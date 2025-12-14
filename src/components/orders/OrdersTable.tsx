@@ -171,9 +171,20 @@ const OrdersTable: React.FC = () => {
       availableStatuses.push(orderStages[currentIndex - 1]);
     }
     
-    // Special handling for requested status - can go to verify, rejected, or cancelled
+    // Special handling for requested status - can go to verify (only after customer confirms), rejected, or cancelled
     if (currentStatus === "requested") {
-      if (!availableStatuses.includes("verify")) availableStatuses.push("verify");
+      // Only add verify if customer has confirmed modifications (if quantities were modified)
+      // If quantities were not modified, verify is always available
+      if (order.quantitiesModified) {
+        // Only show verify if customer has confirmed
+        if (order.isConfirmedByCustomer) {
+          if (!availableStatuses.includes("verify")) availableStatuses.push("verify");
+        }
+        // If customer hasn't confirmed, verify will be removed later in the function
+      } else {
+        // No quantities modified, verify is always available
+        if (!availableStatuses.includes("verify")) availableStatuses.push("verify");
+      }
       if (!availableStatuses.includes("rejected")) availableStatuses.push("rejected");
     }
     
@@ -415,13 +426,17 @@ const OrdersTable: React.FC = () => {
                   };
                   
                   const moq = getMoq();
+                  const itemPrice = item.price || 0;
                   
                   return `
                   <div style="margin-bottom: 16px; padding: 12px; background-color: #F9FAFB; border-radius: 6px; border: 1px solid #E5E7EB;">
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
-                      ${item.skuFamilyId?.name || (item.productId && typeof item.productId === 'object' ? item.productId.name : 'Product')}
-                      ${moq > 1 ? `<span style="font-size: 12px; color: #6B7280; font-weight: normal;"> (MOQ: ${moq})</span>` : ''}
-                    </label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <label style="display: block; font-size: 14px; font-weight: 500; color: #374151;">
+                        ${item.skuFamilyId?.name || (item.productId && typeof item.productId === 'object' ? item.productId.name : 'Product')}
+                        ${moq > 1 ? `<span style="font-size: 12px; color: #6B7280; font-weight: normal;"> (MOQ: ${moq})</span>` : ''}
+                      </label>
+                      <span style="font-size: 14px; font-weight: 600; color: #1F2937;">Price: $${itemPrice.toFixed(2)}</span>
+                    </div>
                     <input
                       type="number"
                       min="${moq}"
@@ -429,6 +444,7 @@ const OrdersTable: React.FC = () => {
                       class="quantity-input"
                       data-item-index="${index}"
                       data-moq="${moq}"
+                      data-price="${itemPrice}"
                       style="width: 100%; margin:0px; padding: 8px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 6px; background-color: #FFFFFF; color: #1F2937; outline: none; transition: border-color 0.2s;"
                     />
                     ${moq > 1 ? `<p style="font-size: 11px; color: #6B7280; margin-top: 4px; margin-bottom: 0;">Minimum order quantity: ${moq}</p>` : ''}
@@ -437,6 +453,60 @@ const OrdersTable: React.FC = () => {
                 }
               )
               .join("")}
+            <div id="newOrderPriceContainer" style="margin-top: 16px; padding: 12px; background-color: #EFF6FF; border-radius: 6px; border: 1px solid #3B82F6; display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 14px; font-weight: 600; color: #1E40AF;">New Order Total:</span>
+                <span id="newOrderTotal" style="font-size: 18px; font-weight: 700; color: #1E40AF;">$0.00</span>
+              </div>
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #93C5FD;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span style="font-size: 12px; color: #6B7280;">Original Total:</span>
+                  <span id="originalOrderTotal" style="font-size: 12px; color: #6B7280;">$${order.totalAmount.toFixed(2)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="font-size: 12px; color: #6B7280;">Difference:</span>
+                  <span id="orderDifference" style="font-size: 12px; font-weight: 600; color: #DC2626;">$0.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="sendConfirmationContainer" style="margin-bottom: 20px; display: none;">
+            <div style="padding: 12px; background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 6px; margin-bottom: 12px;">
+              <p style="margin: 0; font-size: 13px; color: #92400E; font-weight: 500;">
+                <strong>⚠️ Important:</strong> Order quantities have been modified. You must send a confirmation email to the customer before you can change status to verify.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="sendConfirmationBtn"
+              style="width: 100%; padding: 12px; background-color: #F59E0B; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s;"
+              onmouseover="this.style.backgroundColor='#D97706'"
+              onmouseout="this.style.backgroundColor='#F59E0B'"
+            >
+              <i class="fas fa-envelope" style="margin-right: 8px;"></i>
+              <span id="sendConfirmationBtnText">
+                ${order.modificationConfirmationToken 
+                  ? (order.modificationConfirmationExpiry && new Date(order.modificationConfirmationExpiry) < new Date()
+                      ? "Resend Confirmation Email (Expired)" 
+                      : "Resend Confirmation Email")
+                  : "Send Confirmation Email"}
+              </span>
+            </button>
+            ${order.isConfirmedByCustomer ? `
+              <div style="margin-top: 12px; padding: 12px; background-color: #D1FAE5; border-left: 4px solid #10B981; border-radius: 6px;">
+                <p style="margin: 0; font-size: 13px; color: #065F46; font-weight: 600;">
+                  <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                  ✅ Customer has confirmed the order modifications. You can now change status to verify.
+                </p>
+              </div>
+            ` : order.modificationConfirmationToken ? `
+              <div style="margin-top: 12px; padding: 12px; background-color: #FEE2E2; border-left: 4px solid #EF4444; border-radius: 6px;">
+                <p style="margin: 0; font-size: 13px; color: #991B1B; font-weight: 500;">
+                  <i class="fas fa-clock" style="margin-right: 8px;"></i>
+                  ⏳ Waiting for customer confirmation. Verify option will be available after customer confirms.
+                </p>
+              </div>
+            ` : ''}
           </div>
           <div id="otherChargesContainer" style="margin-bottom: 20px;">
             <label for="otherChargesInput" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Other Charges (Optional)</label>
@@ -469,33 +539,104 @@ const OrdersTable: React.FC = () => {
               style="width: 100%; margin:0px; padding: 10px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 6px; background-color: #F9FAFB; color: #1F2937; min-height: 100px; resize: vertical; outline: none; transition: border-color 0.2s;"
             ></textarea>
           </div>
-          <div id="deliveredWarningContainer" style="display: none; margin-top: 20px; padding: 12px; background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 6px;">
-            <p style="margin: 0; font-size: 13px; color: #92400E; font-weight: 500;">
-              <strong>⚠️ Important:</strong> To change status to DELIVERED, you must:
-            </p>
-            <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 12px; color: #92400E;">
-              <li>Ensure customer has added receiver details (name & mobile)</li>
-              <li>Send OTP to receiver mobile number</li>
-              <li>Verify the OTP successfully</li>
-            </ul>
+          <div id="deliveredWarningContainer" style="display: none; margin-top: 20px;">
+            <div style="padding: 12px; background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 6px; margin-bottom: 12px;">
+              <p style="margin: 0; font-size: 13px; color: #92400E; font-weight: 500;">
+                <strong>⚠️ Important:</strong> To change status to DELIVERED, you must send and verify OTP first.
+              </p>
+              ${order.receiverDetails?.mobile ? `
+                <p style="margin: 8px 0 0 0; font-size: 12px; color: #92400E;">
+                  <strong>Receiver Mobile:</strong> ${order.receiverDetails.mobile}
+                </p>
+              ` : `
+                <p style="margin: 8px 0 0 0; font-size: 12px; color: #DC2626; font-weight: 600;">
+                  ❌ Receiver details not available. Customer must add receiver details first.
+                </p>
+              `}
+            </div>
+            
             ${order.receiverDetails?.mobile ? `
-              <p style="margin: 8px 0 0 0; font-size: 12px; color: #92400E;">
-                <strong>Receiver Mobile:</strong> ${order.receiverDetails.mobile}
-              </p>
+              <div id="otpContainer" style="margin-bottom: 12px;">
+                ${!order.deliveryOTP ? `
+                  <button
+                    type="button"
+                    id="sendOTPBtn"
+                    style="width: 100%; padding: 12px; background-color: #0071E0; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#005BB5'"
+                    onmouseout="this.style.backgroundColor='#0071E0'"
+                  >
+                    <i class="fas fa-paper-plane" style="margin-right: 8px;"></i>
+                    Send OTP to ${order.receiverDetails.mobile}
+                  </button>
+                ` : order.deliveryOTPExpiry && new Date(order.deliveryOTPExpiry) < new Date() ? `
+                  <div style="margin-bottom: 12px; padding: 12px; background-color: #FEE2E2; border-left: 4px solid #EF4444; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 13px; color: #991B1B; font-weight: 500;">
+                      <i class="fas fa-exclamation-circle" style="margin-right: 8px;"></i>
+                      OTP has expired. Please send a new OTP.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    id="sendOTPBtn"
+                    style="width: 100%; padding: 12px; background-color: #0071E0; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#005BB5'"
+                    onmouseout="this.style.backgroundColor='#0071E0'"
+                  >
+                    <i class="fas fa-paper-plane" style="margin-right: 8px;"></i>
+                    Resend OTP to ${order.receiverDetails.mobile}
+                  </button>
+                ` : order.deliveryOTPVerified ? `
+                  <div style="padding: 12px; background-color: #D1FAE5; border-left: 4px solid #10B981; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 13px; color: #065F46; font-weight: 600;">
+                      <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                      ✅ OTP Verified - Ready to mark as delivered
+                    </p>
+                  </div>
+                ` : `
+                  <div style="margin-bottom: 12px; padding: 12px; background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 13px; color: #92400E; font-weight: 500;">
+                      <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                      OTP sent to ${order.receiverDetails.mobile}. Please enter the OTP below to verify.
+                    </p>
+                  </div>
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                      Enter OTP
+                    </label>
+                    <input
+                      type="text"
+                      id="otpInput"
+                      maxlength="6"
+                      pattern="[0-9]{6}"
+                      placeholder="Enter 6-digit OTP"
+                      style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 6px; background-color: #FFFFFF; color: #1F2937; outline: none; transition: border-color 0.2s;"
+                    />
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                      <button
+                        type="button"
+                        id="verifyOTPBtn"
+                        style="flex: 1; padding: 12px; background-color: #10B981; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#059669'"
+                        onmouseout="this.style.backgroundColor='#10B981'"
+                      >
+                        <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                        Verify OTP
+                      </button>
+                      <button
+                        type="button"
+                        id="resendOTPBtn"
+                        style="flex: 1; padding: 12px; background-color: #0071E0; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#005BB5'"
+                        onmouseout="this.style.backgroundColor='#0071E0'"
+                      >
+                        <i class="fas fa-redo" style="margin-right: 8px;"></i>
+                        Resend OTP
+                      </button>
+                    </div>
+                  </div>
+                `}
+              </div>
             ` : ''}
-            ${order.deliveryOTPVerified ? `
-              <p style="margin: 8px 0 0 0; font-size: 12px; color: #059669; font-weight: 600;">
-                ✅ OTP Verified - Ready to mark as delivered
-              </p>
-            ` : order.deliveryOTP ? `
-              <p style="margin: 8px 0 0 0; font-size: 12px; color: #DC2626; font-weight: 600;">
-                ❌ OTP Not Verified - Please verify OTP first
-              </p>
-            ` : `
-              <p style="margin: 8px 0 0 0; font-size: 12px; color: #DC2626; font-weight: 600;">
-                ❌ OTP Not Sent - Please send OTP first
-              </p>
-            `}
           </div>
         </div>
       `;
@@ -510,7 +651,7 @@ const OrdersTable: React.FC = () => {
         allowOutsideClick: false,
         allowEscapeKey: true,
         showLoaderOnConfirm: true,
-        preConfirm: () => {
+        preConfirm: async () => {
           try {
             const statusSelect = document.getElementById("statusSelect") as HTMLSelectElement;
             const quantityInputs = document.querySelectorAll(".quantity-input") as NodeListOf<HTMLInputElement>;
@@ -545,6 +686,37 @@ const OrdersTable: React.FC = () => {
             // Payment method selection will be handled in a separate module
             // No validation needed here
 
+            // Validate OTP verification for delivered status
+            if (selectedStatus === "delivered") {
+              if (!order.receiverDetails?.mobile) {
+                Swal.showValidationMessage('Receiver mobile number is required. Customer must add receiver details first.');
+                return false;
+              }
+              
+              // Fetch latest order state to check OTP verification status
+              try {
+                const latestOrdersResponse = await AdminOrderService.getOrderList(1, 100, order._id);
+                const latestOrder = latestOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
+                
+                if (!latestOrder) {
+                  Swal.showValidationMessage('Order not found. Please refresh and try again.');
+                  return false;
+                }
+                
+                if (!latestOrder.deliveryOTPVerified) {
+                  Swal.showValidationMessage('OTP must be verified before changing status to DELIVERED. Please send and verify OTP first.');
+                  return false;
+                }
+              } catch (error) {
+                console.error('Error fetching latest order state:', error);
+                // Fallback to checking the original order object
+                if (!order.deliveryOTPVerified) {
+                  Swal.showValidationMessage('OTP must be verified before changing status to DELIVERED. Please send and verify OTP first.');
+                  return false;
+                }
+              }
+            }
+
             // Check if otherCharges can be added (only before WAITING_FOR_PAYMENT)
             if (selectedOtherCharges !== null && selectedOtherCharges > 0) {
               if (orderStages && orderStages.length > 0) {
@@ -564,9 +736,9 @@ const OrdersTable: React.FC = () => {
             console.log('Other Charges:', selectedOtherCharges);
             console.log('Images:', selectedImages.length);
 
-            // Cart items editing allowed only for VERIFY status
+            // Cart items editing allowed for REQUESTED status (and verify if needed)
             // Validate MOQ when editing quantities
-            if (selectedStatus === "verify" && quantityInputs && quantityInputs.length > 0) {
+            if ((selectedStatus === "requested" || selectedStatus === "verify") && quantityInputs && quantityInputs.length > 0) {
               editedCartItems = order.cartItems.map((item, index) => {
                 const inputValue = quantityInputs[index]?.value;
                 const newQuantity = inputValue ? parseInt(inputValue, 10) : item.quantity;
@@ -601,23 +773,189 @@ const OrdersTable: React.FC = () => {
           try {
             const statusSelect = document.getElementById("statusSelect") as HTMLSelectElement;
             const cartItemsContainer = document.getElementById("cartItemsContainer") as HTMLElement;
+            const sendConfirmationContainer = document.getElementById("sendConfirmationContainer") as HTMLElement;
+            const newOrderPriceContainer = document.getElementById("newOrderPriceContainer") as HTMLElement;
+
+            // Function to calculate and display new order price
+            const calculateNewOrderPrice = () => {
+              const quantityInputs = document.querySelectorAll(".quantity-input") as NodeListOf<HTMLInputElement>;
+              let newTotal = 0;
+              let originalTotal = 0;
+              
+              quantityInputs.forEach((input) => {
+                const price = parseFloat(input.getAttribute('data-price') || '0');
+                const newQuantity = parseInt(input.value || '0', 10);
+                const originalQuantity = parseInt(input.getAttribute('data-original-quantity') || input.value || '0', 10);
+                
+                newTotal += price * newQuantity;
+                originalTotal += price * originalQuantity;
+              });
+              
+              // Add otherCharges if present
+              const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
+              const otherCharges = otherChargesInput ? (parseFloat(otherChargesInput.value) || 0) : (order.otherCharges || 0);
+              newTotal += otherCharges;
+              originalTotal += (order.otherCharges || 0);
+              
+              if (newOrderPriceContainer) {
+                const newOrderTotal = document.getElementById("newOrderTotal") as HTMLElement;
+                const originalOrderTotal = document.getElementById("originalOrderTotal") as HTMLElement;
+                const orderDifference = document.getElementById("orderDifference") as HTMLElement;
+                
+                if (newOrderTotal) newOrderTotal.textContent = `$${newTotal.toFixed(2)}`;
+                if (originalOrderTotal) originalOrderTotal.textContent = `$${originalTotal.toFixed(2)}`;
+                
+                const difference = newTotal - originalTotal;
+                if (orderDifference) {
+                  orderDifference.textContent = `${difference >= 0 ? '+' : ''}$${difference.toFixed(2)}`;
+                  orderDifference.style.color = difference >= 0 ? '#DC2626' : '#059669';
+                }
+                
+                // Show container if quantities changed
+                const quantitiesChanged = Array.from(quantityInputs).some(input => {
+                  const originalQty = parseInt(input.getAttribute('data-original-quantity') || input.value || '0', 10);
+                  const newQty = parseInt(input.value || '0', 10);
+                  return originalQty !== newQty;
+                });
+                
+                newOrderPriceContainer.style.display = quantitiesChanged ? "block" : "none";
+              }
+            };
 
             if (statusSelect && cartItemsContainer) {
-              // Payment method selection removed - will be handled in separate module
+              // Store original quantities for comparison
+              const quantityInputs = document.querySelectorAll(".quantity-input") as NodeListOf<HTMLInputElement>;
+              quantityInputs.forEach((input) => {
+                input.setAttribute('data-original-quantity', input.value);
+              });
               
-              // Set initial visibility based on current status
+              // Function to check if quantities changed and show/hide send confirmation button
+              const checkAndShowConfirmationButton = () => {
+                if (sendConfirmationContainer) {
+                  const statusSelect = document.getElementById("statusSelect") as HTMLSelectElement;
+                  const currentModalStatus = statusSelect ? statusSelect.value : currentStatus;
+                  
+                  // Only show for requested or verify status
+                  if (currentModalStatus === "requested" || currentModalStatus === "verify") {
+                    const quantitiesChanged = Array.from(quantityInputs).some(input => {
+                      const originalQty = parseInt(input.getAttribute('data-original-quantity') || input.value || '0', 10);
+                      const newQty = parseInt(input.value || '0', 10);
+                      return originalQty !== newQty;
+                    });
+                    // Show button if quantities changed in modal OR quantities were already modified (from previous edit)
+                    // AND customer hasn't confirmed yet
+                    const shouldShow = (quantitiesChanged || order.quantitiesModified) && !order.isConfirmedByCustomer;
+                    sendConfirmationContainer.style.display = shouldShow ? "block" : "none";
+                  } else {
+                    sendConfirmationContainer.style.display = "none";
+                  }
+                }
+              };
+              
+              // Set initial visibility based on current status - allow editing in REQUESTED stage
               if (cartItemsContainer) {
-                cartItemsContainer.style.display = currentStatus === "verify" ? "block" : "none";
+                cartItemsContainer.style.display = (currentStatus === "requested" || currentStatus === "verify") ? "block" : "none";
+              }
+              
+              // Show/hide send confirmation container based on status and quantities modified
+              // Initial check - will be updated dynamically when quantities change
+              checkAndShowConfirmationButton();
+              
+              // Handle send confirmation button click
+              const sendConfirmationBtn = document.getElementById("sendConfirmationBtn") as HTMLButtonElement;
+              if (sendConfirmationBtn) {
+                sendConfirmationBtn.addEventListener("click", async () => {
+                  try {
+                    // First, save the order with modified quantities if any changes were made
+                    const quantityInputs = document.querySelectorAll(".quantity-input") as NodeListOf<HTMLInputElement>;
+                    const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
+                    
+                    // Check if quantities were changed
+                    const quantitiesChanged = Array.from(quantityInputs).some(input => {
+                      const originalQty = parseInt(input.getAttribute('data-original-quantity') || input.value || '0', 10);
+                      const newQty = parseInt(input.value || '0', 10);
+                      return originalQty !== newQty;
+                    });
+                    
+                    // Get other charges value
+                    const otherChargesValue = otherChargesInput ? (parseFloat(otherChargesInput.value) || 0) : (order.otherCharges || 0);
+                    const otherChargesChanged = otherChargesValue !== (order.otherCharges || 0);
+                    
+                    // If quantities or other charges were modified, save the order first
+                    if (quantitiesChanged || otherChargesChanged) {
+                      // Prepare edited cart items
+                      const editedCartItems = order.cartItems.map((item, index) => {
+                        const inputValue = quantityInputs[index]?.value;
+                        const newQuantity = inputValue ? parseInt(inputValue, 10) : item.quantity;
+                        return {
+                          ...item,
+                          quantity: newQuantity,
+                        };
+                      });
+                      
+                      // Save the order with updated quantities and other charges
+                      await AdminOrderService.updateOrderStatus(
+                        order._id,
+                        order.status, // Keep current status
+                        editedCartItems,
+                        undefined, // No message
+                        undefined, // No payment method
+                        otherChargesValue > 0 ? otherChargesValue : undefined,
+                        undefined // No images
+                      );
+                      
+                      // Wait a bit for the order to be saved
+                      await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                    
+                    // Now send the confirmation email (order is already saved with new values)
+                    await AdminOrderService.resendModificationConfirmation(order._id);
+                    toastHelper.showTost(
+                      order.modificationConfirmationToken 
+                        ? 'Order updated and confirmation email resent successfully!' 
+                        : 'Order updated and confirmation email sent successfully!',
+                      'success'
+                    );
+                    // Close modal and refresh orders
+                    Swal.close();
+                    fetchOrders();
+                  } catch (error: any) {
+                    console.error('Error sending confirmation email:', error);
+                    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to send confirmation email';
+                    toastHelper.showTost(errorMessage, 'error');
+                  }
+                });
+              }
+              
+              // Add event listeners to quantity inputs for price calculation and confirmation button
+              quantityInputs.forEach((input) => {
+                input.addEventListener("input", () => {
+                  calculateNewOrderPrice();
+                  checkAndShowConfirmationButton();
+                });
+                input.addEventListener("change", () => {
+                  calculateNewOrderPrice();
+                  checkAndShowConfirmationButton();
+                });
+              });
+              
+              // Add event listener to otherCharges input
+              const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
+              if (otherChargesInput) {
+                otherChargesInput.addEventListener("input", calculateNewOrderPrice);
+                otherChargesInput.addEventListener("change", calculateNewOrderPrice);
               }
               
               statusSelect.addEventListener("change", () => {
                 const newStatus = statusSelect.value;
-                // Payment method selection removed - will be handled in separate module
-                // Show cart items editing only for VERIFY status (where EDIT_ORDER is allowed)
+                // Show cart items editing for REQUESTED status (and verify if needed)
                 if (cartItemsContainer) {
-                  // Show cart items editing for VERIFY status only
-                  cartItemsContainer.style.display = newStatus === "verify" ? "block" : "none";
+                  cartItemsContainer.style.display = (newStatus === "requested" || newStatus === "verify") ? "block" : "none";
                 }
+                
+                // Show/hide send confirmation container - check dynamically
+                checkAndShowConfirmationButton();
+                
                 // Show/hide otherCharges based on stage
                 const otherChargesContainer = document.getElementById("otherChargesContainer") as HTMLElement;
                 if (otherChargesContainer) {
@@ -629,20 +967,174 @@ const OrdersTable: React.FC = () => {
                     otherChargesContainer.style.display = "block";
                   }
                 }
-                // Show/hide delivered warning
+                // Show/hide delivered warning and OTP container
                 const deliveredWarningContainer = document.getElementById("deliveredWarningContainer") as HTMLElement;
                 if (deliveredWarningContainer) {
                   deliveredWarningContainer.style.display = newStatus === "delivered" ? "block" : "none";
                 }
+                
+                // Update OTP container visibility when status changes
+                const otpContainer = document.getElementById("otpContainer") as HTMLElement;
+                if (otpContainer && newStatus === "delivered" && order.receiverDetails?.mobile) {
+                  otpContainer.style.display = "block";
+                } else if (otpContainer) {
+                  otpContainer.style.display = "none";
+                }
               });
               
-              // Set initial visibility for delivered warning
+              // Set initial visibility for delivered warning and OTP container
               const deliveredWarningContainer = document.getElementById("deliveredWarningContainer") as HTMLElement;
               if (deliveredWarningContainer) {
                 deliveredWarningContainer.style.display = currentStatus === "delivered" ? "block" : "none";
               }
               
-              // Payment method selection removed - will be handled in separate module
+              // Set initial visibility for OTP container
+              const otpContainer = document.getElementById("otpContainer") as HTMLElement;
+              if (otpContainer) {
+                otpContainer.style.display = (currentStatus === "delivered" && order.receiverDetails?.mobile) ? "block" : "none";
+              }
+
+              // Handle OTP send button click
+              const sendOTPBtn = document.getElementById("sendOTPBtn") as HTMLButtonElement;
+              if (sendOTPBtn) {
+                sendOTPBtn.addEventListener("click", async () => {
+                  try {
+                    sendOTPBtn.disabled = true;
+                    sendOTPBtn.style.opacity = '0.6';
+                    sendOTPBtn.style.cursor = 'not-allowed';
+                    
+                    await AdminOrderService.sendDeliveryOTP(order._id);
+                    toastHelper.showTost('OTP sent successfully!', 'success');
+                    
+                    // Refresh orders to get updated OTP status
+                    await fetchOrders();
+                    
+                    // Get updated order from the refreshed list using search by order ID
+                    const updatedOrdersResponse = await AdminOrderService.getOrderList(1, 100, order._id);
+                    const updatedOrder = updatedOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
+                    
+                    if (updatedOrder) {
+                      // Close current modal and reopen with updated order
+                      Swal.close();
+                      setTimeout(() => {
+                        handleUpdateStatus(updatedOrder);
+                      }, 300);
+                    } else {
+                      // If order not found, just refresh
+                      Swal.close();
+                      fetchOrders();
+                    }
+                  } catch (error: any) {
+                    console.error('Error sending OTP:', error);
+                    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to send OTP';
+                    toastHelper.showTost(errorMessage, 'error');
+                    if (sendOTPBtn) {
+                      sendOTPBtn.disabled = false;
+                      sendOTPBtn.style.opacity = '1';
+                      sendOTPBtn.style.cursor = 'pointer';
+                    }
+                  }
+                });
+              }
+
+              // Handle OTP verify button click
+              const verifyOTPBtn = document.getElementById("verifyOTPBtn") as HTMLButtonElement;
+              if (verifyOTPBtn) {
+                verifyOTPBtn.addEventListener("click", async () => {
+                  try {
+                    const otpInput = document.getElementById("otpInput") as HTMLInputElement;
+                    const otp = otpInput?.value?.trim();
+                    
+                    if (!otp) {
+                      toastHelper.showTost('Please enter the OTP', 'error');
+                      return;
+                    }
+                    
+                    if (!/^\d{6}$/.test(otp)) {
+                      toastHelper.showTost('OTP must be 6 digits', 'error');
+                      return;
+                    }
+
+                    verifyOTPBtn.disabled = true;
+                    verifyOTPBtn.style.opacity = '0.6';
+                    verifyOTPBtn.style.cursor = 'not-allowed';
+                    
+                    await AdminOrderService.verifyDeliveryOTP(order._id, otp);
+                    toastHelper.showTost('OTP verified successfully!', 'success');
+                    
+                    // Refresh orders to get updated OTP status
+                    await fetchOrders();
+                    
+                    // Get updated order from the refreshed list using search by order ID
+                    const updatedOrdersResponse = await AdminOrderService.getOrderList(1, 100, order._id);
+                    const updatedOrder = updatedOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
+                    
+                    if (updatedOrder) {
+                      // Close current modal and reopen with updated order
+                      Swal.close();
+                      setTimeout(() => {
+                        handleUpdateStatus(updatedOrder);
+                      }, 300);
+                    } else {
+                      // If order not found, just refresh
+                      Swal.close();
+                      fetchOrders();
+                    }
+                  } catch (error: any) {
+                    console.error('Error verifying OTP:', error);
+                    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to verify OTP';
+                    toastHelper.showTost(errorMessage, 'error');
+                    if (verifyOTPBtn) {
+                      verifyOTPBtn.disabled = false;
+                      verifyOTPBtn.style.opacity = '1';
+                      verifyOTPBtn.style.cursor = 'pointer';
+                    }
+                  }
+                });
+              }
+
+              // Handle OTP resend button click
+              const resendOTPBtn = document.getElementById("resendOTPBtn") as HTMLButtonElement;
+              if (resendOTPBtn) {
+                resendOTPBtn.addEventListener("click", async () => {
+                  try {
+                    resendOTPBtn.disabled = true;
+                    resendOTPBtn.style.opacity = '0.6';
+                    resendOTPBtn.style.cursor = 'not-allowed';
+                    
+                    await AdminOrderService.sendDeliveryOTP(order._id);
+                    toastHelper.showTost('OTP resent successfully!', 'success');
+                    
+                    // Refresh orders to get updated OTP status
+                    await fetchOrders();
+                    
+                    // Get updated order from the refreshed list using search by order ID
+                    const updatedOrdersResponse = await AdminOrderService.getOrderList(1, 100, order._id);
+                    const updatedOrder = updatedOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
+                    
+                    if (updatedOrder) {
+                      // Close current modal and reopen with updated order
+                      Swal.close();
+                      setTimeout(() => {
+                        handleUpdateStatus(updatedOrder);
+                      }, 300);
+                    } else {
+                      // If order not found, just refresh
+                      Swal.close();
+                      fetchOrders();
+                    }
+                  } catch (error: any) {
+                    console.error('Error resending OTP:', error);
+                    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to resend OTP';
+                    toastHelper.showTost(errorMessage, 'error');
+                    if (resendOTPBtn) {
+                      resendOTPBtn.disabled = false;
+                      resendOTPBtn.style.opacity = '1';
+                      resendOTPBtn.style.cursor = 'pointer';
+                    }
+                  }
+                });
+              }
 
               // Add focus styles for inputs
               const inputs = document.querySelectorAll("input, select, textarea");
@@ -672,10 +1164,10 @@ const OrdersTable: React.FC = () => {
 
         try {
           // Don't send cart items for cancelled status
-          // Allow editing when approving from requested or verify status
-          // Cart items editing allowed only for VERIFY status
-          // Send edited cart items only when status is VERIFY
-          const cartItemsToSend = selectedStatus === "verify" && editedCartItems ? editedCartItems : undefined;
+          // Allow editing when status is REQUESTED or VERIFY
+          // Cart items editing allowed for REQUESTED and VERIFY status
+          // Send edited cart items when status is REQUESTED or VERIFY
+          const cartItemsToSend = (selectedStatus === "requested" || selectedStatus === "verify") && editedCartItems ? editedCartItems : undefined;
 
           console.log('Updating order status:', {
             orderId: order._id,
@@ -1230,20 +1722,43 @@ const OrdersTable: React.FC = () => {
                 ordersData.map((order: Order) => (
                   <tr
                     key={order._id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                      order.isConfirmedByCustomer && order.quantitiesModified
+                        ? "bg-green-50 dark:bg-green-900/20 border-l-4 border-l-green-500"
+                        : ""
+                    }`}
                   >
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {order?.customerId?.name || order?.customerId?.email || order?.customerId?._id}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {order.cartItems.map((item) => (
-                        <div key={item?.productId?._id}>
-                          {item?.skuFamilyId?.name || item?.productId?.name} (x{item.quantity})
-                        </div>
-                      ))}
+                      <div className="space-y-1">
+                        {order.cartItems.map((item) => (
+                          <div key={item?.productId?._id}>
+                            {item?.skuFamilyId?.name || item?.productId?.name} (x{item.quantity})
+                          </div>
+                        ))}
+                        {order.isConfirmedByCustomer && order.quantitiesModified && (
+                          <div className="mt-2 text-xs text-green-600 dark:text-green-400 font-medium">
+                            <i className="fas fa-check-circle mr-1"></i>
+                            Quantities confirmed by customer
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      ${formatPrice(order.totalAmount)}
+                      <div className="flex items-center gap-2">
+                        <span>${formatPrice(order.totalAmount)}</span>
+                        {order.isConfirmedByCustomer && order.quantitiesModified && (
+                          <span 
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700"
+                            title="Order amount updated after customer confirmation"
+                          >
+                            <i className="fas fa-check-circle mr-1"></i>
+                            Updated
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {order.shippingAddress?.country ? (
@@ -1261,11 +1776,19 @@ const OrdersTable: React.FC = () => {
                       {(() => {
                         const statusInfo = getCombinedStatusBadge(order);
                         return (
-                          <span
-                            className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider ${statusInfo.style}`}
-                          >
-                            {statusInfo.message}
-                          </span>
+                          <div className="flex flex-col items-center gap-1">
+                            <span
+                              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider ${statusInfo.style}`}
+                            >
+                              {statusInfo.message}
+                            </span>
+                            {order.isConfirmedByCustomer && order.quantitiesModified && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
+                                <i className="fas fa-check-circle mr-1"></i>
+                                Confirmed by Customer
+                              </span>
+                            )}
+                          </div>
                         );
                       })()}
                     </td>
@@ -1280,63 +1803,17 @@ const OrdersTable: React.FC = () => {
                             <i className="fas fa-edit"></i>
                           </button>
                         )}
-                        {/* Show send/resend confirmation button ONLY when quantities were modified */}
-                        {canVerifyApprove && 
-                         (order.status === 'requested' || order.status === 'verify') &&
-                         order.quantitiesModified &&
-                         (!order.isConfirmedByCustomer) && (
-                          <button
-                            onClick={() => handleSendConfirmation(order)}
-                            className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300"
-                            title={
-                              order.modificationConfirmationToken 
-                                ? (order.modificationConfirmationExpiry && new Date(order.modificationConfirmationExpiry) < new Date()
-                                    ? "Resend Confirmation Email (Expired)" 
-                                    : "Resend Confirmation Email")
-                                : "Send Confirmation Email"
-                            }
+                        {/* Email button removed from actions column - now shown inside the modal */}
+                        {/* Show confirmation badge if customer has confirmed */}
+                        {order.isConfirmedByCustomer && order.quantitiesModified && (
+                          <span
+                            className="text-green-600 dark:text-green-400"
+                            title="Order modifications confirmed by customer"
                           >
-                            <i className="fas fa-envelope"></i>
-                          </button>
+                            <i className="fas fa-check-circle"></i>
+                          </span>
                         )}
-                        {/* Show OTP send/verify buttons when status is ready_to_pick, ready_to_ship, on_the_way, or delivered */}
-                        {canVerifyApprove && 
-                         (order.status === 'ready_to_pick' || order.status === 'ready_to_ship' || order.status === 'on_the_way' || order.status === 'delivered') &&
-                         order.receiverDetails?.mobile && (
-                          <>
-                            {!order.deliveryOTPVerified && (
-                              <>
-                                {!order.deliveryOTP && (
-                                  <button
-                                    onClick={() => handleSendDeliveryOTP(order)}
-                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                    title="Send Delivery OTP"
-                                  >
-                                    <i className="fas fa-sms"></i>
-                                  </button>
-                                )}
-                                {order.deliveryOTP && (
-                                  <button
-                                    onClick={() => handleVerifyDeliveryOTP(order)}
-                                    className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
-                                    title={
-                                      order.deliveryOTPExpiry && new Date(order.deliveryOTPExpiry) < new Date()
-                                        ? "Verify OTP (Expired - Resend Required)"
-                                        : "Verify Delivery OTP"
-                                    }
-                                  >
-                                    <i className="fas fa-check-circle"></i>
-                                  </button>
-                                )}
-                              </>
-                            )}
-                            {order.deliveryOTPVerified && (
-                              <span className="text-green-600 dark:text-green-400" title="OTP Verified">
-                                <i className="fas fa-check-circle"></i>
-                              </span>
-                            )}
-                          </>
-                        )}
+                        {/* OTP buttons removed from actions column - now shown inside the modal when status is delivered */}
                         <button
                           onClick={() => handleViewOrderDetails(order)}
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
