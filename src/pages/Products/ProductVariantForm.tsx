@@ -114,7 +114,7 @@ const ProductVariantForm: React.FC = () => {
             subModelName = product.specification;
           } else if (skuFamily && (skuFamily as any).subSkuFamilies && Array.isArray((skuFamily as any).subSkuFamilies)) {
             // Try to find matching subSkuFamily by storage, ram, color
-            const matchingSubSku = (skuFamily as any).subSkuFamilies.find((sub: any) => {
+            const matchingSubSku = (skuFamily as any).subSkuFamilies.find((_sub: any) => {
               // Match by checking if the IDs correspond to the product's storage, ram, color
               // Since we have text values, we'll use specification as fallback
               return true; // Will use first match or specification

@@ -19,9 +19,12 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
   const [permissions, setPermissions] = useState<SellerProductFieldPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedSeller, setSelectedSeller] = useState<string>(sellerId || '');
-  const [sellers, setSellers] = useState<any[]>([]);
-  const [isGlobal, setIsGlobal] = useState(!sellerId);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedSeller, _setSelectedSeller] = useState<string>(sellerId || '');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_sellers, setSellers] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isGlobal, _setIsGlobal] = useState(!sellerId);
 
   // Group fields by category
   const productDetailFields = permissions.filter(p => p.group === 'productDetail');

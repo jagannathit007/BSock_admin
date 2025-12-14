@@ -5,7 +5,7 @@ import Select from 'react-select';
 import { VariantOption } from './CascadingVariantSelector';
 import { GradeService } from '../../services/grade/grade.services';
 import { SellerService } from '../../services/seller/sellerService';
-import { ProductService } from '../../services/product/product.services';
+import { ProductService, Product } from '../../services/product/product.services';
 import { ConstantsService, Constants } from '../../services/constants/constants.services';
 import { SkuFamilyService } from '../../services/skuFamily/skuFamily.services';
 import toastHelper from '../../utils/toastHelper';
@@ -146,17 +146,17 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     if (editProducts && editProducts.length > 0) {
       console.log('ExcelLikeProductForm: Initializing rows from editProducts:', editProducts.length, 'products');
       console.log('ExcelLikeProductForm: editProducts data:', JSON.stringify(editProducts, null, 2));
-      const transformedRows: ProductRowData[] = editProducts.map((product, index) => {
+      const transformedRows: ProductRowData[] = editProducts.map((product) => {
         const skuFamily = typeof product.skuFamilyId === 'object' ? product.skuFamilyId : null;
         const grade = (product as any).gradeId ? (typeof (product as any).gradeId === 'object' ? (product as any).gradeId._id : (product as any).gradeId) : '';
         const seller = (product as any).sellerId ? (typeof (product as any).sellerId === 'object' ? (product as any).sellerId._id : (product as any).sellerId) : '';
         
         // Get country deliverables
         const hkDeliverable = Array.isArray(product.countryDeliverables) 
-          ? product.countryDeliverables.find(cd => cd.country === 'Hongkong')
+          ? product.countryDeliverables.find((cd: any) => cd.country === 'Hongkong')
           : null;
         const dubaiDeliverable = Array.isArray(product.countryDeliverables)
-          ? product.countryDeliverables.find(cd => cd.country === 'Dubai')
+          ? product.countryDeliverables.find((cd: any) => cd.country === 'Dubai')
           : null;
         
         // Get custom fields
@@ -2751,10 +2751,10 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
             <div className="flex border-b border-gray-300 dark:border-gray-600">
               <div className="min-w-12 border-r-2 border-gray-400 dark:border-gray-600 bg-gray-300 dark:bg-gray-800 sticky left-0 z-10"></div>
               {columns.map((col) => {
-                const hkCols = columns.filter(c => c.subgroup === 'HK');
-                const dubaiCols = columns.filter(c => c.subgroup === 'DUBAI');
-                const paymentTermCols = columns.filter(c => c.subgroup === 'PAYMENT_TERM');
-                const paymentMethodCols = columns.filter(c => c.subgroup === 'PAYMENT_METHOD');
+                const hkCols = columns.filter((c: any) => c.subgroup === 'HK');
+                const dubaiCols = columns.filter((c: any) => c.subgroup === 'DUBAI');
+                const paymentTermCols = columns.filter((c: any) => c.subgroup === 'PAYMENT_TERM');
+                const paymentMethodCols = columns.filter((c: any) => c.subgroup === 'PAYMENT_METHOD');
                 const hkWidth = hkCols.reduce((sum, c) => sum + c.width, 0);
                 const dubaiWidth = dubaiCols.reduce((sum, c) => sum + c.width, 0);
                 const paymentTermWidth = paymentTermCols.reduce((sum, c) => sum + c.width, 0);
@@ -2813,7 +2813,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
                       </div>
                     </div>
                   );
-                } else if (col.subgroup) {
+                } else if ((col as any).subgroup) {
                   // Skip rendering for other columns in the group (they're covered by the group header)
                   return null;
                 } else {
@@ -2838,15 +2838,15 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
                 <div
                   key={col.key}
                   className={`px-3 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600 whitespace-nowrap hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors cursor-default ${
-                    col.group === 'Custom Fields'
+                    (col as any).group === 'Custom Fields'
                       ? 'bg-yellow-50 dark:bg-yellow-900/30'
-                      : col.subgroup === 'HK' 
+                      : (col as any).subgroup === 'HK' 
                       ? 'bg-blue-50 dark:bg-blue-900/30' 
-                      : col.subgroup === 'DUBAI' 
+                      : (col as any).subgroup === 'DUBAI' 
                       ? 'bg-green-50 dark:bg-green-900/30'
-                      : col.subgroup === 'PAYMENT_TERM'
+                      : (col as any).subgroup === 'PAYMENT_TERM'
                       ? 'bg-purple-50 dark:bg-purple-900/30'
-                      : col.subgroup === 'PAYMENT_METHOD'
+                      : (col as any).subgroup === 'PAYMENT_METHOD'
                       ? 'bg-orange-50 dark:bg-orange-900/30'
                       : 'bg-gray-200 dark:bg-gray-800'
                   }`}

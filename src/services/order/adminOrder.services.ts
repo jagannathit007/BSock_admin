@@ -311,6 +311,47 @@ export class AdminOrderService {
       throw new Error(errorMessage);
     }
   };
+
+  static downloadInvoice = async (orderId: string): Promise<void> => {
+    const baseUrl = import.meta.env.VITE_BASE_URL;
+    const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
+    const url = `${baseUrl}/api/${adminRoute}/order/download-invoice`;
+
+    try {
+      const res = await api.post(url, { orderId }, { responseType: 'blob' });
+      
+      // Create blob from response data
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `Invoice_${orderId}_${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toastHelper.showTost('Invoice downloaded successfully!', 'success');
+    } catch (err: any) {
+      // Handle error - check if it's a blob error response
+      let errorMessage = 'Failed to download invoice';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const errorText = await err.response.data.text();
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = 'Failed to download invoice';
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      toastHelper.showTost(errorMessage, 'error');
+      throw new Error(errorMessage);
+    }
+  };
 }
 
 export default AdminOrderService;

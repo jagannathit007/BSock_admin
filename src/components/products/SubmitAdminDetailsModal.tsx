@@ -31,7 +31,8 @@ const SubmitAdminDetailsModal: React.FC<SubmitAdminDetailsModalProps> = ({
   const [showCostModal, setShowCostModal] = useState(false);
   const [currentCostCountry, setCurrentCostCountry] = useState<'Hongkong' | 'Dubai' | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [costsByCountry, setCostsByCountry] = useState<{ Hongkong?: any[]; Dubai?: any[] }>({});
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_costsByCountry, setCostsByCountry] = useState<{ Hongkong?: any[]; Dubai?: any[] }>({});
 
   useEffect(() => {
     if (isOpen) {

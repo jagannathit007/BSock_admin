@@ -151,27 +151,27 @@ const OrdersTable: React.FC = () => {
       orderStages = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered", "cancelled"];
     }
     
-    // Show only next/previous stages (progressive flow)
+    // Show only forward progression - no going back to previous statuses
     const currentIndex = orderStages.indexOf(currentStatus);
     const availableStatuses: string[] = [];
     
     // Always include current status
     availableStatuses.push(currentStatus);
     
-    // Add next stage in flow
-    if (currentIndex >= 0 && currentIndex < orderStages.length - 1) {
-      const nextStage = orderStages[currentIndex + 1];
-      if (nextStage && nextStage !== "cancelled") {
-        availableStatuses.push(nextStage);
+    // Add next stages in flow - forward progression only (no going back)
+    if (currentIndex >= 0) {
+      // Add all stages that come after current status (forward progression)
+      for (let i = currentIndex + 1; i < orderStages.length; i++) {
+        const nextStage = orderStages[i];
+        // Skip rejected and cancelled in the forward progression (they're handled separately)
+        if (nextStage && nextStage !== "cancelled" && nextStage !== "rejected") {
+          availableStatuses.push(nextStage);
+        }
       }
     }
     
-    // Add previous stage (for going back)
-    if (currentIndex > 0) {
-      availableStatuses.push(orderStages[currentIndex - 1]);
-    }
-    
     // Special handling for requested status - can go to verify (only after customer confirms), rejected, or cancelled
+    // Note: rejected and cancelled are only available before payment_received (handled below)
     if (currentStatus === "requested") {
       // Only add verify if customer has confirmed modifications (if quantities were modified)
       // If quantities were not modified, verify is always available
@@ -185,18 +185,29 @@ const OrdersTable: React.FC = () => {
         // No quantities modified, verify is always available
         if (!availableStatuses.includes("verify")) availableStatuses.push("verify");
       }
-      if (!availableStatuses.includes("rejected")) availableStatuses.push("rejected");
+      // Requested is before payment_received, so rejected is allowed (will be added below if conditions are met)
     }
     
-    // Special handling for verify status - can go to approved or back to requested
+    // Special handling for verify status - can go to approved (forward only)
     if (currentStatus === "verify") {
       if (!availableStatuses.includes("approved")) availableStatuses.push("approved");
-      if (!availableStatuses.includes("requested")) availableStatuses.push("requested");
     }
     
-    // Always allow rejected and cancelled
-    if (!availableStatuses.includes("rejected")) availableStatuses.push("rejected");
-    if (!availableStatuses.includes("cancelled")) availableStatuses.push("cancelled");
+    // Allow rejected and cancelled only before payment_received
+    // After payment_received, orders cannot be rejected or cancelled
+    if (currentStatus !== "rejected" && currentStatus !== "cancelled") {
+      // Check if current status is payment_received or any status after it
+      const paymentReceivedIndex = orderStages.indexOf("payment_received");
+      const currentStatusIndex = orderStages.indexOf(currentStatus);
+      
+      // Only allow rejected and cancelled if we haven't reached payment_received yet
+      if (paymentReceivedIndex === -1 || currentStatusIndex < paymentReceivedIndex) {
+        // Current status is before payment_received, allow rejected and cancelled
+        if (!availableStatuses.includes("rejected")) availableStatuses.push("rejected");
+        if (!availableStatuses.includes("cancelled")) availableStatuses.push("cancelled");
+      }
+      // If current status is payment_received or after, don't add rejected or cancelled
+    }
     
     // Filter based on admin permissions
     // Extract verifiedBy and approvedBy IDs properly
@@ -1214,99 +1225,10 @@ const OrdersTable: React.FC = () => {
     setIsDetailsModalOpen(true);
   };
 
-  const handleSendConfirmation = async (order: Order) => {
-    try {
-      const isResend = order.modificationConfirmationToken !== null && order.modificationConfirmationToken !== undefined;
-      const result = await Swal.fire({
-        title: isResend ? 'Resend Confirmation Email' : 'Send Confirmation Email',
-        text: `Are you sure you want to ${isResend ? 'resend' : 'send'} the order modification confirmation email to ${order.customerId?.email || 'the customer'}?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: isResend ? 'Yes, Resend' : 'Yes, Send',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#0071E0',
-      });
-
-      if (result.isConfirmed) {
-        await AdminOrderService.resendModificationConfirmation(order._id);
-        toastHelper.showTost(
-          isResend 
-            ? 'Confirmation email resent successfully!' 
-            : 'Confirmation email sent successfully!',
-          'success'
-        );
-        fetchOrders(); // Refresh orders list
-      }
-    } catch (error: any) {
-      console.error('Error sending confirmation email:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to send confirmation email';
-      toastHelper.showTost(errorMessage, 'error');
-    }
-  };
-
-  const handleSendDeliveryOTP = async (order: Order) => {
-    try {
-      if (!order.receiverDetails?.mobile) {
-        toastHelper.showTost('Receiver mobile number is required. Customer must add receiver details first.', 'error');
-        return;
-      }
-
-      const result = await Swal.fire({
-        title: 'Send Delivery OTP',
-        text: `Send OTP to ${order.receiverDetails.mobile} for order delivery verification?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Send OTP',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#0071E0',
-      });
-
-      if (result.isConfirmed) {
-        await AdminOrderService.sendDeliveryOTP(order._id);
-        fetchOrders(); // Refresh orders list
-      }
-    } catch (error: any) {
-      console.error('Error sending delivery OTP:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to send OTP';
-      toastHelper.showTost(errorMessage, 'error');
-    }
-  };
-
-  const handleVerifyDeliveryOTP = async (order: Order) => {
-    try {
-      const { value: otp } = await Swal.fire({
-        title: 'Verify Delivery OTP',
-        text: `Enter the OTP sent to ${order.receiverDetails?.mobile || 'receiver'}`,
-        input: 'text',
-        inputPlaceholder: 'Enter 6-digit OTP',
-        inputAttributes: {
-          maxlength: 6,
-          pattern: '[0-9]{6}',
-        },
-        showCancelButton: true,
-        confirmButtonText: 'Verify OTP',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#0071E0',
-        inputValidator: (value) => {
-          if (!value) {
-            return 'Please enter the OTP';
-          }
-          if (!/^\d{6}$/.test(value)) {
-            return 'OTP must be 6 digits';
-          }
-        },
-      });
-
-      if (otp) {
-        await AdminOrderService.verifyDeliveryOTP(order._id, otp);
-        fetchOrders(); // Refresh orders list
-      }
-    } catch (error: any) {
-      console.error('Error verifying delivery OTP:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to verify OTP';
-      toastHelper.showTost(errorMessage, 'error');
-    }
-  };
+  // Removed unused functions - these are now handled in OrderDetailsModal:
+  // - handleSendConfirmation (confirmation email)
+  // - handleSendDeliveryOTP (OTP sending)
+  // - handleVerifyDeliveryOTP (OTP verification)
 
   const handleViewTracking = async (orderId: string, initialPage: number = 1) => {
     try {
@@ -1456,7 +1378,7 @@ const OrdersTable: React.FC = () => {
 
         currentPagination = pageData.pagination;
 
-        const result = await Swal.fire({
+        await Swal.fire({
           title: "Order Tracking",
           html: pageData.html,
           width: 950,
@@ -1814,6 +1736,22 @@ const OrdersTable: React.FC = () => {
                           </span>
                         )}
                         {/* OTP buttons removed from actions column - now shown inside the modal when status is delivered */}
+                        {/* Download Invoice button - only show for confirmed orders */}
+                        {['confirm', 'waiting_for_payment', 'payment_received', 'packing', 'ready_to_ship', 'on_the_way', 'ready_to_pick', 'delivered'].includes(order.status) && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await AdminOrderService.downloadInvoice(order._id);
+                              } catch (error) {
+                                console.error('Error downloading invoice:', error);
+                              }
+                            }}
+                            className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                            title="Download Invoice"
+                          >
+                            <i className="fas fa-file-invoice"></i>
+                          </button>
+                        )}
                         <button
                           onClick={() => handleViewOrderDetails(order)}
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
