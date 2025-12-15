@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ProductService, Product } from '../../services/product/product.services';
-import { CostModuleService } from '../../services/costModule/costModule.services';
 import MarginSelectionModal, { MarginSelection } from './MarginSelectionModal';
 import CostModuleSelectionModal, { SelectedCost } from './CostModuleSelectionModal';
 import toastHelper from '../../utils/toastHelper';
@@ -31,24 +30,7 @@ const SubmitAdminDetailsModal: React.FC<SubmitAdminDetailsModalProps> = ({
   const [showCostModal, setShowCostModal] = useState(false);
   const [currentCostCountry, setCurrentCostCountry] = useState<'Hongkong' | 'Dubai' | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [costsByCountry, setCostsByCountry] = useState<{ Hongkong?: any[]; Dubai?: any[] }>({});
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchCostsByCountry();
-    }
-  }, [isOpen]);
-
-  const fetchCostsByCountry = async () => {
-    try {
-      const response = await CostModuleService.getCostsByCountry();
-      if (response.data) {
-        setCostsByCountry(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching costs by country:', error);
-    }
-  };
 
   const handleMarginSelection = (selection: MarginSelection) => {
     setSelectedMargins(selection);

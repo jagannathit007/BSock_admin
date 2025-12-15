@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { SellerProductPermissionService, SellerProductFieldPermission } from '../../services/sellerProductPermission/sellerProductPermission.services';
-import { SellerService } from '../../services/seller/sellerService';
 import toastHelper from '../../utils/toastHelper';
 
 interface SellerProductPermissionModalProps {
@@ -19,9 +18,8 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
   const [permissions, setPermissions] = useState<SellerProductFieldPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedSeller, setSelectedSeller] = useState<string>(sellerId || '');
-  const [sellers, setSellers] = useState<any[]>([]);
-  const [isGlobal, setIsGlobal] = useState(!sellerId);
+  const [selectedSeller] = useState<string>(sellerId || '');
+  const [isGlobal] = useState(!sellerId);
 
   // Group fields by category
   const productDetailFields = permissions.filter(p => p.group === 'productDetail');
@@ -31,18 +29,8 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
   useEffect(() => {
     if (isOpen) {
       loadPermissions();
-      loadSellers();
     }
   }, [isOpen, selectedSeller]);
-
-  const loadSellers = async () => {
-    try {
-      const sellersList = await SellerService.getAllSellers();
-      setSellers(sellersList);
-    } catch (error) {
-      console.error('Error loading sellers:', error);
-    }
-  };
 
   const loadPermissions = async () => {
     try {
