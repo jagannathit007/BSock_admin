@@ -83,14 +83,6 @@ const ProductVariantForm: React.FC = () => {
             let subModelName = '';
             if (p.specification) {
               subModelName = p.specification;
-            } else if (skuFamily && (skuFamily as any).subSkuFamilies && Array.isArray((skuFamily as any).subSkuFamilies)) {
-              // Try to find matching subSkuFamily
-              const matchingSubSku = (skuFamily as any).subSkuFamilies.find((sub: any) => 
-                sub.subName
-              );
-              if (matchingSubSku && matchingSubSku.subName) {
-                subModelName = matchingSubSku.subName;
-              }
             }
             return {
               skuFamilyId: typeof p.skuFamilyId === 'object' ? p.skuFamilyId._id : p.skuFamilyId,
@@ -112,16 +104,6 @@ const ProductVariantForm: React.FC = () => {
           let subModelName = '';
           if (product.specification) {
             subModelName = product.specification;
-          } else if (skuFamily && (skuFamily as any).subSkuFamilies && Array.isArray((skuFamily as any).subSkuFamilies)) {
-            // Try to find matching subSkuFamily by storage, ram, color
-            const matchingSubSku = (skuFamily as any).subSkuFamilies.find((_sub: any) => {
-              // Match by checking if the IDs correspond to the product's storage, ram, color
-              // Since we have text values, we'll use specification as fallback
-              return true; // Will use first match or specification
-            });
-            if (matchingSubSku && matchingSubSku.subName) {
-              subModelName = matchingSubSku.subName;
-            }
           }
           const variant = {
             skuFamilyId: typeof product.skuFamilyId === 'object' ? product.skuFamilyId._id : product.skuFamilyId,
