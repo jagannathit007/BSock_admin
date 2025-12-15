@@ -482,17 +482,24 @@ const OrdersTable: React.FC = () => {
             ` : ''}
           </div>
           <div id="otherChargesContainer" style="margin-bottom: 20px;">
-            <label for="otherChargesInput" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Other Charges (Optional)</label>
-            <input
-              type="number"
-              id="otherChargesInput"
-              min="0"
-              step="0.01"
-              value="${selectedOtherCharges || ''}"
-              placeholder="Enter other charges amount"
-              style="width: 100%; margin:0px; padding: 10px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 6px; background-color: #F9FAFB; color: #1F2937; outline: none; transition: border-color 0.2s;"
-            />
-            <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Note: Other charges can only be added before WAITING_FOR_PAYMENT stage</p>
+            <label for="otherChargesInput" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Other Charges</label>
+            ${order.otherCharges !== null && order.otherCharges !== undefined && Number(order.otherCharges) > 0 ? `
+              <div style="padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px; background-color: #F9FAFB; color: #111827; font-size: 14px;">
+                Added: ${Number(order.otherCharges).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Other charges already applied to this order.</p>
+            ` : `
+              <input
+                type="number"
+                id="otherChargesInput"
+                min="0"
+                step="0.01"
+                value="${selectedOtherCharges || ''}"
+                placeholder="Enter other charges amount"
+                style="width: 100%; margin:0px; padding: 10px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 6px; background-color: #F9FAFB; color: #1F2937; outline: none; transition: border-color 0.2s;"
+              />
+              <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Other charges will be added to the order total.</p>
+            `}
           </div>
           <div id="imagesContainer" style="margin-bottom: 20px;">
             <label for="imagesInput" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Upload Images (Optional)</label>
@@ -690,17 +697,7 @@ const OrdersTable: React.FC = () => {
               }
             }
 
-            // Check if otherCharges can be added (only before WAITING_FOR_PAYMENT)
-            if (selectedOtherCharges !== null && selectedOtherCharges > 0) {
-              if (orderStages && orderStages.length > 0) {
-                const waitingForPaymentIndex = orderStages.indexOf('waiting_for_payment');
-                const currentStatusIndex = orderStages.indexOf(selectedStatus);
-                if (waitingForPaymentIndex !== -1 && currentStatusIndex >= waitingForPaymentIndex) {
-                  Swal.showValidationMessage('Other charges can only be added before WAITING_FOR_PAYMENT stage');
-                  return false;
-                }
-              }
-            }
+            // Other charges allowed at any stage (no validation block)
 
             console.log('Selected Status:', selectedStatus);
             console.log('Current Status:', currentStatus);
