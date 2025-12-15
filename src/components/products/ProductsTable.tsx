@@ -64,6 +64,25 @@ const navigate = useNavigate();
   const [isAdminDetailsModalOpen, setIsAdminDetailsModalOpen] = useState<boolean>(false);
   const [selectedProductForDetails, setSelectedProductForDetails] = useState<Product | null>(null);
 
+  // Helper to extract seller id from various shapes
+  const getProductSellerId = (product: any): string | null => {
+    const tryExtract = (value: any): string | null => {
+      if (!value) return null;
+      if (typeof value === 'string') return value;
+      if (typeof value === 'object') {
+        return value._id || value.id || value.sellerId || null;
+      }
+      return null;
+    };
+
+    return (
+      tryExtract(product?.sellerId) ||
+      tryExtract(product?.addedBySeller) ||
+      tryExtract(product?.createdBy) ||
+      null
+    );
+  };
+
   const handleExport = async () => {
     try {
       const blob = await ProductService.exportProductsExcel();
@@ -155,9 +174,22 @@ const navigate = useNavigate();
           itemsPerPage,
           debouncedSearchTerm
         );
-        setProductsData(response.data.docs || []);
-        setTotalDocs(response.data.totalDocs || 0);
-        setTotalPages(response.data.totalPages || 1);
+        let docs = response.data.docs || [];
+
+        if (sellerFilter !== "all") {
+          docs = docs.filter((product: any) => getProductSellerId(product) === sellerFilter);
+        }
+
+        setProductsData(docs);
+
+        if (sellerFilter !== "all") {
+          const filteredCount = docs.length;
+          setTotalDocs(filteredCount);
+          setTotalPages(Math.max(1, Math.ceil(filteredCount / itemsPerPage)));
+        } else {
+          setTotalDocs(response.data.totalDocs || 0);
+          setTotalPages(response.data.totalPages || 1);
+        }
         setLoading(false);
         return;
       }
@@ -404,10 +436,16 @@ const navigate = useNavigate();
   };
 
   const handleEdit = (product: Product) => {
-    if (product._id) {
-      // Navigate to ProductVariantForm with product ID for editing
+    // Multi-variant products are identified by a groupCode and should open the multi-variant form
+    const groupCode = (product as any)?.groupCode;
+
+    if (groupCode) {
+      navigate(`/products/create?groupCode=${encodeURIComponent(groupCode)}`);
+    } else if (product._id) {
+      // Single-variant edit
       navigate(`/products/create?editId=${product._id}`);
     }
+
     setOpenDropdownId(null);
     setDropdownPosition(null);
   };
@@ -672,6 +710,58 @@ const navigate = useNavigate();
     }
   };
 
+  const handleBulkEdit = () => {
+    if (selectedProductIds.size === 0) {
+      toastHelper.showTost('Please select at least one product', 'warning');
+      return;
+    }
+
+    const selectedProducts = productsData.filter(
+      (p) => p._id && selectedProductIds.has(p._id),
+    );
+
+    if (selectedProducts.length === 0) {
+      toastHelper.showTost('Selected products not found', 'error');
+      return;
+    }
+
+    // Enforce groupCode rules:
+    // - If multi-variant (groupCode present), all selected must share the same groupCode
+    // - Do not mix single-variant (no groupCode) with multi-variant selections
+    const groupCodes = new Set(
+      selectedProducts
+        .map((p) => (p as any)?.groupCode)
+        .filter((code): code is string => Boolean(code)),
+    );
+
+    if (groupCodes.size > 1) {
+      toastHelper.showTost(
+        'Please select multi-variant products with the same group code only.',
+        'warning',
+      );
+      return;
+    }
+
+    if (groupCodes.size === 1) {
+      const groupCode = Array.from(groupCodes)[0];
+      const mixedSingle = selectedProducts.some((p) => !(p as any)?.groupCode);
+      if (mixedSingle) {
+        toastHelper.showTost(
+          `Cannot mix multi-variant products (group ${groupCode}) with single-variant products. Select only products with the same group code.`,
+          'warning',
+        );
+        return;
+      }
+    }
+
+    const idsParam = selectedProducts
+      .map((p) => p._id)
+      .filter((id): id is string => Boolean(id))
+      .join(',');
+    setBulkActionDropdownOpen(false);
+    navigate(`/products/create?editIds=${encodeURIComponent(idsParam)}`);
+  };
+
   const handleBulkVerify = async () => {
     if (selectedProductIds.size === 0) {
       toastHelper.showTost('Please select at least one product', 'warning');
@@ -828,6 +918,10 @@ const navigate = useNavigate();
       return isNaN(num) ? "0.00" : num.toFixed(2);
     }
     return price.toFixed(2);
+  };
+
+  const isMultiVariant = (product: Product): boolean => {
+    return Boolean((product as any)?.groupCode);
   };
 
   const getCountryPrice = (product: Product, country: "Hongkong" | "Dubai"): string => {
@@ -996,6 +1090,18 @@ const navigate = useNavigate();
                       ></div>
                       <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20">
                         <div className="py-1" role="menu">
+                          {canWrite && (
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              onClick={() => {
+                                setBulkActionDropdownOpen(false);
+                                handleBulkEdit();
+                              }}
+                            >
+                              <i className="fas fa-edit text-xs text-blue-600"></i>
+                              Edit Products
+                            </button>
+                          )}
                           {canWrite && (
                             <button
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
@@ -1181,8 +1287,16 @@ const navigate = useNavigate();
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        {getSkuFamilyText(item.skuFamilyId)}
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+                        <span>{getSkuFamilyText(item.skuFamilyId)}</span>
+                        {isMultiVariant(item) && (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700 border border-purple-200"
+                            title={`Multi-variant group: ${(item as any).groupCode || ''}`}
+                          >
+                            MV
+                          </span>
+                        )}
                       </div>
                       {renderProductBadges(item)}
                     </td>
@@ -1707,6 +1821,16 @@ const navigate = useNavigate();
                         {selectedProduct.moq} units
                       </p>
                     </div>
+                    {selectedProduct.totalMoq !== undefined && selectedProduct.totalMoq !== null && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          MOQ PER CART
+                        </label>
+                        <p className="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                          {selectedProduct.totalMoq} units
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Country
@@ -1898,14 +2022,6 @@ const navigate = useNavigate();
                       </label>
                       <p className="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
                         {(selectedProduct as any).shippingTime || 'N/A'}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Delivery Time
-                      </label>
-                      <p className="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                        {(selectedProduct as any).deliveryTime || 'N/A'}
                       </p>
                     </div>
                     <div>

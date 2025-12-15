@@ -54,7 +54,6 @@ export interface ProductRowData {
   tags: string; // Comma-separated string of tag codes
   flashDeal: string;
   shippingTime: string;
-  deliveryTime: string;
   vendor: string;
   vendorListingNo: string;
   carrier: string;
@@ -112,11 +111,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
   const [supplierListingNumbers, setSupplierListingNumbers] = useState<Record<string, { listingNumber: number; supplierCode: string }>>({});
   const [currentUniqueListingNumber, setCurrentUniqueListingNumber] = useState<number | null>(null);
   const [shippingTimeMode, setShippingTimeMode] = useState<Record<number, 'today' | 'tomorrow' | 'calendar' | ''>>({});
-  const totalMoqCellRef = useRef<HTMLDivElement | null>(null);
   const rowsContainerRef = useRef<HTMLDivElement | null>(null);
-  const totalMoqPlaceholderRef = useRef<HTMLDivElement | null>(null);
-  const [totalMoqHeight, setTotalMoqHeight] = useState<number>(0);
-  const [totalMoqLeft, setTotalMoqLeft] = useState<number>(0);
 
   // Modal states
   const [showMarginModal, setShowMarginModal] = useState(false);
@@ -145,6 +140,20 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     group?: string;
     subgroup?: string;
   };
+
+  // Fields that must be shared across all variants in a multi-variant group.
+  // These are editable only on the first (master) row and read-only on others.
+  const groupLevelFields: (keyof ProductRowData)[] = [
+    'supplierId',
+    'currentLocation',
+    'paymentTerm',
+    'paymentMethod',
+    'negotiableFixed',
+    'flashDeal',
+    'shippingTime',
+    'startTime',
+    'endTime',
+  ];
 
   // LocalStorage key for saving form data
   const STORAGE_KEY = 'variant-product-form-data';
@@ -240,7 +249,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           tags: (product as any).tags || '',
           flashDeal: (product as any).isFlashDeal === 'true' || (product as any).isFlashDeal === true ? '1' : '0',
           shippingTime: (product as any).shippingTime || '',
-          deliveryTime: (product as any).deliveryTime || '',
           vendor: (product as any).vendor || '',
           vendorListingNo: (product as any).vendorListingNo || '',
           carrier: (product as any).carrier || '',
@@ -262,6 +270,47 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
       });
       console.log('Transformed rows:', transformedRows);
       setRows(transformedRows);
+
+      // Initialize MOQ PER CART (totalMoq) when editing a multi-variant product
+      if (variantType === 'multi' && editProducts.length > 0) {
+        const firstProduct: any = editProducts[0];
+        let initialTotalMoq: number | string = '';
+
+        // Try to read a group/cart MOQ from the product, if backend provides one
+        if (firstProduct) {
+          if (firstProduct.totalMoq !== undefined && firstProduct.totalMoq !== null) {
+            initialTotalMoq = firstProduct.totalMoq;
+          } else if (firstProduct.moqPerCart !== undefined && firstProduct.moqPerCart !== null) {
+            initialTotalMoq = firstProduct.moqPerCart;
+          } else if (firstProduct.cartMoq !== undefined && firstProduct.cartMoq !== null) {
+            initialTotalMoq = firstProduct.cartMoq;
+          }
+        }
+
+        // Fallback: if no explicit cart MOQ exists, derive a sensible default
+        // from the current rows (e.g. sum of per-variant MOQ values).
+        const numericTotal =
+          typeof initialTotalMoq === 'number'
+            ? initialTotalMoq
+            : typeof initialTotalMoq === 'string' && initialTotalMoq.trim() !== ''
+              ? Number(initialTotalMoq)
+              : 0;
+
+        if (!numericTotal || Number.isNaN(numericTotal)) {
+          const sumFromRows = transformedRows.reduce((sum, row) => {
+            const val = typeof row.moqPerVariant === 'string'
+              ? Number(row.moqPerVariant)
+              : (row.moqPerVariant as number) || 0;
+            return sum + (Number.isNaN(val) ? 0 : val);
+          }, 0);
+
+          if (sumFromRows > 0) {
+            setTotalMoq(sumFromRows);
+          }
+        } else {
+          setTotalMoq(numericTotal);
+        }
+      }
       
       // Extract custom columns from custom fields if any
       if (transformedRows.length > 0) {
@@ -423,57 +472,10 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     }
   }, [rows.map(r => r.shippingTime).join(',')]);
 
-  useEffect(() => {
-    if (variantType === 'multi' && rows.length > 0) {
-      const updatePosition = () => {
-        if (rowsContainerRef.current) {
-          // Get the actual height of the rows container
-          const containerHeight = rowsContainerRef.current.scrollHeight;
-          setTotalMoqHeight(containerHeight);
-        } else {
-          // Fallback: calculate approximate height (40px per row + borders)
-          const approximateHeight = rows.length * 40;
-          setTotalMoqHeight(approximateHeight);
-        }
-        
-        // Measure the actual left position from the placeholder
-        if (totalMoqPlaceholderRef.current && rowsContainerRef.current) {
-          const placeholderRect = totalMoqPlaceholderRef.current.getBoundingClientRect();
-          const containerRect = rowsContainerRef.current.getBoundingClientRect();
-          const leftPosition = placeholderRect.left - containerRect.left;
-          setTotalMoqLeft(leftPosition);
-        }
-      };
-      
-      // Use ResizeObserver for accurate tracking
-      if (rowsContainerRef.current) {
-        const resizeObserver = new ResizeObserver(() => {
-          updatePosition();
-        });
-        resizeObserver.observe(rowsContainerRef.current);
-        
-        // Initial update
-        updatePosition();
-        
-        // Also update after a short delay to ensure DOM is ready
-        const timeoutId = setTimeout(updatePosition, 100);
-        const timeoutId2 = setTimeout(updatePosition, 300);
-        
-        return () => {
-          resizeObserver.disconnect();
-          clearTimeout(timeoutId);
-          clearTimeout(timeoutId2);
-        };
-      } else {
-        // Fallback calculation
-        const approximateHeight = rows.length * 40;
-        setTotalMoqHeight(approximateHeight);
-      }
-    } else {
-      setTotalMoqHeight(0);
-      setTotalMoqLeft(0);
-    }
-  }, [rows.length, variantType, rows]);
+  // NOTE: Previously there was complex positioning logic here to render
+  // a special merged cell UI for the "MOQ PER CART" column. That logic
+  // has been removed; `totalMoq` now behaves like a regular numeric
+  // field (editable on the first row, read-only on others).
 
   // Save data to localStorage whenever rows, totalMoq, or customColumns change
   useEffect(() => {
@@ -526,7 +528,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     tags: '',
     flashDeal: '',
     shippingTime: '',
-    deliveryTime: '',
     vendor: '',
     vendorListingNo: '',
     carrier: '',
@@ -817,6 +818,15 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     setRows(prevRows => {
       const newRows = [...prevRows];
       newRows[index] = { ...newRows[index], [field]: value };
+
+      // In multi-variant mode, keep group-level fields identical across all rows.
+      if (variantType === 'multi' && groupLevelFields.includes(field)) {
+        for (let i = 0; i < newRows.length; i++) {
+          if (i !== index) {
+            (newRows[i] as any)[field] = value;
+          }
+        }
+      }
       
       // Auto-generate supplier listing number when supplier is selected
       if (field === 'supplierId' && value) {
@@ -901,7 +911,19 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
   };
 
   const addRow = () => {
-    setRows(prevRows => [...prevRows, createEmptyRow(prevRows.length)]);
+    setRows(prevRows => {
+      const baseRow = createEmptyRow(prevRows.length);
+
+      // In multi-variant mode, new variants inherit group-level fields from master row (row 0)
+      if (variantType === 'multi' && prevRows.length > 0) {
+        const master = prevRows[0];
+        groupLevelFields.forEach((field) => {
+          (baseRow as any)[field] = (master as any)[field];
+        });
+      }
+
+      return [...prevRows, baseRow];
+    });
   };
 
   const removeRow = (index: number) => {
@@ -936,10 +958,24 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // For multi-variant products, enforce that all group-level fields match the master row
+    let normalizedRows = rows;
+    if (variantType === 'multi' && rows.length > 1) {
+      const master = rows[0];
+      normalizedRows = rows.map((row, index) => {
+        if (index === 0) return row;
+        const updated: ProductRowData = { ...row };
+        groupLevelFields.forEach((field) => {
+          (updated as any)[field] = (master as any)[field];
+        });
+        return updated;
+      });
+    }
+
     // Set current time for start time if not entered
     const currentTime = new Date().toISOString();
-    const updatedRows = rows.map(row => ({
+    const updatedRows = normalizedRows.map(row => ({
       ...row,
       startTime: row.startTime || currentTime
     }));
@@ -1222,6 +1258,13 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
       // Transform calculation results back to product format with calculated prices
       // IMPORTANT: Each calculation result represents ONE product row, and we create ONE product per row
       // with ALL countryDeliverables combined (USD + local currency for each country)
+      const normalizeEnum = (val: any, allowed: string[]): string | null => {
+        if (val === null || val === undefined) return null;
+        const str = String(val).trim().toLowerCase();
+        const match = allowed.find((opt) => opt.toLowerCase() === str);
+        return match || null;
+      };
+
       const productsToCreate = calculationResults.map((result) => {
         const row = result.product;
         
@@ -1389,10 +1432,9 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
             return [];
           })(),
           shippingTime: cleanString(row.shippingTime) || '',
-          deliveryTime: cleanString(row.deliveryTime) || '',
-          vendor: cleanString(row.vendor) || null,
+          vendor: normalizeEnum(row.vendor, ['att', 'tmobile']),
           vendorListingNo: cleanString(row.vendorListingNo) || '',
-          carrier: cleanString(row.carrier) || null,
+          carrier: normalizeEnum(row.carrier, ['tmob', 'mixed']),
           carrierListingNo: cleanString(row.carrierListingNo) || '',
           uniqueListingNo: cleanString(row.uniqueListingNo) || '',
           tags: cleanString(row.tags) || '',
@@ -1473,7 +1515,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     { key: 'negotiableFixed', label: 'NEGOTIABLE/FIXED', width: 150, group: 'Other Info' },
     { key: 'flashDeal', label: 'FLASH DEAL', width: 130, group: 'Other Info' },
     { key: 'shippingTime', label: 'SHIPPING TIME', width: 130, group: 'Other Info' },
-    { key: 'deliveryTime', label: 'DELIVERY TIME', width: 130, group: 'Other Info' },
     { key: 'vendor', label: 'VENDOR', width: 100, group: 'Other Info' },
     { key: 'vendorListingNo', label: 'VENDOR LISTING NO', width: 150, group: 'Other Info' },
     { key: 'carrier', label: 'CARRIER', width: 100, group: 'Other Info' },
@@ -1533,6 +1574,17 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
   const renderCell = (row: ProductRowData, rowIndex: number, column: typeof columns[0]) => {
     const value = row[column.key as keyof ProductRowData];
     const cellId = `${rowIndex}-${column.key}`;
+
+    const isMultiVariant = variantType === 'multi';
+    const isGroupLevelField =
+      isMultiVariant && groupLevelFields.includes(column.key as keyof ProductRowData);
+    const isMasterRow = rowIndex === 0;
+
+    // For group-level fields in multi-variant mode, non-master rows always display the master row's value
+    const groupDisplayValue =
+      isGroupLevelField && !isMasterRow && rows.length > 0
+        ? (rows[0][column.key as keyof ProductRowData] as any)
+        : value;
 
     switch (column.key) {
       case 'skuFamilyId':
@@ -1759,10 +1811,11 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         const options = column.key === 'lockUnlock' ? lockUnlockOptions : negotiableFixedOptions;
         return (
           <select
-            value={value as string}
+            value={groupDisplayValue as string}
             onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
             className="w-full px-2 py-1 text-xs border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
             required={column.key === 'lockUnlock'}
+            disabled={isGroupLevelField && !isMasterRow}
             onFocus={() => {
               setFocusedCell({ row: rowIndex, col: column.key });
               setSelectedRowIndex(rowIndex);
@@ -1823,9 +1876,10 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
       case 'flashDeal':
         return (
           <select
-            value={value as string}
+            value={groupDisplayValue as string}
             onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
             className="w-full px-2 py-1 text-xs border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+            disabled={isGroupLevelField && !isMasterRow}
             onFocus={() => {
               setFocusedCell({ row: rowIndex, col: column.key });
               setSelectedRowIndex(rowIndex);
@@ -1842,10 +1896,10 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
       case 'paymentTerm':
         // Handle array of strings
-        const selectedTerms = Array.isArray(value) 
-          ? value.filter(t => t && t.trim() !== '')
-          : (typeof value === 'string' && value.trim()
-              ? value.split(',').map(t => t.trim()).filter(t => t)
+        const selectedTerms = Array.isArray(groupDisplayValue) 
+          ? (groupDisplayValue as string[]).filter(t => t && t.trim() !== '')
+          : (typeof groupDisplayValue === 'string' && (groupDisplayValue as string).trim()
+              ? (groupDisplayValue as string).split(',').map(t => t.trim()).filter(t => t)
               : []);
         const selectedTermOptions = paymentTermOptions
           .filter(opt => selectedTerms.includes(opt.code))
@@ -1865,6 +1919,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
               classNamePrefix="select"
               isSearchable={false}
               placeholder="Select terms..."
+              isDisabled={isGroupLevelField && !isMasterRow}
               styles={{
                 control: (provided, state) => ({ 
                   ...provided, 
@@ -1910,10 +1965,10 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
       case 'paymentMethod':
         // Handle array of strings
-        const selectedMethods = Array.isArray(value) 
-          ? value.filter(m => m && m.trim() !== '')
-          : (typeof value === 'string' && value.trim()
-              ? value.split(',').map(m => m.trim()).filter(m => m)
+        const selectedMethods = Array.isArray(groupDisplayValue) 
+          ? (groupDisplayValue as string[]).filter(m => m && m.trim() !== '')
+          : (typeof groupDisplayValue === 'string' && (groupDisplayValue as string).trim()
+              ? (groupDisplayValue as string).split(',').map(m => m.trim()).filter(m => m)
               : []);
         const selectedOptions = paymentMethodOptions
           .filter(opt => selectedMethods.includes(opt.code))
@@ -1933,6 +1988,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
               classNamePrefix="select"
               isSearchable={false}
               placeholder="Select methods..."
+              isDisabled={isGroupLevelField && !isMasterRow}
               styles={{
                 control: (provided, state) => ({ 
                   ...provided, 
@@ -1979,10 +2035,11 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
       case 'currentLocation':
         return (
           <select
-            value={value as string}
+            value={groupDisplayValue as string}
             onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
             className="w-full px-2 py-1 text-xs border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
             required
+            disabled={isGroupLevelField && !isMasterRow}
             onFocus={() => {
               setFocusedCell({ row: rowIndex, col: column.key });
               setSelectedRowIndex(rowIndex);
@@ -2045,31 +2102,34 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         );
 
       case 'totalMoq':
-        // Only render in first row, will span all rows
-        if (rowIndex === 0 && variantType === 'multi') {
-          return (
-            <div className="flex flex-col items-center justify-center w-full h-full py-2">
-              <input
-                type="number"
-                step="0.01"
-                value={totalMoq}
-                onChange={(e) => setTotalMoq(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border-2 border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-medium text-center"
-                placeholder="0.00"
-                required
-                onFocus={() => {
-                  setFocusedCell({ row: rowIndex, col: column.key });
-                  setSelectedRowIndex(rowIndex);
-                }}
-              />
-              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
-                All {rows.length} products
-              </span>
-            </div>
-          );
+        // Simple numeric field for MOQ PER CART.
+        // Editable only in the first (master) row for multi-variant,
+        // read-only for other rows; hidden for single-variant products.
+        if (variantType !== 'multi') {
+          return null;
         }
-        // Don't render for other rows or single variant
-        return null;
+
+        const isMasterMoqRow = rowIndex === 0;
+
+        return (
+          <input
+            type="number"
+            step="0.01"
+            value={totalMoq}
+            onChange={(e) => {
+              if (isMasterMoqRow) {
+                setTotalMoq(e.target.value);
+              }
+            }}
+            className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 text-right font-medium placeholder:text-gray-400"
+            placeholder="0.00"
+            disabled={!isMasterMoqRow}
+            onFocus={() => {
+              setFocusedCell({ row: rowIndex, col: column.key });
+              setSelectedRowIndex(rowIndex);
+            }}
+          />
+        );
 
       case 'deliveryLocation':
         const deliveryValue = Array.isArray(value) ? value : (value ? [value] : []);
@@ -2882,33 +2942,8 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
             </div>
           </div>
 
-          {/* Enhanced Rows */}
+          {/* Rows */}
           <div ref={rowsContainerRef} className="relative">
-            {variantType === 'multi' && rows.length > 0 && totalMoqLeft > 0 && (() => {
-              const totalMoqCol = columns.find(col => col.key === 'totalMoq');
-              if (!totalMoqCol) return null;
-              
-              return (
-                <div
-                  ref={totalMoqCellRef}
-                  className="px-0 py-1.5 border-r border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/30 absolute"
-                  style={{ 
-                    width: `${totalMoqCol.width}px`, 
-                    minWidth: `${totalMoqCol.width}px`,
-                    left: `${totalMoqLeft}px`,
-                    top: '0',
-                    height: totalMoqHeight > 0 ? `${totalMoqHeight}px` : `${rows.length * 40}px`,
-                    minHeight: totalMoqHeight > 0 ? `${totalMoqHeight}px` : `${rows.length * 40}px`,
-                    zIndex: 10
-                  }}
-                  title={`MOQ PER CART for all ${rows.length} products`}
-                >
-                  <div className="w-full h-full flex flex-col items-center justify-center px-2">
-                    {renderCell(rows[0], 0, totalMoqCol)}
-                  </div>
-                </div>
-              );
-            })()}
             {rows.map((row, rowIndex) => (
               <div
                 key={rowIndex}
@@ -2961,28 +2996,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
                 {/* Enhanced Cells */}
                 {columns.map((col) => {
-                  // For totalMoq column in multi-variant mode:
-                  // - Render invisible placeholder in all rows to maintain column alignment
-                  // - The actual spanning cell is rendered outside the row loop
-                  // - Use ref on first row's placeholder to measure position
-                  if (col.key === 'totalMoq' && variantType === 'multi') {
-                    return (
-                      <div
-                        key={`${rowIndex}-${col.key}`}
-                        ref={rowIndex === 0 ? totalMoqPlaceholderRef : null}
-                        className="px-0 py-1.5 border-r border-gray-200 dark:border-gray-700"
-                        style={{ 
-                          width: `${col.width}px`, 
-                          minWidth: `${col.width}px`,
-                          visibility: 'hidden',
-                          pointerEvents: 'none'
-                        }}
-                        aria-hidden="true"
-                      />
-                    );
-                  }
-                  
-                  // Regular columns (not totalMoq or totalMoq in single variant)
+                  // Render all columns (including totalMoq) as regular cells
                   return (
                     <div
                       key={`${rowIndex}-${col.key}`}

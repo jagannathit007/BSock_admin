@@ -82,9 +82,12 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
   };
 
   const handleNext = () => {
-    // Validate that at least seller category is selected if products have seller code
-    if (hasSellerCode && !selection.sellerCategory) {
-      toastHelper.showTost('Seller Category margin is required when products have seller code', 'warning');
+    // Validate that at least one of seller or customer category is selected when products have seller code
+    if (hasSellerCode && !selection.sellerCategory && !selection.customerCategory) {
+      toastHelper.showTost(
+        'Please select at least Seller Category or Customer Category margin when products have seller code',
+        'warning'
+      );
       return;
     }
     onNext(selection);
@@ -120,14 +123,10 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
                 <span className="ml-3 text-lg font-medium text-gray-800 dark:text-white">
                   Seller Category Margin
                 </span>
-                {hasSellerCode && (
-                  <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">
-                    (Required)
-                  </span>
-                )}
               </label>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 ml-8">
-                Apply margin based on seller category. If disabled, all other margins will be disabled.
+                Apply margin based on seller category. If disabled, all other margins except customer category will be
+                disabled.
               </p>
             </div>
 

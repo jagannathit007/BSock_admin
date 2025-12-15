@@ -12,13 +12,19 @@ const ProductVariantForm: React.FC = () => {
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type');
   const editId = searchParams.get('editId');
+  const editIdsParam = searchParams.get('editIds');
+  const groupCodeParam = searchParams.get('groupCode');
+  const editIds = (editIdsParam || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [editProducts, setEditProducts] = useState<Product[]>([]); // For multi-variant products
   const [loadingProduct, setLoadingProduct] = useState(false);
   
   // Initialize step and variantType based on URL parameter
   const getInitialStep = (): PageStep => {
-    if (editId) {
+    if (editId || editIds.length > 0 || groupCodeParam) {
       return 'form'; // Go directly to form when editing
     }
     if (typeParam === 'single') {
@@ -31,9 +37,14 @@ const ProductVariantForm: React.FC = () => {
   };
 
   const getInitialVariantType = (): 'single' | 'multi' | null => {
+    if (groupCodeParam) {
+      return 'multi';
+    }
+    if (editIds.length > 0) {
+      return editIds.length > 1 ? 'multi' : 'single';
+    }
     if (editId) {
-      // Will be determined after loading product
-      return null;
+      return null; // Determined after loading product
     }
     if (typeParam === 'single') {
       return 'single';
@@ -48,81 +59,144 @@ const ProductVariantForm: React.FC = () => {
   const [variantType, setVariantType] = useState<'single' | 'multi' | null>(getInitialVariantType());
   const [selectedVariants, setSelectedVariants] = useState<VariantOption[]>([]);
   const [loading, setLoading] = useState(false);
-  // Load product data when editing
+  // Load product data when editing (single or multiple)
   useEffect(() => {
-    const loadProductForEdit = async () => {
-      if (!editId) return;
-      
+    const mapProductToVariant = (p: Product): VariantOption => {
+      const skuFamily = typeof p.skuFamilyId === 'object' ? p.skuFamilyId : null;
+      let subModelName = '';
+      if (p.specification) {
+        subModelName = p.specification;
+      } else if (skuFamily && (skuFamily as any).subSkuFamilies && Array.isArray((skuFamily as any).subSkuFamilies)) {
+        const matchingSubSku = (skuFamily as any).subSkuFamilies.find((sub: any) => sub.subName);
+        if (matchingSubSku && matchingSubSku.subName) {
+          subModelName = matchingSubSku.subName;
+        }
+      }
+      return {
+        skuFamilyId: typeof p.skuFamilyId === 'object' ? (p.skuFamilyId as any)._id : p.skuFamilyId,
+        subModelName,
+        storage: p.storage || '',
+        color: p.color || '',
+        ram: p.ram || '',
+      };
+    };
+
+    const loadProductsForEdit = async () => {
+      if (!editId && editIds.length === 0 && !groupCodeParam) return;
+
       try {
         setLoadingProduct(true);
-        const product = await ProductService.getProductById(editId);
-        
-        console.log('Loaded product for edit:', product);
-        
-        if (!product) {
-          toastHelper.showTost('Product not found', 'error');
-          navigate('/products');
-          return;
-        }
-        
-        // Check if it's a multi-variant product (has groupCode)
-        const groupCode = (product as any).groupCode;
-        if (groupCode) {
-          // Load all products with the same groupCode
-          const response = await ProductService.getProductList(1, 1000, '', false, false, false, false);
-          const allProducts = response.data.docs || [];
-          const groupedProducts = allProducts.filter((p: any) => p.groupCode === groupCode);
-          
+
+        // Prefer explicit groupCode param for multi-variant edit
+        if (groupCodeParam) {
+          const groupedProducts = await ProductService.getProductsByGroupCode(groupCodeParam);
+
+          if (!groupedProducts || groupedProducts.length === 0) {
+            toastHelper.showTost('No products found for this group code', 'warning');
+            navigate('/products');
+            return;
+          }
+
           setEditProducts(groupedProducts);
           setVariantType('multi');
-          
-          // Set variants from products
-          const variants: VariantOption[] = groupedProducts.map((p: Product) => {
-            const skuFamily = typeof p.skuFamilyId === 'object' ? p.skuFamilyId : null;
-            // Get subModelName from specification
-            let subModelName = '';
-            if (p.specification) {
-              subModelName = p.specification;
-            }
-            return {
-              skuFamilyId: typeof p.skuFamilyId === 'object' ? p.skuFamilyId._id : p.skuFamilyId,
-              subModelName: subModelName,
-              storage: p.storage || '',
-              color: p.color || '',
-              ram: p.ram || '',
-            };
-          });
-          setSelectedVariants(variants);
-        } else {
-          // Single variant product
-          console.log('Setting single variant product:', product);
-          setEditProduct(product);
-          setVariantType('single');
-          
-          const skuFamily = typeof product.skuFamilyId === 'object' ? product.skuFamilyId : null;
-          // Get subModelName from specification or find matching subSkuFamily
-          let subModelName = '';
-          if (product.specification) {
-            subModelName = product.specification;
+          setSelectedVariants(groupedProducts.map(mapProductToVariant));
+          setStep('form');
+          try {
+            localStorage.removeItem('variant-product-form-data');
+          } catch (error) {
+            console.error('Error clearing localStorage:', error);
           }
-          const variant = {
-            skuFamilyId: typeof product.skuFamilyId === 'object' ? product.skuFamilyId._id : product.skuFamilyId,
-            subModelName: subModelName,
-            storage: product.storage || '',
-            color: product.color || '',
-            ram: product.ram || '',
-          };
-          console.log('Setting selected variant:', variant);
-          setSelectedVariants([variant]);
+          return;
         }
-        
-        setStep('form');
-        
-        // Clear localStorage when editing to prevent conflicts
-        try {
-          localStorage.removeItem('variant-product-form-data');
-        } catch (error) {
-          console.error('Error clearing localStorage:', error);
+
+        // If multiple IDs were provided via editIds query param
+        if (editIds.length > 0) {
+          const fetched = await Promise.all(
+            editIds.map(async (id) => {
+              try {
+                return await ProductService.getProductById(id);
+              } catch (err) {
+                console.error('Failed to load product', id, err);
+                return null;
+              }
+            })
+          );
+          const validProducts = fetched.filter((p): p is Product => Boolean(p));
+
+          if (validProducts.length === 0) {
+            toastHelper.showTost('Selected products not found', 'error');
+            navigate('/products');
+            return;
+          }
+
+          if (validProducts.length === 1) {
+            const product = validProducts[0];
+            const groupCode = (product as any)?.groupCode;
+
+            if (groupCode) {
+              const groupedProducts = await ProductService.getProductsByGroupCode(groupCode);
+
+              if (!groupedProducts || groupedProducts.length === 0) {
+                toastHelper.showTost('No products found for this group code', 'warning');
+                navigate('/products');
+                return;
+              }
+
+              setEditProducts(groupedProducts);
+              setVariantType('multi');
+              setSelectedVariants(groupedProducts.map(mapProductToVariant));
+            } else {
+              setEditProduct(product);
+              setVariantType('single');
+              setSelectedVariants([mapProductToVariant(product)]);
+            }
+          } else {
+            setEditProducts(validProducts);
+            setVariantType('multi');
+            setSelectedVariants(validProducts.map(mapProductToVariant));
+          }
+
+          setStep('form');
+          try {
+            localStorage.removeItem('variant-product-form-data');
+          } catch (error) {
+            console.error('Error clearing localStorage:', error);
+          }
+          return;
+        }
+
+        // Legacy single editId flow
+        if (editId) {
+          const product = await ProductService.getProductById(editId);
+
+          console.log('Loaded product for edit:', product);
+
+          if (!product) {
+            toastHelper.showTost('Product not found', 'error');
+            navigate('/products');
+            return;
+          }
+
+          const groupCode = (product as any).groupCode;
+          if (groupCode) {
+            const groupedProducts = await ProductService.getProductsByGroupCode(groupCode);
+
+            setEditProducts(groupedProducts);
+            setVariantType('multi');
+            setSelectedVariants(groupedProducts.map(mapProductToVariant));
+          } else {
+            setEditProduct(product);
+            setVariantType('single');
+            setSelectedVariants([mapProductToVariant(product)]);
+          }
+
+          setStep('form');
+
+          try {
+            localStorage.removeItem('variant-product-form-data');
+          } catch (error) {
+            console.error('Error clearing localStorage:', error);
+          }
         }
       } catch (error: any) {
         console.error('Error loading product:', error);
@@ -132,9 +206,9 @@ const ProductVariantForm: React.FC = () => {
         setLoadingProduct(false);
       }
     };
-    
-    loadProductForEdit();
-  }, [editId, navigate]);
+
+    loadProductsForEdit();
+  }, [editId, editIds.length, groupCodeParam, navigate]);
 
   // For multi variant, initialize with empty variant to allow form entry
   useEffect(() => {
@@ -190,6 +264,7 @@ const ProductVariantForm: React.FC = () => {
   const handleFormSave = async (rows: ProductRowData[], totalMoq?: number | string) => {
     try {
       setLoading(true);
+      const isEditMode = Boolean(editId || editIds.length > 0);
       
       // Validate all required IDs before processing
       const validationErrors: string[] = [];
@@ -325,7 +400,7 @@ const ProductVariantForm: React.FC = () => {
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
           expiryTime: cleanString(row.endTime) ? new Date(row.endTime).toISOString() : '',
           groupCode: variantType === 'multi' 
-            ? (editId && editProducts.length > 0 ? (editProducts[0] as any).groupCode : (row.groupCode || `GROUP-${Date.now()}`))
+            ? ((editId || editIds.length > 0) && editProducts.length > 0 ? (editProducts[0] as any).groupCode : (row.groupCode || `GROUP-${Date.now()}`))
             : undefined,
           sequence: row.sequence || null,
           countryDeliverables,
@@ -367,7 +442,6 @@ const ProductVariantForm: React.FC = () => {
             return [];
           })(),
           shippingTime: cleanString(row.shippingTime) || '',
-          deliveryTime: cleanString(row.deliveryTime) || '',
           vendor: cleanString(row.vendor) || null,
           vendorListingNo: cleanString(row.vendorListingNo) || '',
           carrier: cleanString(row.carrier) || null,
@@ -383,7 +457,7 @@ const ProductVariantForm: React.FC = () => {
       });
 
       // Update or create products
-      if (editId) {
+      if (isEditMode) {
         // Update existing products
         if (variantType === 'single' && editProduct?._id) {
           // Single variant update
@@ -658,7 +732,7 @@ const ProductVariantForm: React.FC = () => {
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600 dark:text-gray-400">{editId ? 'Updating products...' : 'Creating products...'}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{(editId || editIds.length > 0) ? 'Updating products...' : 'Creating products...'}</p>
                 </div>
               </div>
             ) : variantType ? (
@@ -667,7 +741,7 @@ const ProductVariantForm: React.FC = () => {
                 variants={selectedVariants}
                 onSave={handleFormSave}
                 onCancel={handleCancel}
-                editProducts={editId ? (variantType === 'multi' ? editProducts : (editProduct ? [editProduct] : [])) : []}
+                editProducts={(editId || editIds.length > 0) ? (variantType === 'multi' ? editProducts : (editProduct ? [editProduct] : [])) : []}
               />
             ) : null}
           </div>
