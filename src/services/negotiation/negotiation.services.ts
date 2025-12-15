@@ -31,8 +31,9 @@ export interface Negotiation {
   };
   toUserType?: 'Admin' | 'Customer';
   offerPrice: number;
+  quantity?: number;
   message?: string;
-  status: 'negotiation' | 'accepted';
+  status: 'negotiation' | 'accepted' | 'rejected';
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
@@ -70,7 +71,7 @@ export interface RespondToNegotiationRequest {
 
 export class NegotiationService {
   // Get all negotiations for admin
-  static async getAllNegotiations(page = 1, limit = 10, status?: string, customerId?: string): Promise<NegotiationListResponse> {
+  static async getAllNegotiations(page = 1, limit = 10, status?: string, customerId?: string, productId?: string): Promise<NegotiationListResponse> {
     try {
       const baseUrl = import.meta.env.VITE_BASE_URL;
       const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
@@ -79,6 +80,7 @@ export class NegotiationService {
       const body: any = { page, limit };
       if (status) body.status = status;
       if (customerId) body.customerId = customerId;
+      if (productId) body.productId = productId;
 
       const res = await api.post(url, body);
       if (res.data?.status !== 200) {
@@ -136,19 +138,64 @@ export class NegotiationService {
   }
 
   // Get accepted negotiations for admin
-  static async getAcceptedNegotiations(page = 1, limit = 10): Promise<NegotiationListResponse> {
+  static async getAcceptedNegotiations(page = 1, limit = 10, customerId?: string, productId?: string): Promise<NegotiationListResponse> {
     try {
       const baseUrl = import.meta.env.VITE_BASE_URL;
       const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
       const url = `${baseUrl}/api/${adminRoute}/negotiation/accepted`;
 
-      const res = await api.post(url, { page, limit });
+      const body: any = { page, limit };
+      if (customerId) body.customerId = customerId;
+      if (productId) body.productId = productId;
+
+      const res = await api.post(url, body);
       if (res.data?.status !== 200) {
         throw new Error(res.data?.message || 'Failed to fetch accepted negotiations');
       }
       return res.data.data;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to fetch accepted negotiations';
+      toastHelper.showTost(errorMessage, 'error');
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Get rejected negotiations for admin
+  static async getRejectedNegotiations(page = 1, limit = 10): Promise<NegotiationListResponse> {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
+      const url = `${baseUrl}/api/${adminRoute}/negotiation/rejected`;
+
+      const res = await api.post(url, { page, limit });
+      if (res.data?.status !== 200) {
+        throw new Error(res.data?.message || 'Failed to fetch rejected negotiations');
+      }
+      return res.data.data;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to fetch rejected negotiations';
+      toastHelper.showTost(errorMessage, 'error');
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Place order from accepted negotiation
+  static async placeOrderFromNegotiation(negotiationId: string): Promise<any> {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
+      const url = `${baseUrl}/api/${adminRoute}/negotiation/place-order`;
+
+      const res = await api.post(url, { negotiationId });
+      if (res.status === 200 && res.data.data) {
+        toastHelper.showTost(res.data.message || 'Order placed successfully!', 'success');
+        return res.data.data;
+      } else {
+        toastHelper.showTost(res.data.message || 'Failed to place order', 'warning');
+        return false;
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to place order';
       toastHelper.showTost(errorMessage, 'error');
       throw new Error(errorMessage);
     }

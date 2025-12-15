@@ -126,13 +126,7 @@ const OrdersTable: React.FC = () => {
     const currentStatus = order.status;
     const orderTrackingStatus = order.orderTrackingStatus;
     
-    // If order is already cancelled, no status options
-    if (currentStatus === "cancelled" || orderTrackingStatus === "cancelled") {
-      return ["cancelled"];
-    }
-    
     // Get dynamic stages from backend based on order's location and currency
-    // Backend will include internal admin stages (verify, approved) in the response
     let orderStages: string[] = [];
     try {
       if (order.currentLocation && order.deliveryLocation && order.currency) {
@@ -142,71 +136,34 @@ const OrdersTable: React.FC = () => {
           order.currency
         );
       } else {
-        // Fallback to default stages including internal admin stages
-        orderStages = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered", "cancelled"];
+        orderStages = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered"];
       }
     } catch (error) {
       console.error('Error fetching order stages:', error);
-      // Fallback to default stages including internal admin stages
-      orderStages = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered", "cancelled"];
+      orderStages = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered"];
     }
     
-    // Show only forward progression - no going back to previous statuses
+    // Remove cancelled entirely from options
+    orderStages = orderStages.filter((s) => s !== "cancelled");
+    
     const currentIndex = orderStages.indexOf(currentStatus);
     const availableStatuses: string[] = [];
     
     // Always include current status
-    availableStatuses.push(currentStatus);
+    if (currentStatus) availableStatuses.push(currentStatus);
     
-    // Add next stages in flow - forward progression only (no going back)
-    if (currentIndex >= 0) {
-      // Add all stages that come after current status (forward progression)
-      for (let i = currentIndex + 1; i < orderStages.length; i++) {
-        const nextStage = orderStages[i];
-        // Skip rejected and cancelled in the forward progression (they're handled separately)
-        if (nextStage && nextStage !== "cancelled" && nextStage !== "rejected") {
-          availableStatuses.push(nextStage);
-        }
-      }
+    // Include one next status if exists
+    if (currentIndex >= 0 && currentIndex < orderStages.length - 1) {
+      const nextStatus = orderStages[currentIndex + 1];
+      if (nextStatus) availableStatuses.push(nextStatus);
     }
     
-    // Special handling for requested status - can go to verify (only after customer confirms), rejected, or cancelled
-    // Note: rejected and cancelled are only available before payment_received (handled below)
-    if (currentStatus === "requested") {
-      // Only add verify if customer has confirmed modifications (if quantities were modified)
-      // If quantities were not modified, verify is always available
-      if (order.quantitiesModified) {
-        // Only show verify if customer has confirmed
-        if (order.isConfirmedByCustomer) {
-          if (!availableStatuses.includes("verify")) availableStatuses.push("verify");
-        }
-        // If customer hasn't confirmed, verify will be removed later in the function
-      } else {
-        // No quantities modified, verify is always available
-        if (!availableStatuses.includes("verify")) availableStatuses.push("verify");
-      }
-      // Requested is before payment_received, so rejected is allowed (will be added below if conditions are met)
-    }
-    
-    // Special handling for verify status - can go to approved (forward only)
-    if (currentStatus === "verify") {
-      if (!availableStatuses.includes("approved")) availableStatuses.push("approved");
-    }
-    
-    // Allow rejected and cancelled only before payment_received
-    // After payment_received, orders cannot be rejected or cancelled
-    if (currentStatus !== "rejected" && currentStatus !== "cancelled") {
-      // Check if current status is payment_received or any status after it
+    // Allow rejected only before payment_received
+    if (currentStatus !== "rejected") {
       const paymentReceivedIndex = orderStages.indexOf("payment_received");
-      const currentStatusIndex = orderStages.indexOf(currentStatus);
-      
-      // Only allow rejected and cancelled if we haven't reached payment_received yet
-      if (paymentReceivedIndex === -1 || currentStatusIndex < paymentReceivedIndex) {
-        // Current status is before payment_received, allow rejected and cancelled
-        if (!availableStatuses.includes("rejected")) availableStatuses.push("rejected");
-        if (!availableStatuses.includes("cancelled")) availableStatuses.push("cancelled");
+      if (paymentReceivedIndex === -1 || currentIndex < paymentReceivedIndex) {
+        availableStatuses.push("rejected");
       }
-      // If current status is payment_received or after, don't add rejected or cancelled
     }
     
     // Filter based on admin permissions

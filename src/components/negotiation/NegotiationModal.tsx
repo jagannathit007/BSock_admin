@@ -5,12 +5,35 @@ import { useSocket } from '../../context/SocketContext';
 import toastHelper from '../../utils/toastHelper';
 
 interface NegotiationGroup {
-  bidId: string;
-  productId: any;
+  customerId: string;
+  customer: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  } | null;
+  productId: string;
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+    mainImage: string;
+    description?: string;
+    skuFamilyId: {
+      _id: string;
+      name: string;
+      brand?: string;
+      code?: string;
+      images?: string[];
+      description?: string;
+    } | null;
+  } | null;
   negotiations: Negotiation[];
   status: 'negotiation' | 'accepted';
   acceptedBy?: 'Admin' | 'Customer';
   acceptedAt?: string;
+  latestUpdate?: string;
 }
 
 interface NegotiationModalProps {
@@ -22,8 +45,15 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
   const { socketService } = useSocket();
   const [activeTab, setActiveTab] = useState('active');
   const [negotiations, setNegotiations] = useState<NegotiationGroup[]>([]);
-  const [acceptedNegotiations, setAcceptedNegotiations] = useState<Negotiation[]>([]);
+  const [acceptedNegotiations, setAcceptedNegotiations] = useState<NegotiationGroup[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [acceptedPage, setAcceptedPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [acceptedTotalPages, setAcceptedTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [acceptedTotal, setAcceptedTotal] = useState(0);
+  const limit = 10;
   const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
   const [showResponseForm, setShowResponseForm] = useState(false);
   const [responseData, setResponseData] = useState({
@@ -35,41 +65,8 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const imageBaseUrl = import.meta.env.VITE_BASE_URL;
 
-  // Group negotiations by bidId to show complete bid flow
-  const groupNegotiationsByBidId = (allNegotiations: Negotiation[]): NegotiationGroup[] => {
-    const grouped = allNegotiations.reduce((acc, negotiation) => {
-      const bidId = negotiation.bidId;
-      
-      if (!acc[bidId]) {
-        acc[bidId] = {
-          bidId,
-          productId: negotiation.productId,
-          negotiations: [],
-          status: 'negotiation' as 'negotiation' | 'accepted',
-          acceptedBy: undefined,
-          acceptedAt: undefined
-        };
-      }
-      
-      acc[bidId].negotiations.push(negotiation);
-      
-      // If any negotiation in the group is accepted, mark the group as accepted
-      if (negotiation.status === 'accepted') {
-        acc[bidId].status = 'accepted';
-        acc[bidId].acceptedBy = negotiation.toUserType || 'Admin';
-        acc[bidId].acceptedAt = negotiation.updatedAt;
-      }
-      
-      return acc;
-    }, {} as Record<string, NegotiationGroup>);
-    
-    // Convert to array and sort by creation date (most recent first)
-    return Object.values(grouped).sort((a, b) => {
-      const aLatest = Math.max(...a.negotiations.map(n => new Date(n.createdAt).getTime()));
-      const bLatest = Math.max(...b.negotiations.map(n => new Date(n.createdAt).getTime()));
-      return bLatest - aLatest;
-    });
-  };
+  // Backend now returns grouped negotiations, so we don't need to group on frontend
+  // This function is kept for backward compatibility but should not be needed
 
   useEffect(() => {
     if (isOpen) {
@@ -84,7 +81,17 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
         socketService.removeNegotiationListeners();
       }
     };
-  }, [isOpen, activeTab, socketService]);
+  }, [isOpen, socketService]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (activeTab === 'active') {
+        fetchNegotiations();
+      } else {
+        fetchAcceptedNegotiations();
+      }
+    }
+  }, [activeTab, currentPage, acceptedPage, isOpen]);
 
   // Setup socket listeners for real-time updates
   const setupSocketListeners = () => {
@@ -108,8 +115,11 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
       
       // Refresh negotiations if it's a relevant update
       if (data.type === 'new_bid' || data.type === 'counter_offer' || data.type === 'bid_accepted') {
-        fetchNegotiations();
-        fetchAcceptedNegotiations();
+        if (activeTab === 'active') {
+          fetchNegotiations();
+        } else {
+          fetchAcceptedNegotiations();
+        }
       }
     });
 
@@ -128,8 +138,11 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
       toastHelper.showTost(data.message || '📬 New negotiation activity', toastType);
       
       // Refresh negotiations
-      fetchNegotiations();
-      fetchAcceptedNegotiations();
+      if (activeTab === 'active') {
+        fetchNegotiations();
+      } else {
+        fetchAcceptedNegotiations();
+      }
     });
 
     // Listen for negotiation updates
@@ -147,8 +160,11 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
       toastHelper.showTost(data.message || '📝 Negotiation updated', toastType);
       
       // Refresh negotiations
-      fetchNegotiations();
-      fetchAcceptedNegotiations();
+      if (activeTab === 'active') {
+        fetchNegotiations();
+      } else {
+        fetchAcceptedNegotiations();
+      }
     });
 
     // Listen for user typing indicators
@@ -180,21 +196,12 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
   const fetchNegotiations = async () => {
     setLoading(true);
     try {
-      // Fetch both active and accepted negotiations to show complete bid flow
-      const [activeResponse, acceptedResponse] = await Promise.all([
-        NegotiationService.getAllNegotiations(1, 50, 'negotiation'),
-        NegotiationService.getAcceptedNegotiations(1, 50)
-      ]);
+      const response = await NegotiationService.getAllNegotiations(currentPage, limit, 'negotiation');
       
-      // Combine all negotiations and group by bidId
-      const allNegotiations = [
-        ...(activeResponse.negotiations || []),
-        ...(acceptedResponse.negotiations || [])
-      ];
-      
-      // Group negotiations by bidId to show complete flow
-      const groupedNegotiations = groupNegotiationsByBidId(allNegotiations);
-      setNegotiations(groupedNegotiations);
+      // Backend now returns grouped negotiations by customer + product
+      setNegotiations(response.negotiations || []);
+      setTotalPages(response.totalPages || 1);
+      setTotal(response.total || 0);
     } catch (error) {
       console.error('Error fetching negotiations:', error);
     } finally {
@@ -203,11 +210,18 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
   };
 
   const fetchAcceptedNegotiations = async () => {
+    setLoading(true);
     try {
-      const response = await NegotiationService.getAcceptedNegotiations(1, 50);
+      const response = await NegotiationService.getAcceptedNegotiations(acceptedPage, limit);
+      
+      // Backend now returns grouped negotiations by customer + product
       setAcceptedNegotiations(response.negotiations || []);
+      setAcceptedTotalPages(response.totalPages || 1);
+      setAcceptedTotal(response.total || 0);
     } catch (error) {
       console.error('Error fetching accepted negotiations:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -299,27 +313,42 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
     });
   };
 
-  const getProductImage = (productId: any) => {
-    if (typeof productId === 'string') return '/images/placeholder.jpg';
-    const images = productId?.skuFamilyId?.images;
+  const getProductImage = (product: NegotiationGroup['product']) => {
+    if (!product) return '/images/placeholder.jpg';
+    const images = product.skuFamilyId?.images;
     if (images && Array.isArray(images) && images.length > 0) {
       return `${imageBaseUrl}/${images[0]}`;
     }
     // Fallback to mainImage if available
-    if (productId?.mainImage) {
-      return `${imageBaseUrl}/${productId.mainImage}`;
+    if (product.mainImage) {
+      return `${imageBaseUrl}/${product.mainImage}`;
     }
     return '/images/placeholder.jpg';
   };
 
-  const getProductName = (productId: any) => {
-    if (typeof productId === 'string') return 'Product';
-    return productId?.name || 'Product';
+  const getProductName = (product: NegotiationGroup['product']) => {
+    if (!product) return 'Product';
+    return product.name || 'Product';
   };
 
-  const getUserName = (userId: any) => {
-    if (typeof userId === 'string') return 'User';
-    return `${userId?.firstName || ''} ${userId?.lastName || ''}`.trim() || 'User';
+  const getSKUFamilyName = (product: NegotiationGroup['product']) => {
+    if (!product?.skuFamilyId) return 'N/A';
+    return product.skuFamilyId.name || 'N/A';
+  };
+
+  const getSKUFamilyDetails = (product: NegotiationGroup['product']) => {
+    if (!product?.skuFamilyId) return null;
+    return product.skuFamilyId;
+  };
+
+  const getCustomerName = (customer: NegotiationGroup['customer']) => {
+    if (!customer) return 'Unknown Customer';
+    return `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Unknown Customer';
+  };
+
+  const getCustomerEmail = (customer: NegotiationGroup['customer']) => {
+    if (!customer) return 'N/A';
+    return customer.email || 'N/A';
   };
 
   if (!isOpen) return null;
@@ -414,34 +443,60 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
               {/* Data List */}
               {(activeTab === 'active' ? negotiations.length > 0 : acceptedNegotiations.length > 0) && (
                 <div className="space-y-6">
-                  {(activeTab === 'active' ? negotiations : acceptedNegotiations).map((item) => {
-                // Handle both grouped negotiations and individual accepted negotiations
-                const negotiationGroup = activeTab === 'active' ? item as NegotiationGroup : null;
-                const individualNegotiation = activeTab === 'accepted' ? item as Negotiation : null;
-                
-                if (negotiationGroup) {
+                  {(activeTab === 'active' ? negotiations : acceptedNegotiations).map((negotiationGroup: NegotiationGroup) => {
                   return (
-                    <div key={negotiationGroup.bidId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div key={`${negotiationGroup.customerId}_${negotiationGroup.productId}`} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       {/* Group Header */}
                       <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-start space-x-4 flex-1">
                           <img
-                            src={getProductImage(negotiationGroup.productId)}
-                            alt={getProductName(negotiationGroup.productId)}
+                            src={getProductImage(negotiationGroup.product)}
+                            alt={getProductName(negotiationGroup.product)}
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSePykPxV7hbiMoufhNrCVlkEh94nvJQIMDeA&s';
                             }}
-                            className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                            className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                           />
                           <div className="flex-1">
-                            <h3 className="font-medium text-gray-900">
-                              {getProductName(negotiationGroup.productId)}
+                            <h3 className="font-semibold text-gray-900 text-lg mb-2">
+                              {getProductName(negotiationGroup.product)}
                             </h3>
-                            <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                              <span className="flex items-center">
-                                <Package className="w-4 h-4 mr-1" />
-                                Bid ID: {negotiationGroup?.bidId?.slice(0, 8)}...
-                              </span>
+                            
+                            {/* Customer Information */}
+                            <div className="mb-2 p-2 bg-blue-50 rounded-lg">
+                              <div className="flex items-center space-x-2 text-sm">
+                                <User className="w-4 h-4 text-blue-600" />
+                                <span className="font-medium text-gray-700">Customer:</span>
+                                <span className="text-gray-900">{getCustomerName(negotiationGroup.customer)}</span>
+                                <span className="text-gray-500">•</span>
+                                <span className="text-gray-600">{getCustomerEmail(negotiationGroup.customer)}</span>
+                              </div>
+                            </div>
+
+                            {/* SKU Family Information */}
+                            {negotiationGroup.product?.skuFamilyId && (
+                              <div className="mb-2 p-2 bg-gray-50 rounded-lg">
+                                <div className="flex items-center space-x-2 text-sm">
+                                  <Package className="w-4 h-4 text-gray-600" />
+                                  <span className="font-medium text-gray-700">SKU Family:</span>
+                                  <span className="text-gray-900">{getSKUFamilyName(negotiationGroup.product)}</span>
+                                  {negotiationGroup.product.skuFamilyId.brand && (
+                                    <>
+                                      <span className="text-gray-500">•</span>
+                                      <span className="text-gray-600">Brand: {negotiationGroup.product.skuFamilyId.brand}</span>
+                                    </>
+                                  )}
+                                  {negotiationGroup.product.skuFamilyId.code && (
+                                    <>
+                                      <span className="text-gray-500">•</span>
+                                      <span className="text-gray-600">Code: {negotiationGroup.product.skuFamilyId.code}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex items-center space-x-4 text-sm text-gray-500 mt-2">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 negotiationGroup.status === 'accepted' 
                                   ? 'bg-green-100 text-green-800' 
@@ -553,90 +608,49 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
                       </div>
                     </div>
                   );
-                } else if (individualNegotiation) {
-                  // Handle individual accepted negotiations for the accepted tab
-                  return (
-                    <div key={individualNegotiation._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <img
-                              src={getProductImage(individualNegotiation.productId)}
-                              alt={getProductName(individualNegotiation.productId)}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSePykPxV7hbiMoufhNrCVlkEh94nvJQIMDeA&s';
-                              }}
-                              className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-medium text-gray-900">
-                                {getProductName(individualNegotiation.productId)}
-                              </h3>
-                              <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                                <span className="flex items-center">
-                                  <User className="w-4 h-4 mr-1" />
-                                  {getUserName(individualNegotiation.fromUserId)}
-                                </span>
-                                <span className="flex items-center">
-                                  <Clock className="w-4 h-4 mr-1" />
-                                  {formatDate(individualNegotiation.createdAt)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                            <div className="flex items-center space-x-2">
-                              <DollarSign className="w-4 h-4 text-green-600" />
-                              <span className="text-sm text-gray-600">Offer Price:</span>
-                              <span className="font-medium text-green-600">
-                                {formatPrice(individualNegotiation.offerPrice)}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Package className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm text-gray-600">Status:</span>
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Accepted
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm text-gray-600">Accepted By:</span>
-                              <span className="font-medium text-gray-900">
-                                {individualNegotiation.toUserType}
-                              </span>
-                            </div>
-                          </div>
-
-                          {individualNegotiation.message && (
-                            <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                              <p className="text-sm text-gray-700">{individualNegotiation.message}</p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Action Button for Accepted Orders */}
-                        {/* <div className="flex flex-col space-y-2 ml-4">
-                          <button
-                            onClick={() => {
-                              // Navigate to product details page
-                              const productId = typeof individualNegotiation.productId === 'string' 
-                                ? individualNegotiation.productId 
-                                : individualNegotiation.productId._id;
-                              window.location.href = `/#/product/${productId}`;
-                            }}
-                            className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors flex items-center space-x-2"
-                          >
-                            <Package className="w-4 h-4" />
-                            <span>View Product</span>
-                          </button>
-                        </div> */}
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
                   })}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {((activeTab === 'active' && totalPages > 1) || (activeTab === 'accepted' && acceptedTotalPages > 1)) && (
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+                  <div className="text-sm text-gray-700">
+                    Showing {((activeTab === 'active' ? currentPage : acceptedPage) - 1) * limit + 1} to{' '}
+                    {Math.min((activeTab === 'active' ? currentPage : acceptedPage) * limit, activeTab === 'active' ? total : acceptedTotal)} of{' '}
+                    {activeTab === 'active' ? total : acceptedTotal} results
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        if (activeTab === 'active') {
+                          if (currentPage > 1) setCurrentPage(currentPage - 1);
+                        } else {
+                          if (acceptedPage > 1) setAcceptedPage(acceptedPage - 1);
+                        }
+                      }}
+                      disabled={(activeTab === 'active' ? currentPage : acceptedPage) === 1}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-3 py-2 text-sm font-medium text-gray-700">
+                      Page {activeTab === 'active' ? currentPage : acceptedPage} of {activeTab === 'active' ? totalPages : acceptedTotalPages}
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (activeTab === 'active') {
+                          if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                        } else {
+                          if (acceptedPage < acceptedTotalPages) setAcceptedPage(acceptedPage + 1);
+                        }
+                      }}
+                      disabled={(activeTab === 'active' ? currentPage : acceptedPage) >= (activeTab === 'active' ? totalPages : acceptedTotalPages)}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </>

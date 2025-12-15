@@ -34,6 +34,7 @@ import Customers from "./pages/Customers/Customers";
 import Sellers from "./pages/Sellers/Sellers";
 import BidProducts from "./pages/BidProducts/BidProducts";
 import BidTracking from "./pages/BidProducts/BidTracking";
+import Negotiations from "./pages/Negotiations/Negotiations";
 import Brand from "./pages/Brand/Brand";
 import Grade from "./pages/Grade/Grade";
 import ProductCategory from "./pages/ProductCategory/ProductCategory";
@@ -77,6 +78,7 @@ export default function App() {
 
             <Route path="/bid-products" element={<BidProducts />} />
             <Route path="/bid-tracking" element={<BidTracking />} />
+            <Route path="/negotiations" element={<Negotiations />} />
 
             {/* Masters */}
             <Route path="/masters/brand" element={<Brand />} />
