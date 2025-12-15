@@ -137,6 +137,15 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
 
+  // Column type definition
+  type ColumnType = {
+    key: string;
+    label: string;
+    width: number;
+    group?: string;
+    subgroup?: string;
+  };
+
   // LocalStorage key for saving form data
   const STORAGE_KEY = 'variant-product-form-data';
 
@@ -1427,7 +1436,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
   };
 
   // Column definitions
-  const columns = [
+  const columns: ColumnType[] = [
     { key: 'supplierId', label: 'SUPPLIER ID*', width: 130, group: 'Supplier Info' },
     { key: 'supplierListingNumber', label: 'SUPPLIER LISTING NO*', width: 180, group: 'Supplier Info' },
     { key: 'customerListingNumber', label: 'CUSTOMER LISTING NO*', width: 180, group: 'Supplier Info' },

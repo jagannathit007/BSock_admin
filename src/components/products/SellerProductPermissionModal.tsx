@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { SellerProductPermissionService, SellerProductFieldPermission } from '../../services/sellerProductPermission/sellerProductPermission.services';
-import { SellerService } from '../../services/seller/sellerService';
 import toastHelper from '../../utils/toastHelper';
 
 interface SellerProductPermissionModalProps {
@@ -34,18 +33,8 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
   useEffect(() => {
     if (isOpen) {
       loadPermissions();
-      loadSellers();
     }
   }, [isOpen, selectedSeller]);
-
-  const loadSellers = async () => {
-    try {
-      const sellersList = await SellerService.getAllSellers();
-      setSellers(sellersList);
-    } catch (error) {
-      console.error('Error loading sellers:', error);
-    }
-  };
 
   const loadPermissions = async () => {
     try {
