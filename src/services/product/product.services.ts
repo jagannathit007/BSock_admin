@@ -14,6 +14,8 @@ export interface Product {
   stock: number | string;
   country: string | null;
   moq: number | string;
+  /** Group-level MOQ for multi-variant products ("MOQ PER CART"). */
+  totalMoq?: number | string | null;
   purchaseType?: string; // 'full' | 'partial' - default: 'partial'
   isNegotiable: boolean;
   isFlashDeal: string;
@@ -201,6 +203,12 @@ export class ProductService {
         stock: typeof productData.stock === 'string' ? parseInt(productData.stock, 10) : productData.stock,
         country: productData.country || null,
         moq: typeof productData.moq === 'string' ? parseInt(productData.moq, 10) : productData.moq,
+        // Group-level MOQ for multi-variant products ("MOQ PER CART")
+        totalMoq: productData.totalMoq !== undefined && productData.totalMoq !== null
+          ? (typeof productData.totalMoq === 'string'
+              ? parseInt(productData.totalMoq, 10)
+              : productData.totalMoq)
+          : undefined,
         purchaseType: productData.purchaseType || 'partial',
         isNegotiable: typeof productData.isNegotiable === 'boolean' ? productData.isNegotiable : false,
         // Convert isFlashDeal from string "true"/"false" to boolean
@@ -279,6 +287,57 @@ export class ProductService {
       toastHelper.showTost(errorMessage, 'error');
       throw new Error(errorMessage);
     }
+  };
+
+  // Fetch all products that share the same groupCode (multi-variant product)
+  static getProductsByGroupCode = async (groupCode: string): Promise<Product[]> => {
+    const pageSize = 200;
+    let page = 1;
+    let totalPages = 1;
+    const collected: Product[] = [];
+
+    while (page <= totalPages) {
+      const response = await ProductService.getProductList(
+        page,
+        pageSize,
+        undefined, // do not rely on search – fetch all and filter by groupCode
+        false,
+        false,
+        false,
+        false
+      );
+
+      const docs = response?.data?.docs || [];
+      // Filter by groupCode to avoid false positives from generic search
+      const sameGroup = docs.filter((p: any) => (p as any)?.groupCode === groupCode);
+      collected.push(...sameGroup);
+
+      const apiTotalPages = response?.data?.totalPages;
+      if (apiTotalPages && apiTotalPages > 0) {
+        totalPages = apiTotalPages;
+      } else {
+        const totalDocsFromAPI = response?.data?.totalDocs;
+        if (totalDocsFromAPI && totalDocsFromAPI > 0) {
+          totalPages = Math.max(1, Math.ceil(totalDocsFromAPI / pageSize));
+        } else if (docs.length < pageSize) {
+          // No more pages if we received less than a full page
+          totalPages = page;
+        }
+      }
+
+      page += 1;
+    }
+
+    // Deduplicate by _id
+    const unique = new Map<string, Product>();
+    collected.forEach((p, idx) => {
+      const key = (p as any)?._id || `idx-${idx}`;
+      if (!unique.has(key)) {
+        unique.set(key, p);
+      }
+    });
+
+    return Array.from(unique.values());
   };
 
   // Get a single product by ID

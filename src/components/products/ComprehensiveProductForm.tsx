@@ -41,7 +41,6 @@ export interface ProductRowData {
   // Other Information Group
   negotiableFixed: string; // '1' for negotiable, '0' for fixed
   shippingTime: string;
-  deliveryTime: string;
   vendor: string;
   vendorListingNo: string;
   carrier: string;
@@ -115,7 +114,6 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
         paymentMethod: [],
         negotiableFixed: '0',
         shippingTime: '',
-        deliveryTime: '',
         vendor: '',
         vendorListingNo: '',
         carrier: '',
@@ -165,7 +163,6 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
         paymentMethod: [],
         negotiableFixed: '0',
         shippingTime: '',
-        deliveryTime: '',
         vendor: '',
         vendorListingNo: '',
         carrier: '',
@@ -806,7 +803,6 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
               <tr className="bg-gray-100 dark:bg-gray-700">
                 <th className="px-3 py-2 text-xs font-semibold border text-left min-w-[120px]">NEGOTIABLE/FIXED</th>
                 <th className="px-3 py-2 text-xs font-semibold border text-left min-w-[120px]">SHIPPING TIME</th>
-                <th className="px-3 py-2 text-xs font-semibold border text-left min-w-[120px]">DELIVERY TIME</th>
                 <th className="px-3 py-2 text-xs font-semibold border text-left min-w-[100px]">VENDOR</th>
                 <th className="px-3 py-2 text-xs font-semibold border text-left min-w-[120px]">VENDOR LISTING NO</th>
                 <th className="px-3 py-2 text-xs font-semibold border text-left min-w-[100px]">CARRIER</th>
@@ -843,15 +839,6 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
                       onChange={(e) => updateRow(rowIndex, 'shippingTime', e.target.value)}
                       className="w-full px-2 py-1 text-sm border rounded bg-gray-50 dark:bg-gray-800"
                       placeholder="e.g., ship today"
-                    />
-                  </td>
-                  <td className="px-3 py-2 border">
-                    <input
-                      type="text"
-                      value={row.deliveryTime}
-                      onChange={(e) => updateRow(rowIndex, 'deliveryTime', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border rounded bg-gray-50 dark:bg-gray-800"
-                      placeholder="e.g., 2-3 days"
                     />
                   </td>
                   <td className="px-3 py-2 border">

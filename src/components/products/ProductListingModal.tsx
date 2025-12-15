@@ -156,7 +156,6 @@ const ProductListingModal: React.FC<ProductListingModalProps> = ({
           paymentTerm: Array.isArray(row.paymentTerm) ? row.paymentTerm : (row.paymentTerm ? [row.paymentTerm] : null),
           paymentMethod: Array.isArray(row.paymentMethod) ? row.paymentMethod : (row.paymentMethod ? [row.paymentMethod] : null),
           shippingTime: cleanString(row.shippingTime) || '',
-          deliveryTime: cleanString(row.deliveryTime) || '',
           vendor: cleanString(row.vendor) || null,
           vendorListingNo: cleanString(row.vendorListingNo) || '',
           carrier: cleanString(row.carrier) || null,

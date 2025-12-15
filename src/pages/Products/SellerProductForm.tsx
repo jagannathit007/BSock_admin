@@ -44,7 +44,6 @@ interface ProductRowData {
   tags: string;
   flashDeal: string;
   shippingTime: string;
-  deliveryTime: string;
   vendor: string;
   vendorListingNo: string;
   carrier: string;
@@ -163,7 +162,6 @@ const SellerProductForm: React.FC = () => {
     tags: '',
     flashDeal: '',
     shippingTime: '',
-    deliveryTime: '',
     vendor: '',
     vendorListingNo: '',
     carrier: '',
@@ -304,7 +302,6 @@ const SellerProductForm: React.FC = () => {
           paymentTerm: hasPermission('paymentTerm') ? (cleanString(row.paymentTerm) || null) : null,
           paymentMethod: hasPermission('paymentMethod') ? (cleanString(row.paymentMethod) || null) : null,
           shippingTime: hasPermission('shippingTime') ? (cleanString(row.shippingTime) || '') : '',
-          deliveryTime: hasPermission('deliveryTime') ? (cleanString(row.deliveryTime) || '') : '',
           vendor: hasPermission('vendor') ? (cleanString(row.vendor) || null) : null,
           vendorListingNo: hasPermission('vendorListingNo') ? (cleanString(row.vendorListingNo) || '') : '',
           carrier: hasPermission('carrier') ? (cleanString(row.carrier) || null) : null,
@@ -567,7 +564,6 @@ const SellerProductForm: React.FC = () => {
                         { value: '0', label: 'Fixed' },
                       ])}
                       {renderFormField(rowIndex, 'shippingTime', 'Shipping Time', 'text')}
-                      {renderFormField(rowIndex, 'deliveryTime', 'Delivery Time', 'text')}
                       {renderFormField(rowIndex, 'startTime', 'Start Time', 'date')}
                       {renderFormField(rowIndex, 'endTime', 'End Time', 'date')}
                       {renderFormField(rowIndex, 'remark', 'Remark', 'text')}
