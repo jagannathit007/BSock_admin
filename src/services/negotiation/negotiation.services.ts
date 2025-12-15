@@ -32,6 +32,7 @@ export interface Negotiation {
   toUserType?: 'Admin' | 'Customer';
   offerPrice: number;
   quantity?: number;
+  isPlacedOrder?: boolean;
   message?: string;
   status: 'negotiation' | 'accepted' | 'rejected';
   isRead: boolean;

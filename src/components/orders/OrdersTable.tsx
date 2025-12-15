@@ -136,11 +136,12 @@ const OrdersTable: React.FC = () => {
           order.currency
         );
       } else {
-        orderStages = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered"];
+        // Keep verify directly after requested; rejected is handled separately
+        orderStages = ["requested", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered", "rejected"];
       }
     } catch (error) {
       console.error('Error fetching order stages:', error);
-      orderStages = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered"];
+      orderStages = ["requested", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered", "rejected"];
     }
     
     // Remove cancelled entirely from options
@@ -156,6 +157,15 @@ const OrdersTable: React.FC = () => {
     if (currentIndex >= 0 && currentIndex < orderStages.length - 1) {
       const nextStatus = orderStages[currentIndex + 1];
       if (nextStatus) availableStatuses.push(nextStatus);
+    }
+
+    // Ensure verify is available after requested (if present in stages)
+    const verifyIndex = orderStages.indexOf("verify");
+    if (verifyIndex > -1 && verifyIndex !== currentIndex && !availableStatuses.includes("verify")) {
+      // Only offer verify if it comes after current status in the flow
+      if (currentIndex === -1 || verifyIndex >= currentIndex) {
+        availableStatuses.push("verify");
+      }
     }
     
     // Allow rejected only before payment_received
@@ -258,10 +268,6 @@ const OrdersTable: React.FC = () => {
         const verifyIndex = availableStatuses.indexOf("verify");
         if (verifyIndex >= 0) {
           availableStatuses.splice(verifyIndex, 1);
-          console.log('✅ Removed "verify" option - Customer has not confirmed order modifications yet (isConfirmedByCustomer is false)', {
-            hasToken: !!order.modificationConfirmationToken,
-            isConfirmed: order.isConfirmedByCustomer
-          });
         }
       }
     }
@@ -270,7 +276,6 @@ const OrdersTable: React.FC = () => {
       const verifyIndex = availableStatuses.indexOf("verify");
       if (verifyIndex >= 0) {
         availableStatuses.splice(verifyIndex, 1);
-        console.log('✅ Removed "verify" option - Quantities were modified but confirmation email not sent yet');
       }
     }
     

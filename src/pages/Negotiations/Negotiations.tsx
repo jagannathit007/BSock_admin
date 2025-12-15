@@ -589,7 +589,7 @@ const getCustomerDetails = (customer: any) => {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
               >
                 <ShoppingCart className="w-4 h-4" />
-                <span>Place Order Again</span>
+                <span>{negotiation.isPlacedOrder ? 'Place Order Again' : 'Place Order'}</span>
               </button>
             </div>
           );
@@ -795,3 +795,4 @@ const getCustomerDetails = (customer: any) => {
 };
 
 export default Negotiations;
+
