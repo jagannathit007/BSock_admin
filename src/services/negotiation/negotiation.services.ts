@@ -65,7 +65,7 @@ export interface NegotiationStatsResponse {
 
 export interface RespondToNegotiationRequest {
   negotiationId: string;
-  action: 'accept' | 'counter';
+  action: 'accept' | 'counter' | 'reject';
   offerPrice?: number;
   message?: string;
 }
@@ -102,19 +102,26 @@ export class NegotiationService {
       const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
       const url = `${baseUrl}/api/${adminRoute}/negotiation/respond`;
 
+      console.log('Sending negotiation response:', responseData);
       const res = await api.post(url, responseData);
-      // Check if response status is 200 and data is not null
-      if (res.status === 200 && res.data.data) {
-        toastHelper.showTost(res.data.message || 'Response sent successfully!', 'success');
-        return res.data.data;
+      console.log('Negotiation response received:', res.data);
+      
+      // Backend returns { status: 200, message: ..., data: ... }
+      if (res.status === 200 && res.data) {
+        if (res.data.status === 200) {
+          // Success response
+          return res.data.data || res.data;
+        } else {
+          // Backend returned an error status
+          const errorMessage = res.data.message || 'Failed to send response';
+          throw new Error(errorMessage);
+        }
       } else {
-        // Show warning message and return false
-        toastHelper.showTost(res.data.message || 'Failed to send response', 'warning');
-        return false;
+        throw new Error('Invalid response from server');
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to send response';
-      toastHelper.showTost(errorMessage, 'error');
+      console.error('Error in respondToNegotiation:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to send response';
       throw new Error(errorMessage);
     }
   }

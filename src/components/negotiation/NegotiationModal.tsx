@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, MessageSquare, DollarSign, Clock, CheckCircle, User, Package, Send, BellRing } from 'lucide-react';
+import { X, MessageSquare, DollarSign, Clock, CheckCircle, User, Package, Send, BellRing, XCircle } from 'lucide-react';
 import NegotiationService, { Negotiation } from '../../services/negotiation/negotiation.services';
 import { useSocket } from '../../context/SocketContext';
 import toastHelper from '../../utils/toastHelper';
+import Swal from 'sweetalert2';
 
 interface NegotiationGroup {
   customerId: string;
@@ -57,7 +58,7 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
   const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
   const [showResponseForm, setShowResponseForm] = useState(false);
   const [responseData, setResponseData] = useState({
-    action: 'counter' as 'counter' | 'accept',
+    action: 'counter' as 'counter' | 'accept' | 'reject',
     offerPrice: '',
     message: ''
   });
@@ -249,6 +250,52 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
       fetchNegotiations();
     } catch (error) {
       console.error('Error responding to negotiation:', error);
+    }
+  };
+
+  const handleRejectOffer = async (negotiation: Negotiation) => {
+    if (!negotiation._id) return;
+
+    try {
+      const result = await Swal.fire({
+        title: 'Reject Offer?',
+        text: `Are you sure you want to reject this offer of ${formatPrice(negotiation.offerPrice)}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, Reject',
+        cancelButtonText: 'Cancel',
+        input: 'textarea',
+        inputPlaceholder: 'Optional rejection message...',
+        inputAttributes: {
+          'aria-label': 'Rejection message'
+        },
+        showLoaderOnConfirm: true,
+        preConfirm: async (message) => {
+          try {
+            const response = await NegotiationService.respondToNegotiation({
+              negotiationId: negotiation._id!,
+              action: 'reject',
+              message: message && message.trim() ? message.trim() : undefined
+            });
+            return response;
+          } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to reject offer';
+            Swal.showValidationMessage(errorMessage);
+            return false;
+          }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+      });
+
+      if (result.isConfirmed && result.value !== false) {
+        toastHelper.showTost('Offer rejected successfully!', 'success');
+        fetchNegotiations();
+      }
+    } catch (error) {
+      console.error('Error rejecting offer:', error);
+      toastHelper.showTost('Failed to reject offer', 'error');
     }
   };
 
@@ -582,17 +629,26 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
                                   {negotiation.status === 'negotiation' && (
                                     <>
                                       {canAccept(negotiation, negotiationGroup) && (
-                                        <button
-                                          onClick={() => {
-                                            setSelectedNegotiation(negotiation);
-                                            setResponseData({ action: 'accept', offerPrice: '', message: '' });
-                                            setShowResponseForm(true);
-                                          }}
-                                          className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-1"
-                                        >
-                                          <CheckCircle className="w-4 h-4" />
-                                          <span>Accept</span>
-                                        </button>
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedNegotiation(negotiation);
+                                              setResponseData({ action: 'accept', offerPrice: '', message: '' });
+                                              setShowResponseForm(true);
+                                            }}
+                                            className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-1"
+                                          >
+                                            <CheckCircle className="w-4 h-4" />
+                                            <span>Accept</span>
+                                          </button>
+                                          <button
+                                            onClick={() => handleRejectOffer(negotiation)}
+                                            className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-1"
+                                          >
+                                            <XCircle className="w-4 h-4" />
+                                            <span>Reject</span>
+                                          </button>
+                                        </>
                                       )}
                                       {hasAcceptedNegotiation(negotiationGroup) && (
                                         <div className="text-xs text-gray-500 text-center">
