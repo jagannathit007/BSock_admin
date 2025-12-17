@@ -4,7 +4,6 @@ import {
   GroupIcon,
   DollarLineIcon,
   BoxIcon,
-  BoltIcon,
 } from "../../icons";
 import { DashboardService, DashboardStats } from "../../services/dashboard/dashboard.services";
 

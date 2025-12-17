@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import toastHelper from "../../utils/toastHelper";
 import CustomerCartService, { CustomerCartItem, CartProduct } from "../../services/order/customerCart.services";
 import { useDebounce } from "../../hooks/useDebounce";
-import { useModulePermissions } from "../../hooks/useModulePermissions";
 
 // Interface for Customer Cart data
 interface Customer {
@@ -17,7 +16,6 @@ interface Customer {
 type CustomerCart = CustomerCartItem & { updatedAt?: string };
 
 const CustomerCart: React.FC = () => {
-  const { canWrite } = useModulePermissions('/customer-cart');
   const [customerCartsData, setCustomerCartsData] = useState<CustomerCart[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const debouncedSearchTerm = useDebounce(searchTerm, 1000);
