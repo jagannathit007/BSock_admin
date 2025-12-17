@@ -115,11 +115,6 @@ const CurrencyConversionTable: React.FC = () => {
     setCurrentPage(page);
   };
 
-  const handleCreateNew = () => {
-    setEditId(null);
-    setIsModalOpen(true);
-  };
-
   const getEditItem = () => {
     if (!editId) return null;
     return currencyConversions.find((item) => item._id === editId) || null;
@@ -147,15 +142,6 @@ const CurrencyConversionTable: React.FC = () => {
               />
             </div>
           </div>
-          {canWrite && (
-            <button
-              className="inline-flex whitespace-nowrap items-center gap-1 rounded-lg bg-[#0071E0] text-white px-4 py-2 text-sm font-medium hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
-              onClick={handleCreateNew}
-            >
-              <i className="fas fa-plus text-xs"></i>
-              Add Conversion
-            </button>
-          )}
         </div>
 
         {/* Table */}
@@ -170,7 +156,7 @@ const CurrencyConversionTable: React.FC = () => {
                   Rate
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
-                  Created At
+                  Updated At
                 </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                   Actions
@@ -208,8 +194,8 @@ const CurrencyConversionTable: React.FC = () => {
                       {typeof conversion.rate === 'number' ? conversion.rate.toFixed(4) : parseFloat(conversion.rate || '0').toFixed(4)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {conversion.createdAt
-                        ? new Date(conversion.createdAt).toLocaleDateString()
+                      {conversion.updatedAt
+                        ? new Date(conversion.updatedAt).toLocaleDateString()
                         : '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-center">

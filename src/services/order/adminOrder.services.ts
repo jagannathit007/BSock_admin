@@ -37,6 +37,7 @@ export interface Order {
   deliveryLocation?: string;
   currency?: string;
   otherCharges?: number | null;
+  discount?: number | null;
   status: string;
   totalAmount: number;
   createdAt: string;
@@ -140,7 +141,8 @@ export class AdminOrderService {
     message?: string,
     paymentMethod?: string,
     otherCharges?: number | null,
-    images?: File[]
+    images?: File[],
+    discount?: number | null
   ): Promise<any> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;
     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
@@ -169,6 +171,9 @@ export class AdminOrderService {
     }
     if (otherCharges !== undefined && otherCharges !== null) {
       formData.append('otherCharges', otherCharges.toString());
+    }
+    if (discount !== undefined && discount !== null) {
+      formData.append('discount', discount.toString());
     }
     
     // Add images if provided
