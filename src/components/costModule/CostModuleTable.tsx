@@ -233,6 +233,9 @@ const CostModuleTable: React.FC = () => {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                   Express Delivery
                 </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
+                  Same Location
+                </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                   Actions
                 </th>
@@ -241,7 +244,7 @@ const CostModuleTable: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={13} className="p-12 text-center">
+                  <td colSpan={14} className="p-12 text-center">
                     <div className="text-gray-500 dark:text-gray-400 text-lg">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-600 mx-auto mb-4"></div>
                       Loading Cost Modules...
@@ -250,7 +253,7 @@ const CostModuleTable: React.FC = () => {
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="p-12 text-center">
+                  <td colSpan={14} className="p-12 text-center">
                     <div className="text-gray-500 dark:text-gray-400 text-lg">
                       No cost modules found
                     </div>
@@ -316,6 +319,18 @@ const CostModuleTable: React.FC = () => {
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {item.isExpressDelivery ? (
                         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
+                          <i className="fas fa-check-circle"></i>
+                          Yes
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                          No
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                      {item.isSameLocationCharge ? (
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-700">
                           <i className="fas fa-check-circle"></i>
                           Yes
                         </span>

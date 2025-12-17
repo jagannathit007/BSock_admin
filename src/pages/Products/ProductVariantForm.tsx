@@ -300,7 +300,11 @@ const ProductVariantForm: React.FC = () => {
         // When editing, preserve existing countryDeliverables with margins and costs
         let countryDeliverables: any[] = [];
         
-        if (editId) {
+        // Check if row already has countryDeliverables (from calculation/preview flow)
+        if ((row as any).countryDeliverables && Array.isArray((row as any).countryDeliverables)) {
+          // Use the pre-calculated countryDeliverables with margins and costs
+          countryDeliverables = (row as any).countryDeliverables;
+        } else if (editId) {
           // For edit mode, preserve existing countryDeliverables structure
           const existingProduct = variantType === 'single' ? editProduct : (editProducts[rowIndex] || null);
           if (existingProduct && (existingProduct as any).countryDeliverables) {
@@ -310,20 +314,30 @@ const ProductVariantForm: React.FC = () => {
               if (cd.country === 'Hongkong') {
                 return {
                   ...cd,
+                  basePrice: parseFloat(String(row.hkUsd)) || cd.basePrice || cd.usd || 0,
+                  calculatedPrice: cd.calculatedPrice || parseFloat(String(row.hkUsd)) || cd.usd || 0,
                   usd: parseFloat(String(row.hkUsd)) || cd.usd || 0,
                   xe: parseFloat(String(row.hkXe)) || cd.xe || 0,
                   local: parseFloat(String(row.hkHkd)) || cd.local || cd.hkd || 0,
                   hkd: parseFloat(String(row.hkHkd)) || cd.hkd || 0,
                   price: parseFloat(String(row.hkUsd)) || cd.price || cd.usd || 0,
+                  // Preserve margins and costs
+                  margins: cd.margins || [],
+                  costs: cd.costs || [],
                 };
               } else if (cd.country === 'Dubai') {
                 return {
                   ...cd,
+                  basePrice: parseFloat(String(row.dubaiUsd)) || cd.basePrice || cd.usd || 0,
+                  calculatedPrice: cd.calculatedPrice || parseFloat(String(row.dubaiUsd)) || cd.usd || 0,
                   usd: parseFloat(String(row.dubaiUsd)) || cd.usd || 0,
                   xe: parseFloat(String(row.dubaiXe)) || cd.xe || 0,
                   local: parseFloat(String(row.dubaiAed)) || cd.local || cd.aed || 0,
                   aed: parseFloat(String(row.dubaiAed)) || cd.aed || 0,
                   price: parseFloat(String(row.dubaiUsd)) || cd.price || cd.usd || 0,
+                  // Preserve margins and costs
+                  margins: cd.margins || [],
+                  costs: cd.costs || [],
                 };
               }
               return cd;
@@ -333,46 +347,82 @@ const ProductVariantForm: React.FC = () => {
             if (row.hkUsd || row.hkHkd) {
               countryDeliverables.push({
                 country: 'Hongkong',
+                currency: 'USD',
+                basePrice: parseFloat(String(row.hkUsd)) || 0,
+                calculatedPrice: parseFloat(String(row.hkUsd)) || 0,
+                exchangeRate: parseFloat(String(row.hkXe)) || null,
                 price: parseFloat(String(row.hkUsd)) || 0,
                 usd: parseFloat(String(row.hkUsd)) || 0,
                 xe: parseFloat(String(row.hkXe)) || 0,
                 local: parseFloat(String(row.hkHkd)) || 0,
                 hkd: parseFloat(String(row.hkHkd)) || 0,
+                margins: [],
+                costs: [],
+                charges: [],
               });
             }
             
             if (row.dubaiUsd || row.dubaiAed) {
               countryDeliverables.push({
                 country: 'Dubai',
+                currency: 'USD',
+                basePrice: parseFloat(String(row.dubaiUsd)) || 0,
+                calculatedPrice: parseFloat(String(row.dubaiUsd)) || 0,
+                exchangeRate: parseFloat(String(row.dubaiXe)) || null,
                 price: parseFloat(String(row.dubaiUsd)) || 0,
                 usd: parseFloat(String(row.dubaiUsd)) || 0,
                 xe: parseFloat(String(row.dubaiXe)) || 0,
                 local: parseFloat(String(row.dubaiAed)) || 0,
                 aed: parseFloat(String(row.dubaiAed)) || 0,
+                margins: [],
+                costs: [],
+                charges: [],
               });
             }
           }
         } else {
-          // For create mode, create new countryDeliverables
+          // For create mode, create new countryDeliverables with proper structure
           if (row.hkUsd || row.hkHkd) {
+            const hkUsd = parseFloat(String(row.hkUsd)) || 0;
+            const hkXe = parseFloat(String(row.hkXe)) || null;
+            const hkHkd = parseFloat(String(row.hkHkd)) || 0;
+            
             countryDeliverables.push({
               country: 'Hongkong',
-              price: parseFloat(String(row.hkUsd)) || 0,
-              usd: parseFloat(String(row.hkUsd)) || 0,
-              xe: parseFloat(String(row.hkXe)) || 0,
-              local: parseFloat(String(row.hkHkd)) || 0,
-              hkd: parseFloat(String(row.hkHkd)) || 0,
+              currency: 'USD',
+              basePrice: hkUsd,
+              calculatedPrice: hkUsd, // Will be updated by backend calculation if margins/costs are provided
+              exchangeRate: hkXe,
+              price: hkUsd,
+              usd: hkUsd,
+              xe: hkXe,
+              local: hkHkd,
+              hkd: hkHkd,
+              margins: (row as any).hkMargins || [], // Extract margins if provided in row
+              costs: (row as any).hkCosts || [], // Extract costs if provided in row
+              charges: [],
             });
           }
           
           if (row.dubaiUsd || row.dubaiAed) {
+            const dubaiUsd = parseFloat(String(row.dubaiUsd)) || 0;
+            const dubaiXe = parseFloat(String(row.dubaiXe)) || null;
+            const dubaiAed = parseFloat(String(row.dubaiAed)) || 0;
+            
             countryDeliverables.push({
               country: 'Dubai',
-              price: parseFloat(String(row.dubaiUsd)) || 0,
-              usd: parseFloat(String(row.dubaiUsd)) || 0,
-              xe: parseFloat(String(row.dubaiXe)) || 0,
-              local: parseFloat(String(row.dubaiAed)) || 0,
-              aed: parseFloat(String(row.dubaiAed)) || 0,
+              currency: 'USD',
+              basePrice: dubaiUsd,
+              calculatedPrice: dubaiUsd, // Will be updated by backend calculation if margins/costs are provided
+              exchangeRate: dubaiXe,
+              price: dubaiUsd,
+              usd: dubaiUsd,
+              xe: dubaiXe,
+              local: dubaiAed,
+              aed: dubaiAed,
+              margins: (row as any).dubaiMargins || [], // Extract margins if provided in row
+              costs: (row as any).dubaiCosts || [], // Extract costs if provided in row
+              charges: [],
             });
           }
         }

@@ -40,6 +40,13 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
     }
   }, [isOpen, country]);
 
+  // ✅ FIX #2: Reset selections when modal opens or country changes (prevents cross-location contamination)
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedCosts(new Set());
+    }
+  }, [isOpen, country]);
+
   useEffect(() => {
     // Group costs by groupId
     const grouped: Record<string, any[]> = {};
@@ -80,25 +87,17 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
   };
 
   const handleCostToggle = (costId: string, cost: any) => {
+    // ✅ FIX #3: PURE FUNCTION - Calculate group membership from source array, not derived state
     const newSelected = new Set(selectedCosts);
     
-    // If cost has groupId, handle group selection
-    if (cost.groupId) {
-      const groupCosts = groupedCosts[cost.groupId] || [];
-      
-      if (newSelected.has(costId)) {
-        // Deselect all costs in the group
-        groupCosts.forEach(c => newSelected.delete(c._id));
-      } else {
-        // Select all costs in the group
-        groupCosts.forEach(c => newSelected.add(c._id));
-      }
-    } else {
-      // Toggle individual cost
+    // ✅ CRITICAL FIX: Express delivery and same location costs should ALWAYS be individually selectable
+    // They should NOT be auto-selected when a group is selected
+    if (cost.isExpressDelivery || cost.isSameLocationCharge) {
+      // ✅ INDIVIDUAL SELECTION: Express delivery and same location costs are always individually selectable
       if (newSelected.has(costId)) {
         newSelected.delete(costId);
       } else {
-        // For express delivery, only one can be selected at a time
+        // ✅ EXPRESS DELIVERY: Only one can be selected
         if (cost.isExpressDelivery) {
           // Remove all other express delivery costs
           costs.forEach(c => {
@@ -107,6 +106,33 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
             }
           });
         }
+        newSelected.add(costId);
+      }
+    } else if (cost.groupId) {
+      // ✅ GROUP SELECTION: For non-express/same-location costs in a group
+      // ✅ DETERMINISTIC: Find group members from costs array (source of truth, not groupedCosts state)
+      // Exclude express delivery and same location costs from group auto-selection
+      const groupMembers = costs.filter(c => 
+        c.groupId === cost.groupId && 
+        !c.isExpressDelivery && 
+        !c.isSameLocationCharge
+      );
+      
+      // ✅ CHECK: Are all non-express group members currently selected?
+      const allGroupSelected = groupMembers.every(c => newSelected.has(c._id));
+      
+      if (allGroupSelected) {
+        // ✅ DESELECT ALL: Remove all non-express group members
+        groupMembers.forEach(c => newSelected.delete(c._id));
+      } else {
+        // ✅ SELECT ALL: Add all non-express group members
+        groupMembers.forEach(c => newSelected.add(c._id));
+      }
+    } else {
+      // ✅ INDIVIDUAL COST: Toggle single cost (no group, not express/same location)
+      if (newSelected.has(costId)) {
+        newSelected.delete(costId);
+      } else {
         newSelected.add(costId);
       }
     }
@@ -219,7 +245,7 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
                       Group: {groupId}
                       <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                        (Selecting one will select all in group)
+                        (Selecting one will select all in group, except Express Delivery and Same Location costs)
                       </span>
                     </h3>
                   )}

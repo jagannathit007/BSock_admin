@@ -37,48 +37,51 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
       const hasSeller = products.some(p => p.supplierId);
       setHasSellerCode(hasSeller);
       
-      // If seller margin is off, uncheck all others
-      if (!selection.sellerCategory) {
-        setSelection(prev => ({
-          ...prev,
-          brand: false,
-          productCategory: false,
-          conditionCategory: false,
-        }));
-      }
+      // ✅ FIX #1: Reset selection when modal opens (fresh state, no stale closure)
+      setSelection({
+        brand: false,
+        productCategory: false,
+        conditionCategory: false,
+        sellerCategory: false,
+        customerCategory: false,
+      });
     }
-  }, [isOpen, products, selection.sellerCategory]);
+  }, [isOpen, products]); // ✅ NO DEPENDENCY ON selection (removes circular dependency)
 
   const handleToggle = (key: keyof MarginSelection) => {
-    if (key === 'sellerCategory') {
-      setSelection(prev => ({
-        ...prev,
-        [key]: !prev[key],
-        // If seller margin is turned off, turn off all others except customer margin
-        ...(prev[key] ? {
-          brand: false,
-          productCategory: false,
-          conditionCategory: false,
-          // customerCategory is kept as is - it can remain enabled
-        } : {}),
-      }));
-    } else if (key === 'customerCategory') {
-      // Customer margin can be toggled independently
-      setSelection(prev => ({
-        ...prev,
-        [key]: !prev[key],
-      }));
-    } else {
-      // If seller margin is off, don't allow others (except customer) to be selected
-      if (!selection.sellerCategory) {
-        toastHelper.showTost('Please enable Seller Category margin first', 'warning');
-        return;
+    setSelection(prev => {
+      // ✅ FIX #1: USE FUNCTIONAL UPDATE - Always read from 'prev', never from closure
+      if (key === 'sellerCategory') {
+        const newSellerCategory = !prev.sellerCategory;
+        return {
+          ...prev,
+          sellerCategory: newSellerCategory,
+          // ✅ DETERMINISTIC: If turning OFF, turn off dependents
+          ...(newSellerCategory ? {} : {
+            brand: false,
+            productCategory: false,
+            conditionCategory: false,
+            // customerCategory stays independent
+          }),
+        };
+      } else if (key === 'customerCategory') {
+        // ✅ INDEPENDENT: Can toggle independently
+        return {
+          ...prev,
+          customerCategory: !prev.customerCategory,
+        };
+      } else {
+        // ✅ DEPENDENT: Can only toggle if sellerCategory is ON
+        if (!prev.sellerCategory) {
+          toastHelper.showTost('Please enable Seller Category margin first', 'warning');
+          return prev; // ✅ NO CHANGE if dependency not met
+        }
+        return {
+          ...prev,
+          [key]: !prev[key],
+        };
       }
-      setSelection(prev => ({
-        ...prev,
-        [key]: !prev[key],
-      }));
-    }
+    });
   };
 
   const handleNext = () => {

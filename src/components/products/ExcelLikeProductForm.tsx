@@ -1075,31 +1075,173 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
   // Handle cost selection
   const handleCostNext = (costs: SelectedCost[]) => {
-    if (currentCostCountry) {
-      setSelectedCosts(prev => ({
+    if (!currentCostCountry) return;
+    
+    const country = currentCostCountry;
+    
+    // ✅ FIX: Update state using functional update
+    setSelectedCosts(prev => {
+      const updated = {
         ...prev,
-        [currentCostCountry]: costs,
-      }));
-    }
+        [country]: costs,
+      };
+      
+      // ✅ DEBUG: Log state update
+      console.log(`✅ Cost Selection Updated for ${country}:`, {
+        selectedCosts: costs.map(c => ({ costId: c.costId, name: c.name })),
+        fullState: {
+          Hongkong: updated.Hongkong.map(c => ({ costId: c.costId, name: c.name })),
+          Dubai: updated.Dubai.map(c => ({ costId: c.costId, name: c.name }))
+        }
+      });
+      
+      return updated;
+    });
     
     setShowCostModal(false);
     
     // Check if we need to open cost modal for other country
     const hasDubai = pendingRows.some(r => r.dubaiUsd || r.dubaiAed);
     
-    if (currentCostCountry === 'Hongkong' && hasDubai) {
+    if (country === 'Hongkong' && hasDubai) {
+      // Open Dubai modal
       setCurrentCostCountry('Dubai');
       setShowCostModal(true);
-    } else {
-      // All countries processed, proceed to calculation
-      proceedToCalculation();
+      } else {
+        // ✅ FIX: All countries processed - pass updated costs directly to avoid stale state
+        // Get the updated costs from state using functional update
+        setSelectedCosts(currentState => {
+          console.log('🔍 Proceeding to calculation with final state:', {
+            Hongkong: currentState.Hongkong.map(c => ({ costId: c.costId, name: c.name })),
+            Dubai: currentState.Dubai.map(c => ({ costId: c.costId, name: c.name }))
+          });
+          // Pass costs directly to avoid stale state issue
+          proceedToCalculation(currentState);
+          return currentState; // Return unchanged
+        });
+      }
+  };
+
+  // ✅ FIX #4: Validate selection state before calculation
+  const validateSelectionState = (
+    marginSelection: MarginSelection | null,
+    selectedCosts: { Hongkong: SelectedCost[]; Dubai: SelectedCost[] }
+  ): { valid: boolean; error?: string } => {
+    // ✅ STEP 1: Validate margins exist
+    if (!marginSelection) {
+      return { valid: false, error: 'Margin selection is required' };
     }
+    
+    // ✅ STEP 2: Validate margin dependencies
+    if (!marginSelection.sellerCategory) {
+      if (marginSelection.brand || 
+          marginSelection.productCategory || 
+          marginSelection.conditionCategory) {
+        return { 
+          valid: false, 
+          error: 'Dependent margins selected without seller category' 
+        };
+      }
+    }
+    
+    // ✅ STEP 3: Validate costs are arrays
+    if (!Array.isArray(selectedCosts.Hongkong) || 
+        !Array.isArray(selectedCosts.Dubai)) {
+      return { valid: false, error: 'Cost selections must be arrays' };
+    }
+    
+    // ✅ STEP 4: Validate no duplicate cost IDs
+    const allCostIds = [
+      ...selectedCosts.Hongkong.map(c => c.costId),
+      ...selectedCosts.Dubai.map(c => c.costId)
+    ];
+    const uniqueIds = new Set(allCostIds);
+    if (allCostIds.length !== uniqueIds.size) {
+      return { valid: false, error: 'Duplicate cost IDs detected' };
+    }
+    
+    return { valid: true };
+  };
+
+  // ✅ FIX #5: Validate API response against selections
+  const validateCalculationResults = (
+    apiProducts: any[],
+    marginSelection: MarginSelection,
+    selectedCosts: { Hongkong: SelectedCost[]; Dubai: SelectedCost[] }
+  ): { valid: boolean; warnings: string[] } => {
+    const warnings: string[] = [];
+    
+    apiProducts.forEach((product, index) => {
+      product.countryDeliverables?.forEach((cd: any) => {
+        const country = cd.country;
+        
+        // ✅ VALIDATE: Only selected margins should be present
+        const appliedMargins = cd.margins || [];
+        appliedMargins.forEach((margin: any) => {
+          const marginType = margin.type; // 'brand', 'productCategory', etc.
+          if (!marginSelection[marginType as keyof MarginSelection]) {
+            warnings.push(
+              `Product ${index + 1} (${country}): Unselected margin applied: ${margin.name}`
+            );
+          }
+        });
+        
+        // ✅ VALIDATE: Only selected costs should be present
+        const appliedCosts = cd.costs || [];
+        const countrySelectedCostIds = (country === 'Hongkong' 
+          ? selectedCosts.Hongkong 
+          : selectedCosts.Dubai
+        ).map(c => c.costId);
+        
+        appliedCosts.forEach((cost: any) => {
+          // Check both costId and _id for compatibility
+          const costIdMatch = cost.costId && countrySelectedCostIds.includes(cost.costId);
+          const idMatch = cost._id && countrySelectedCostIds.includes(cost._id);
+          if (!costIdMatch && !idMatch) {
+            warnings.push(
+              `Product ${index + 1} (${country}): Unselected cost applied: ${cost.name} (costId: ${cost.costId}, _id: ${cost._id})`
+            );
+          }
+        });
+      });
+    });
+    
+    return {
+      valid: warnings.length === 0,
+      warnings,
+    };
   };
 
   // Calculate prices and show preview
-  const proceedToCalculation = async () => {
+  const proceedToCalculation = async (costsOverride?: { Hongkong: SelectedCost[]; Dubai: SelectedCost[] }) => {
     try {
       setLoading(true);
+      
+      // ✅ FIX: Use override costs if provided, otherwise use state
+      const costsToUse = costsOverride || selectedCosts;
+      
+      // ✅ FIX #4: CRITICAL - Validate state before proceeding
+      const validation = validateSelectionState(marginSelection, costsToUse);
+      if (!validation.valid) {
+        toastHelper.showTost(validation.error || 'Invalid selection state', 'error');
+        setLoading(false);
+        return;
+      }
+      
+      // ✅ ASSERT: marginSelection is not null after validation
+      if (!marginSelection) {
+        throw new Error('Margin selection is null after validation');
+      }
+      
+      // ✅ DEBUG: Log calculation inputs
+      console.group('🔍 PRICING CALCULATION');
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('Margin Selection:', JSON.stringify(marginSelection, null, 2));
+      console.log('Selected Costs (HK):', costsToUse.Hongkong.map(c => c.costId));
+      console.log('Selected Costs (Dubai):', costsToUse.Dubai.map(c => c.costId));
+      console.log('Costs Details (HK):', costsToUse.Hongkong.map(c => ({ costId: c.costId, name: c.name })));
+      console.log('Costs Details (Dubai):', costsToUse.Dubai.map(c => ({ costId: c.costId, name: c.name })));
+      console.groupEnd();
       
       // Fetch SKU Family data to get brand and product category codes
       const skuFamilyMap = new Map();
@@ -1197,10 +1339,38 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
       }));
 
       // Prepare selected costs by country
+      // ✅ IMPORTANT: Include ALL selected costs (including express delivery and same location)
+      // They will be stored even if not applicable at product creation time
       const selectedCostsByCountry: Record<string, string[]> = {
-        Hongkong: selectedCosts.Hongkong.map(c => c.costId),
-        Dubai: selectedCosts.Dubai.map(c => c.costId),
+        Hongkong: costsToUse.Hongkong.map(c => c.costId),
+        Dubai: costsToUse.Dubai.map(c => c.costId),
       };
+      
+      // ✅ DEBUG: Log all selected costs to ensure same location costs are included
+      console.log('📦 Selected Costs for Calculation:', {
+        Hongkong: {
+          total: costsToUse.Hongkong.length,
+          costs: costsToUse.Hongkong.map(c => ({
+            costId: c.costId,
+            name: c.name,
+            isExpressDelivery: c.isExpressDelivery,
+            isSameLocationCharge: c.isSameLocationCharge
+          })),
+          expressDelivery: costsToUse.Hongkong.filter(c => c.isExpressDelivery).length,
+          sameLocation: costsToUse.Hongkong.filter(c => c.isSameLocationCharge).length
+        },
+        Dubai: {
+          total: costsToUse.Dubai.length,
+          costs: costsToUse.Dubai.map(c => ({
+            costId: c.costId,
+            name: c.name,
+            isExpressDelivery: c.isExpressDelivery,
+            isSameLocationCharge: c.isSameLocationCharge
+          })),
+          expressDelivery: costsToUse.Dubai.filter(c => c.isExpressDelivery).length,
+          sameLocation: costsToUse.Dubai.filter(c => c.isSameLocationCharge).length
+        }
+      });
 
       // Call calculation API
       if (!marginSelection) {
@@ -1223,21 +1393,78 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
       );
 
       if (response.data && response.data.products) {
-        // Map response to ProductCalculationResult format
-        const results: ProductCalculationResult[] = response.data.products.map((product: any, index: number) => ({
-          product: pendingRows[index],
-          countryDeliverables: product.countryDeliverables.map((cd: any) => ({
-            country: cd.country,
-            basePrice: cd.basePrice,
-            calculatedPrice: cd.calculatedPrice,
-            margins: cd.margins || [],
-            costs: cd.costs || [],
-            exchangeRate: cd.xe,
-            // Preserve local currency calculations for preview rendering
-            hkd: cd.hkd,
-            aed: cd.aed,
-          })),
-        }));
+        // ✅ FIX #5: VALIDATE - Check API response matches selections
+        const validation = validateCalculationResults(
+          response.data.products,
+          marginSelection,
+          costsToUse
+        );
+        
+        if (validation.warnings.length > 0) {
+          console.warn('⚠️ Calculation validation warnings:', validation.warnings);
+          // ✅ LOG: But don't block - backend might have valid reasons
+          // TODO: Investigate why backend applied unselected items
+        }
+        
+        // ✅ FIX #5: FILTER - Only include selected margins and costs
+        const results: ProductCalculationResult[] = response.data.products.map((product: any, index: number) => {
+          return {
+            product: pendingRows[index],
+            countryDeliverables: product.countryDeliverables.map((cd: any) => {
+              const country = cd.country;
+              const countrySelectedCostIds = (country === 'Hongkong' 
+                ? costsToUse.Hongkong 
+                : costsToUse.Dubai
+              ).map(c => c.costId);
+              
+              // ✅ DEBUG: Log cost matching for Dubai
+              if (country === 'Dubai') {
+                console.log(`🔍 Dubai Cost Filtering - Product ${index + 1}:`);
+                console.log('  Selected Cost IDs:', countrySelectedCostIds);
+                console.log('  API Costs:', (cd.costs || []).map((c: any) => ({
+                  costId: c.costId,
+                  _id: c._id,
+                  name: c.name
+                })));
+              }
+              
+              // ✅ FILTER: Only selected margins
+              const filteredMargins = (cd.margins || []).filter((margin: any) => {
+                const marginType = margin.type;
+                return marginSelection[marginType as keyof MarginSelection] === true;
+              });
+              
+              // ✅ FILTER: Only selected costs (check both costId and _id for compatibility)
+              const filteredCosts = (cd.costs || []).filter((cost: any) => {
+                // Check both costId and _id to handle different API response formats
+                const costIdMatch = cost.costId && countrySelectedCostIds.includes(cost.costId);
+                const idMatch = cost._id && countrySelectedCostIds.includes(cost._id);
+                return costIdMatch || idMatch;
+              });
+              
+              // ✅ DEBUG: Log filtered results for Dubai
+              if (country === 'Dubai') {
+                console.log(`  Filtered Costs:`, filteredCosts.map((c: any) => ({
+                  costId: c.costId,
+                  _id: c._id,
+                  name: c.name
+                })));
+              }
+              
+              return {
+                country: cd.country,
+                basePrice: cd.basePrice,
+                calculatedPrice: cd.calculatedPrice,
+                margins: filteredMargins,  // ✅ ONLY SELECTED
+                costs: filteredCosts,      // ✅ ONLY SELECTED
+                exchangeRate: cd.xe,
+                // Preserve local currency calculations for preview rendering
+                hkd: cd.hkd,
+                aed: cd.aed,
+              };
+            }),
+          };
+        });
         
         setCalculationResults(results);
         setShowPreviewModal(true);
@@ -1443,6 +1670,24 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           warranty: cleanString(row.warranty) || '',
           batteryHealth: cleanString(row.batteryHealth) || '',
           lockUnlock: row.lockUnlock === '1',
+          // ✅ FIX #6: CRITICAL - Store selection metadata for reproducibility
+          pricingMetadata: marginSelection ? {
+            selections: {
+              margins: {
+                sellerCategory: marginSelection.sellerCategory,
+                brand: marginSelection.brand,
+                productCategory: marginSelection.productCategory,
+                conditionCategory: marginSelection.conditionCategory,
+                customerCategory: marginSelection.customerCategory,
+              },
+              costs: {
+                Hongkong: selectedCosts.Hongkong.map(c => c.costId),
+                Dubai: selectedCosts.Dubai.map(c => c.costId),
+              },
+            },
+            calculationTimestamp: Date.now(),
+            calculationVersion: 1,
+          } : undefined,
         };
       });
 
