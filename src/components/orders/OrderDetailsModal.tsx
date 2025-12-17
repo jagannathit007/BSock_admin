@@ -215,6 +215,16 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       </td>
                     </tr>
                   )}
+                  {order.discount && order.discount > 0 && (
+                    <tr className="bg-gray-50 dark:bg-gray-700">
+                      <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300">
+                        Discount:
+                      </td>
+                      <td className="px-4 py-2 text-right text-sm text-green-600 dark:text-green-400 font-medium">
+                        -${formatPrice(order.discount)}
+                      </td>
+                    </tr>
+                  )}
                   {order.appliedCharges && order.appliedCharges.length > 0 && (
                     <tr className="bg-gray-50 dark:bg-gray-700">
                       <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300">

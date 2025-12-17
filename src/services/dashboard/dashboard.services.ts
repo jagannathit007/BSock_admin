@@ -8,23 +8,27 @@ export interface DashboardStats {
     isPositive: boolean;
   };
   orders: {
-    total: number;
-    today: number;
+    total: number; // Total delivered orders count
+    today: number; // Today delivered orders
+    todayPlaced?: number; // Today orders placed
     change: number;
     isPositive: boolean;
   };
   sales: {
-    total: number;
+    total: number; // Total sales amount
     today: number;
     change: number;
     isPositive: boolean;
   };
   products: {
     total: number;
-    active: number;
+    active: number; // Approved products count
   };
   bids: {
     active: number;
+  };
+  wallet: {
+    total: number; // Total wallet balance
   };
 }
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Swal from "sweetalert2";
 import { format } from "date-fns";
 import toastHelper from "../../utils/toastHelper";
 import CustomerCartService, { CustomerCartItem, CartProduct } from "../../services/order/customerCart.services";
@@ -148,31 +147,6 @@ const CustomerCart: React.FC = () => {
     }
   };
 
-  const handleRemoveFromCart = async (cartItem: CustomerCart) => {
-    if (!cartItem._id) return;
-
-    const confirmed = await Swal.fire({
-      title: "Remove from Cart?",
-      text: "This will remove the item from customer's cart!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, remove it!",
-      cancelButtonText: "No, cancel!",
-    });
-
-    if (confirmed.isConfirmed) {
-      try {
-        // Replace with your actual API call
-        // await CustomerCartService.removeFromCart(cartItem._id);
-
-        toastHelper.showTost("Item removed from cart successfully!", "success");
-        fetchCustomerCarts(); // Refresh the list
-      } catch (error) {
-        console.error("Failed to remove item from cart:", error);
-        toastHelper.showTost("Failed to remove item from cart!", "error");
-      }
-    }
-  };
 
   const handlePreview = (cartItem: CustomerCart) => {
     console.log('Preview item costSummary:', (cartItem as any).costSummary); // Debug
@@ -461,15 +435,6 @@ const CustomerCart: React.FC = () => {
                         >
                           <i className="fas fa-eye"></i>
                         </button>
-                        {canWrite && (
-                          <button
-                            onClick={() => handleRemoveFromCart(item)}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                            title="Remove from Cart"
-                          >
-                            <i className="fas fa-trash"></i>
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

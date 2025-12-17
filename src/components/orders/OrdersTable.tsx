@@ -332,6 +332,7 @@ const OrdersTable: React.FC = () => {
       let message = "";
       // Payment method removed - will be handled in separate module
       let selectedOtherCharges: number | null = order.otherCharges || null;
+      let selectedDiscount: number | null = order.discount || null;
       let selectedImages: File[] = [];
 
       // Get order stages to check if we can edit order
@@ -501,6 +502,26 @@ const OrdersTable: React.FC = () => {
               <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Other charges will be added to the order total.</p>
             `}
           </div>
+          <div id="discountContainer" style="margin-bottom: 20px; display: none;">
+            <label for="discountInput" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Discount</label>
+            ${order.discount !== null && order.discount !== undefined && Number(order.discount) > 0 ? `
+              <div style="padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px; background-color: #F9FAFB; color: #111827; font-size: 14px;">
+                Applied: ${Number(order.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Discount already applied to this order.</p>
+            ` : `
+              <input
+                type="number"
+                id="discountInput"
+                min="0"
+                step="0.01"
+                value=""
+                placeholder="Enter discount amount"
+                style="width: 100%; margin:0px; padding: 10px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 6px; background-color: #F9FAFB; color: #1F2937; outline: none; transition: border-color 0.2s;"
+              />
+              <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Discount will be subtracted from the order total. Only available before waiting for payment status.</p>
+            `}
+          </div>
           <div id="imagesContainer" style="margin-bottom: 20px;">
             <label for="imagesInput" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Upload Images (Optional)</label>
             <input
@@ -637,6 +658,7 @@ const OrdersTable: React.FC = () => {
             const quantityInputs = document.querySelectorAll(".quantity-input") as NodeListOf<HTMLInputElement>;
             const messageInput = document.getElementById("messageInput") as HTMLTextAreaElement;
             const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
+            const discountInput = document.getElementById("discountInput") as HTMLInputElement;
             const imagesInput = document.getElementById("imagesInput") as HTMLInputElement;
 
             if (!statusSelect) {
@@ -655,6 +677,16 @@ const OrdersTable: React.FC = () => {
               if (selectedOtherCharges !== null && selectedOtherCharges < 0) {
                 Swal.showValidationMessage('Other charges cannot be negative');
               return false;
+              }
+            }
+
+            // Get discount
+            if (discountInput) {
+              const discountValue = discountInput.value;
+              selectedDiscount = discountValue ? parseFloat(discountValue) : null;
+              if (selectedDiscount !== null && selectedDiscount < 0) {
+                Swal.showValidationMessage('Discount cannot be negative');
+                return false;
               }
             }
 
@@ -767,6 +799,12 @@ const OrdersTable: React.FC = () => {
               newTotal += otherCharges;
               originalTotal += (order.otherCharges || 0);
               
+              // Subtract discount if present
+              const discountInput = document.getElementById("discountInput") as HTMLInputElement;
+              const discount = discountInput ? (parseFloat(discountInput.value) || 0) : (order.discount || 0);
+              newTotal = Math.max(0, newTotal - discount);
+              originalTotal = Math.max(0, originalTotal - (order.discount || 0));
+              
               if (newOrderPriceContainer) {
                 const newOrderTotal = document.getElementById("newOrderTotal") as HTMLElement;
                 const originalOrderTotal = document.getElementById("originalOrderTotal") as HTMLElement;
@@ -826,6 +864,16 @@ const OrdersTable: React.FC = () => {
               if (cartItemsContainer) {
                 const allowByStatus = currentStatus === "requested";
                 cartItemsContainer.style.display = canEditOrder && allowByStatus ? "block" : "none";
+              }
+              
+              // Set initial visibility for discount container - only before waiting_for_payment
+              const discountContainer = document.getElementById("discountContainer") as HTMLElement;
+              if (discountContainer) {
+                const waitingForPaymentIndex = orderStages.indexOf('waiting_for_payment');
+                const currentStatusIndex = orderStages.indexOf(currentStatus);
+                const canShowDiscount = (waitingForPaymentIndex !== -1 && 
+                  currentStatusIndex !== -1 && currentStatusIndex < waitingForPaymentIndex);
+                discountContainer.style.display = canShowDiscount ? "block" : "none";
               }
               
               // Show/hide send confirmation container based on status and quantities modified
@@ -916,6 +964,12 @@ const OrdersTable: React.FC = () => {
                 otherChargesInput.addEventListener("input", calculateNewOrderPrice);
                 otherChargesInput.addEventListener("change", calculateNewOrderPrice);
               }
+              // Add event listener to discount input
+              const discountInput = document.getElementById("discountInput") as HTMLInputElement;
+              if (discountInput) {
+                discountInput.addEventListener("input", calculateNewOrderPrice);
+                discountInput.addEventListener("change", calculateNewOrderPrice);
+              }
               
               statusSelect.addEventListener("change", () => {
                 const newStatus = statusSelect.value;
@@ -938,6 +992,18 @@ const OrdersTable: React.FC = () => {
                   } else {
                     otherChargesContainer.style.display = "block";
                   }
+                }
+                // Show/hide discount container - only before waiting_for_payment
+                const discountContainer = document.getElementById("discountContainer") as HTMLElement;
+                if (discountContainer) {
+                  const waitingForPaymentIndex = orderStages.indexOf('waiting_for_payment');
+                  const newStatusIndex = orderStages.indexOf(newStatus);
+                  const currentStatusIndex = orderStages.indexOf(currentStatus);
+                  // Show discount only if current or new status is before waiting_for_payment
+                  const canShowDiscount = (waitingForPaymentIndex !== -1 && 
+                    ((newStatusIndex !== -1 && newStatusIndex < waitingForPaymentIndex) ||
+                     (currentStatusIndex !== -1 && currentStatusIndex < waitingForPaymentIndex)));
+                  discountContainer.style.display = canShowDiscount ? "block" : "none";
                 }
                 // Show/hide delivered warning and OTP container
                 const deliveredWarningContainer = document.getElementById("deliveredWarningContainer") as HTMLElement;
@@ -1155,7 +1221,8 @@ const OrdersTable: React.FC = () => {
             message || undefined,
             undefined, // Payment method removed - will be handled in separate module
             selectedOtherCharges !== null ? selectedOtherCharges : undefined,
-            selectedImages.length > 0 ? selectedImages : undefined
+            selectedImages.length > 0 ? selectedImages : undefined,
+            selectedDiscount !== null ? selectedDiscount : undefined
           );
 
           console.log('Update response:', response);
