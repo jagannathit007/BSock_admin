@@ -218,6 +218,52 @@ const Negotiations = () => {
     }
   };
 
+  const handleRejectOffer = async (negotiation: Negotiation) => {
+    if (!negotiation._id) return;
+
+    try {
+      const result = await Swal.fire({
+        title: 'Reject Offer?',
+        text: `Are you sure you want to reject this offer of ${formatPrice(negotiation.offerPrice)}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, Reject',
+        cancelButtonText: 'Cancel',
+        input: 'textarea',
+        inputPlaceholder: 'Optional rejection message...',
+        inputAttributes: {
+          'aria-label': 'Rejection message'
+        },
+        showLoaderOnConfirm: true,
+        preConfirm: async (message) => {
+          try {
+            const response = await NegotiationService.respondToNegotiation({
+              negotiationId: negotiation._id!,
+              action: 'reject',
+              message: message && message.trim() ? message.trim() : undefined
+            });
+            return response;
+          } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to reject offer';
+            Swal.showValidationMessage(errorMessage);
+            return false;
+          }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+      });
+
+      if (result.isConfirmed && result.value !== false) {
+        toastHelper.showTost('Offer rejected successfully!', 'success');
+        fetchData(); // Refresh data
+      }
+    } catch (error) {
+      console.error('Error rejecting offer:', error);
+      toastHelper.showTost('Failed to reject offer', 'error');
+    }
+  };
+
   const handleOpenCounterOffer = (negotiation: Negotiation) => {
     if (!negotiation._id) return;
     setCounterOfferPrice(negotiation.offerPrice.toString());
@@ -477,6 +523,13 @@ const getCustomerDetails = (customer: any) => {
                                           >
                                             <Handshake className="w-3 h-3" />
                                             <span>Counter</span>
+                                          </button>
+                                          <button
+                                            onClick={() => handleRejectOffer(negotiation)}
+                                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg flex items-center space-x-1 transition-colors"
+                                          >
+                                            <XCircle className="w-3 h-3" />
+                                            <span>Reject</span>
                                           </button>
                                         </div>
                                       )}

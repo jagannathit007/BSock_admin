@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Link } from "react-router";
-import { Handshake } from "lucide-react";
+import { Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useSidebar } from "../context/SidebarContext";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
-// import NotificationDropdown from "../components/header/NotificationDropdown";
 import UserDropdown from "../components/header/UserDropdown";
-import NegotiationModal from "../components/negotiation/NegotiationModal";
 import Logo from "../components/common/Logo";
+import { useSocket } from "../context/SocketContext";
+import NegotiationService from "../services/negotiation/negotiation.services";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
-  const [isNegotiationModalOpen, setIsNegotiationModalOpen] = useState(false);
+  const [hasNewNegotiation, setHasNewNegotiation] = useState(false);
+
+  const { socketService } = useSocket();
+  const navigate = useNavigate();
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
@@ -25,10 +29,6 @@ const AppHeader: React.FC = () => {
 
   const toggleApplicationMenu = () => {
     setApplicationMenuOpen(!isApplicationMenuOpen);
-  };
-
-  const handleNegotiationClick = () => {
-    setIsNegotiationModalOpen(true);
   };
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +47,56 @@ const AppHeader: React.FC = () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  // Fetch initial negotiation stats to determine if there are active negotiations
+  useEffect(() => {
+    const fetchNegotiationStats = async () => {
+      try {
+        const statsResponse = await NegotiationService.getNegotiationStats();
+        if (statsResponse?.data?.activeNegotiations && statsResponse.data.activeNegotiations > 0) {
+          setHasNewNegotiation(true);
+        }
+      } catch (error) {
+        // Silent fail – header should not break if stats fail
+        console.error("Failed to fetch negotiation stats for header:", error);
+      }
+    };
+
+    fetchNegotiationStats();
+  }, []);
+
+  // Listen for negotiation-related socket events to highlight new negotiations
+  useEffect(() => {
+    if (!socketService) return;
+
+    const handleNegotiationEvent = (data: any) => {
+      try {
+        const type = data?.type || data?.eventType;
+        const fromUserType = data?.FromUserType || data?.fromUserType || data?.userType;
+
+        // Treat customer-initiated negotiation events as "new"
+        if (
+          fromUserType === "Customer" ||
+          type === "new_bid" ||
+          type === "new_negotiation" ||
+          type === "negotiation_created"
+        ) {
+          setHasNewNegotiation(true);
+        }
+      } catch {
+        // Ignore malformed payloads
+      }
+    };
+
+    socketService.onNegotiationNotification(handleNegotiationEvent);
+    socketService.onNegotiationBroadcast(handleNegotiationEvent);
+    socketService.onNegotiationUpdate(handleNegotiationEvent);
+  }, [socketService]);
+
+  const handleNegotiationBellClick = () => {
+    setHasNewNegotiation(false);
+    navigate("/negotiations");
+  };
 
   return (
     <header className="sticky top-0 flex w-full bg-white border-gray-200 z-50 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
@@ -159,28 +209,24 @@ const AppHeader: React.FC = () => {
             {/* <!-- Dark Mode Toggler --> */}
             <ThemeToggleButton />
             {/* <!-- Dark Mode Toggler --> */}
-            {/* <NotificationDropdown /> */}
-            {/* <!-- Negotiation Button --> */}
+            {/* <!-- Negotiation Notification Bell --> */}
             <button
-              onClick={handleNegotiationClick}
-              className="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              onClick={handleNegotiationBellClick}
+              className="relative flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
               title="Negotiations"
             >
-              <Handshake className="w-5 h-5" />
+              {hasNewNegotiation && (
+                <span className="absolute right-0.5 top-0.5 z-10 h-2 w-2 rounded-full bg-orange-400">
+                  <span className="absolute inline-flex w-full h-full bg-orange-400 rounded-full opacity-75 animate-ping"></span>
+                </span>
+              )}
+              <Bell className="w-5 h-5" />
             </button>
-            {/* <!-- Notification Menu Area --> */}
           </div>
           {/* <!-- User Area --> */}
           <UserDropdown />
         </div>
       </div>
-
-      {/* Negotiation Modal */}
-      <NegotiationModal
-        isOpen={isNegotiationModalOpen}
-        onClose={() => setIsNegotiationModalOpen(false)}
-        // userType="admin"
-      />
     </header>
   );
 };

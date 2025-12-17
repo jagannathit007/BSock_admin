@@ -305,6 +305,7 @@ const OrdersTable: React.FC = () => {
       }
       
       const currentStatus = order.status;
+      const canEditOrder = !!(order as any).canEditOrder;
       const availableStatusOptions = await getAvailableStatusOptions(order);
       
       // Check if current admin has permission to update this order's status
@@ -706,9 +707,9 @@ const OrdersTable: React.FC = () => {
             console.log('Other Charges:', selectedOtherCharges);
             console.log('Images:', selectedImages.length);
 
-            // Cart items editing allowed for REQUESTED status (and verify if needed)
+            // Cart items editing allowed only in REQUESTED status
             // Validate MOQ when editing quantities
-            if ((selectedStatus === "requested" || selectedStatus === "verify") && quantityInputs && quantityInputs.length > 0) {
+            if (canEditOrder && selectedStatus === "requested" && quantityInputs && quantityInputs.length > 0) {
               editedCartItems = order.cartItems.map((item, index) => {
                 const inputValue = quantityInputs[index]?.value;
                 const newQuantity = inputValue ? parseInt(inputValue, 10) : item.quantity;
@@ -822,9 +823,10 @@ const OrdersTable: React.FC = () => {
                 }
               };
               
-              // Set initial visibility based on current status - allow editing in REQUESTED stage
+              // Set initial visibility based on current status - allow editing only in REQUESTED stage
               if (cartItemsContainer) {
-                cartItemsContainer.style.display = (currentStatus === "requested" || currentStatus === "verify") ? "block" : "none";
+                const allowByStatus = currentStatus === "requested";
+                cartItemsContainer.style.display = canEditOrder && allowByStatus ? "block" : "none";
               }
               
               // Show/hide send confirmation container based on status and quantities modified
@@ -918,9 +920,10 @@ const OrdersTable: React.FC = () => {
               
               statusSelect.addEventListener("change", () => {
                 const newStatus = statusSelect.value;
-                // Show cart items editing for REQUESTED status (and verify if needed)
+                // Show cart items editing only for REQUESTED status
                 if (cartItemsContainer) {
-                  cartItemsContainer.style.display = (newStatus === "requested" || newStatus === "verify") ? "block" : "none";
+                  const allowByStatus = newStatus === "requested";
+                  cartItemsContainer.style.display = canEditOrder && allowByStatus ? "block" : "none";
                 }
                 
                 // Show/hide send confirmation container - check dynamically
@@ -1134,10 +1137,10 @@ const OrdersTable: React.FC = () => {
 
         try {
           // Don't send cart items for cancelled status
-          // Allow editing when status is REQUESTED or VERIFY
-          // Cart items editing allowed for REQUESTED and VERIFY status
-          // Send edited cart items when status is REQUESTED or VERIFY
-          const cartItemsToSend = (selectedStatus === "requested" || selectedStatus === "verify") && editedCartItems ? editedCartItems : undefined;
+          // Allow editing only when status is REQUESTED
+          // Cart items editing allowed only for REQUESTED status
+          // Send edited cart items when status is REQUESTED
+          const cartItemsToSend = selectedStatus === "requested" && editedCartItems ? editedCartItems : undefined;
 
           console.log('Updating order status:', {
             orderId: order._id,
