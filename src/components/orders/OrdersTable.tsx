@@ -124,7 +124,6 @@ const OrdersTable: React.FC = () => {
     }
     
     const currentStatus = order.status;
-    const orderTrackingStatus = order.orderTrackingStatus;
     
     // Get dynamic stages from backend based on order's location and currency
     let orderStages: string[] = [];

@@ -5,7 +5,7 @@ import {
   ChevronRight, 
   ChevronDown, 
   User, 
-  Package, 
+  // Package, 
   DollarSign, 
   Clock, 
   CheckCircle, 

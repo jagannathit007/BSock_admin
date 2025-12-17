@@ -31,7 +31,7 @@ const SubmitAdminDetailsModal: React.FC<SubmitAdminDetailsModalProps> = ({
   const [currentCostCountry, setCurrentCostCountry] = useState<'Hongkong' | 'Dubai' | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_costsByCountry, setCostsByCountry] = useState<{ Hongkong?: any[]; Dubai?: any[] }>({});
+  // const [_costsByCountry, setCostsByCountry] = useState<{ Hongkong?: any[]; Dubai?: any[] }>({});
 
 
   const handleMarginSelection = (selection: MarginSelection) => {

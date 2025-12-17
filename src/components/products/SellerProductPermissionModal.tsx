@@ -21,7 +21,7 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedSeller, _setSelectedSeller] = useState<string>(sellerId || '');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_sellers, setSellers] = useState<any[]>([]);
+  // const [_sellers, setSellers] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isGlobal, _setIsGlobal] = useState(!sellerId);
 
