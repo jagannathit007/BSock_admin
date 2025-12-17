@@ -305,6 +305,7 @@ const OrdersTable: React.FC = () => {
       }
       
       const currentStatus = order.status;
+      const canEditOrder = !!(order as any).canEditOrder;
       const availableStatusOptions = await getAvailableStatusOptions(order);
       
       // Check if current admin has permission to update this order's status
@@ -708,7 +709,7 @@ const OrdersTable: React.FC = () => {
 
             // Cart items editing allowed for REQUESTED status (and verify if needed)
             // Validate MOQ when editing quantities
-            if ((selectedStatus === "requested" || selectedStatus === "verify") && quantityInputs && quantityInputs.length > 0) {
+            if (canEditOrder && (selectedStatus === "requested" || selectedStatus === "verify") && quantityInputs && quantityInputs.length > 0) {
               editedCartItems = order.cartItems.map((item, index) => {
                 const inputValue = quantityInputs[index]?.value;
                 const newQuantity = inputValue ? parseInt(inputValue, 10) : item.quantity;
@@ -824,7 +825,8 @@ const OrdersTable: React.FC = () => {
               
               // Set initial visibility based on current status - allow editing in REQUESTED stage
               if (cartItemsContainer) {
-                cartItemsContainer.style.display = (currentStatus === "requested" || currentStatus === "verify") ? "block" : "none";
+                const allowByStatus = currentStatus === "requested" || currentStatus === "verify";
+                cartItemsContainer.style.display = canEditOrder && allowByStatus ? "block" : "none";
               }
               
               // Show/hide send confirmation container based on status and quantities modified
@@ -920,7 +922,8 @@ const OrdersTable: React.FC = () => {
                 const newStatus = statusSelect.value;
                 // Show cart items editing for REQUESTED status (and verify if needed)
                 if (cartItemsContainer) {
-                  cartItemsContainer.style.display = (newStatus === "requested" || newStatus === "verify") ? "block" : "none";
+                  const allowByStatus = newStatus === "requested" || newStatus === "verify";
+                  cartItemsContainer.style.display = canEditOrder && allowByStatus ? "block" : "none";
                 }
                 
                 // Show/hide send confirmation container - check dynamically
