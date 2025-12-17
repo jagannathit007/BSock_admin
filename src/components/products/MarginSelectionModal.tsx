@@ -29,14 +29,9 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
     sellerCategory: false,
     customerCategory: false,
   });
-  const [hasSellerCode, setHasSellerCode] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      // Check if any product has seller code
-      const hasSeller = products.some(p => p.supplierId);
-      setHasSellerCode(hasSeller);
-      
       // ✅ FIX #1: Reset selection when modal opens (fresh state, no stale closure)
       setSelection({
         brand: false,
@@ -85,14 +80,7 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
   };
 
   const handleNext = () => {
-    // Validate that at least one of seller or customer category is selected when products have seller code
-    if (hasSellerCode && !selection.sellerCategory && !selection.customerCategory) {
-      toastHelper.showTost(
-        'Please select at least Seller Category or Customer Category margin when products have seller code',
-        'warning'
-      );
-      return;
-    }
+    // Allow proceeding without selecting any margins
     onNext(selection);
   };
 

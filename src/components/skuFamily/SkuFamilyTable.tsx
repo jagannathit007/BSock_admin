@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { SkuFamilyService } from "../../services/skuFamily/skuFamily.services";
+import { SubSkuFamilyService } from "../../services/skuFamily/subSkuFamily.services";
 import toastHelper from "../../utils/toastHelper";
 import SkuFamilyModal from "./SkuFamilyModal";
 import SubSkuFamilyModal from "./SubSkuFamilyModal";
@@ -39,6 +40,18 @@ const SkuFamilyTable: React.FC = () => {
   const [editingSubSkuFamily, setEditingSubSkuFamily] = useState<any>(null);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const itemsPerPage = 10;
+  
+  // Sub SKU Family pagination state - stores pagination info per SKU Family
+  const [subSkuFamilyData, setSubSkuFamilyData] = useState<Record<string, {
+    docs: any[];
+    totalDocs: number;
+    totalPages: number;
+    currentPage: number;
+    loading: boolean;
+  }>>({});
+  const [subSkuFamilySearch, setSubSkuFamilySearch] = useState<Record<string, string>>({});
+  const debouncedSubSkuFamilySearch = useDebounce(subSkuFamilySearch, 500);
+  const subSkuFamilyItemsPerPage = 5;
 
   // Helper function to get video URL
   const getVideoUrl = (path: string): string => {
@@ -53,6 +66,25 @@ const SkuFamilyTable: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [currentPage, debouncedSearchTerm]);
+
+  // Fetch sub SKU families when a row is expanded
+  useEffect(() => {
+    expandedRows.forEach((skuFamilyId) => {
+      if (skuFamilyId && !subSkuFamilyData[skuFamilyId]) {
+        fetchSubSkuFamilies(skuFamilyId, 1);
+      }
+    });
+  }, [expandedRows]);
+
+  // Handle debounced search for sub SKU families
+  useEffect(() => {
+    Object.keys(debouncedSubSkuFamilySearch).forEach((skuFamilyId) => {
+      if (expandedRows.has(skuFamilyId)) {
+        const searchTerm = debouncedSubSkuFamilySearch[skuFamilyId] || '';
+        fetchSubSkuFamilies(skuFamilyId, 1, searchTerm);
+      }
+    });
+  }, [debouncedSubSkuFamilySearch]);
 
   // Reset to first page when search term changes
   useEffect(() => {
@@ -106,6 +138,61 @@ const SkuFamilyTable: React.FC = () => {
       setTotalDocs(0);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSubSkuFamilies = async (skuFamilyId: string, page: number, search?: string) => {
+    // Set loading state for this specific SKU Family
+    setSubSkuFamilyData(prev => ({
+      ...prev,
+      [skuFamilyId]: {
+        ...prev[skuFamilyId],
+        loading: true,
+      }
+    }));
+
+    try {
+      const searchTerm = search !== undefined ? search : (subSkuFamilySearch[skuFamilyId] || '');
+      const response = await SubSkuFamilyService.getSubSkuFamilyList(
+        page,
+        subSkuFamilyItemsPerPage,
+        skuFamilyId,
+        searchTerm.trim()
+      );
+      
+      if (response.data?.docs) {
+        setSubSkuFamilyData(prev => ({
+          ...prev,
+          [skuFamilyId]: {
+            docs: response.data.docs,
+            totalDocs: response.data.totalDocs || 0,
+            totalPages: response.data.totalPages || 1,
+            currentPage: response.data.page || 1,
+            loading: false,
+          }
+        }));
+      } else {
+        setSubSkuFamilyData(prev => ({
+          ...prev,
+          [skuFamilyId]: {
+            docs: [],
+            totalDocs: 0,
+            totalPages: 1,
+            currentPage: 1,
+            loading: false,
+          }
+        }));
+      }
+    } catch (err: any) {
+      console.error("Error fetching Sub SKU families:", err);
+      toastHelper.showTost("Failed to fetch Sub SKU families", "error");
+      setSubSkuFamilyData(prev => ({
+        ...prev,
+        [skuFamilyId]: {
+          ...prev[skuFamilyId],
+          loading: false,
+        }
+      }));
     }
   };
 
@@ -218,6 +305,11 @@ const SkuFamilyTable: React.FC = () => {
         await SkuFamilyService.addSubSkuFamily(selectedSkuFamilyForSub, formData);
       }
       fetchData();
+      // Refresh sub SKU families for the current SKU Family
+      if (selectedSkuFamilyForSub && subSkuFamilyData[selectedSkuFamilyForSub]) {
+        const currentPage = subSkuFamilyData[selectedSkuFamilyForSub].currentPage;
+        fetchSubSkuFamilies(selectedSkuFamilyForSub, currentPage);
+      }
       setSubSkuFamilyModalOpen(false);
       setSelectedSkuFamilyForSub(null);
       setEditingSubSkuFamilyId(null);
@@ -243,6 +335,11 @@ const SkuFamilyTable: React.FC = () => {
       try {
         await SkuFamilyService.deleteSubSkuFamily(skuFamilyId, subSkuFamilyId);
         fetchData();
+        // Refresh sub SKU families for the current SKU Family
+        if (subSkuFamilyData[skuFamilyId]) {
+          const currentPage = subSkuFamilyData[skuFamilyId].currentPage;
+          fetchSubSkuFamilies(skuFamilyId, currentPage);
+        }
       } catch (err: any) {
         console.error("Error deleting Sub SKU family:", err);
         toastHelper.showTost("Failed to delete Sub SKU family", "error");
@@ -263,6 +360,11 @@ const SkuFamilyTable: React.FC = () => {
       setEditingSubSequenceId(null);
       setEditingSubSequenceValue("");
       fetchData();
+      // Refresh sub SKU families for the current SKU Family
+      if (subSkuFamilyData[skuFamilyId]) {
+        const currentPage = subSkuFamilyData[skuFamilyId].currentPage;
+        fetchSubSkuFamilies(skuFamilyId, currentPage);
+      }
     } catch (err: any) {
       console.error("Error updating sub sequence:", err);
       setEditingSubSequenceId(null);
@@ -288,7 +390,7 @@ const SkuFamilyTable: React.FC = () => {
               <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
               <input
                 type="text"
-                placeholder="Search by name or code..."
+                placeholder="Search by name, code, brand, category, condition, or sub SKU..."
                 className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
                 value={searchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -418,7 +520,7 @@ const SkuFamilyTable: React.FC = () => {
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
                           {searchTerm.trim() 
-                            ? `No SKU families match your search "${searchTerm}". Try adjusting your search terms.`
+                            ? `No SKU families match your search "${searchTerm}". Try searching by name, code, brand, category, condition, or sub SKU name.`
                             : canWrite
                             ? "There are no SKU families available at the moment. Click the 'Add SKU Family' button to create your first SKU family."
                             : "There are no SKU families available at the moment."}
@@ -454,6 +556,10 @@ const SkuFamilyTable: React.FC = () => {
                               newExpanded.delete(item._id);
                             } else {
                               newExpanded.add(item._id);
+                              // Fetch sub SKU families when expanding
+                              if (!subSkuFamilyData[item._id]) {
+                                fetchSubSkuFamilies(item._id, 1);
+                              }
                             }
                             setExpandedRows(newExpanded);
                           }
@@ -578,11 +684,44 @@ const SkuFamilyTable: React.FC = () => {
                       </td>
                     </tr>
                     {/* Expanded Sub SKU Families Row */}
-                    {isExpanded && item.subSkuFamilies && item.subSkuFamilies.length > 0 && (
+                    {isExpanded && item._id && (
                       <tr className="bg-gray-50/50 dark:bg-gray-800/20">
                         <td colSpan={8} className="px-0 py-0">
                           <div className="px-6 py-4">
                             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                              {/* Sub SKU Family Search */}
+                              <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                                <div className="flex items-center gap-3">
+                                  <div className="relative flex-1">
+                                    <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                                    <input
+                                      type="text"
+                                      placeholder="Search sub SKU families..."
+                                      className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
+                                      value={subSkuFamilySearch[item._id] || ''}
+                                      onChange={(e) => {
+                                        setSubSkuFamilySearch(prev => ({
+                                          ...prev,
+                                          [item._id!]: e.target.value
+                                        }));
+                                      }}
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      setSubSkuFamilySearch(prev => ({
+                                        ...prev,
+                                        [item._id!]: ''
+                                      }));
+                                      fetchSubSkuFamilies(item._id!, 1, '');
+                                    }}
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
+                              </div>
+                              
                               <table className="w-full text-sm">
                                 <thead className="bg-gray-50 dark:bg-gray-900/30 border-b border-gray-200 dark:border-gray-700">
                                   <tr>
@@ -599,9 +738,19 @@ const SkuFamilyTable: React.FC = () => {
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                  {item.subSkuFamilies
-                                    .sort((a: any, b: any) => (a.subSkuSequence || 1) - (b.subSkuSequence || 1))
-                                    .map((subSku: any, subIndex: number) => {
+                                  {subSkuFamilyData[item._id]?.loading ? (
+                                    <tr>
+                                      <td colSpan={8} className="p-8 text-center">
+                                        <div className="text-gray-500 dark:text-gray-400 text-sm">
+                                          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-blue-600 mx-auto mb-2"></div>
+                                          Loading Sub SKU Families...
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ) : subSkuFamilyData[item._id]?.docs && subSkuFamilyData[item._id].docs.length > 0 ? (
+                                    subSkuFamilyData[item._id].docs
+                                      .sort((a: any, b: any) => (a.subSkuSequence || 1) - (b.subSkuSequence || 1))
+                                      .map((subSku: any, subIndex: number) => {
                                       const subSkuImage = subSku.images && subSku.images.length > 0 ? subSku.images[0] : null;
                                       const getImageUrl = (path: string): string => {
                                         if (!path) return placeholderImage;
@@ -741,38 +890,108 @@ const SkuFamilyTable: React.FC = () => {
                                           </td>
                                         </tr>
                                       );
-                                    })}
+                                    })
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={8} className="p-8 text-center">
+                                        <div className="flex flex-col items-center justify-center text-center">
+                                          <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+                                            <i className="fas fa-box-open text-2xl text-gray-400"></i>
+                                          </div>
+                                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                                            No Sub SKU Families found
+                                          </p>
+                                          {canWrite && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (item._id) {
+                                                  handleAddSubSkuFamily(item._id);
+                                                }
+                                              }}
+                                              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                                            >
+                                              <i className="fas fa-plus"></i>
+                                              Add Sub SKU Family
+                                            </button>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
                                 </tbody>
                               </table>
+                              
+                              {/* Sub SKU Family Pagination */}
+                              {subSkuFamilyData[item._id] && subSkuFamilyData[item._id].totalDocs > 0 && (
+                                <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 sm:mb-0">
+                                    Showing {subSkuFamilyData[item._id].docs.length} of {subSkuFamilyData[item._id].totalDocs} sub SKU families
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentPage = subSkuFamilyData[item._id!].currentPage;
+                                        if (currentPage > 1) {
+                                          fetchSubSkuFamilies(item._id!, currentPage - 1);
+                                        }
+                                      }}
+                                      disabled={subSkuFamilyData[item._id].currentPage === 1}
+                                      className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-xs transition-colors"
+                                    >
+                                      Previous
+                                    </button>
+                                    <div className="flex space-x-1">
+                                      {Array.from({ length: Math.min(subSkuFamilyData[item._id].totalPages, 5) }, (_, i) => {
+                                        const pageNum = i + 1;
+                                        const currentPage = subSkuFamilyData[item._id].currentPage;
+                                        // Show pages around current page
+                                        let displayPage = pageNum;
+                                        if (subSkuFamilyData[item._id].totalPages > 5) {
+                                          if (currentPage <= 3) {
+                                            displayPage = pageNum;
+                                          } else if (currentPage >= subSkuFamilyData[item._id].totalPages - 2) {
+                                            displayPage = subSkuFamilyData[item._id].totalPages - 4 + pageNum;
+                                          } else {
+                                            displayPage = currentPage - 2 + pageNum;
+                                          }
+                                        }
+                                        return (
+                                          <button
+                                            key={displayPage}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              fetchSubSkuFamilies(item._id!, displayPage);
+                                            }}
+                                            className={`px-2 py-1.5 rounded-lg text-xs ${
+                                              subSkuFamilyData[item._id].currentPage === displayPage
+                                                ? "bg-[#0071E0] text-white dark:bg-blue-500 dark:text-white border border-blue-600 dark:border-blue-500"
+                                                : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                            } transition-colors`}
+                                          >
+                                            {displayPage}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentPage = subSkuFamilyData[item._id!].currentPage;
+                                        if (currentPage < subSkuFamilyData[item._id!].totalPages) {
+                                          fetchSubSkuFamilies(item._id!, currentPage + 1);
+                                        }
+                                      }}
+                                      disabled={subSkuFamilyData[item._id].currentPage === subSkuFamilyData[item._id].totalPages}
+                                      className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-xs transition-colors"
+                                    >
+                                      Next
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    {isExpanded && (!item.subSkuFamilies || item.subSkuFamilies.length === 0) && (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-8 bg-gray-50 dark:bg-gray-800/50">
-                          <div className="flex flex-col items-center justify-center text-center">
-                            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
-                              <i className="fas fa-box-open text-2xl text-gray-400"></i>
-                            </div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                              No Sub SKU Families found
-                            </p>
-                            {canWrite && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (item._id) {
-                                    handleAddSubSkuFamily(item._id);
-                                  }
-                                }}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                              >
-                                <i className="fas fa-plus"></i>
-                                Add Sub SKU Family
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>

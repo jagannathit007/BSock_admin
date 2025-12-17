@@ -114,7 +114,8 @@ export class SubSkuFamilyService {
   static getSubSkuFamilyList = async (page: number, limit: number, skuFamilyId?: string, search?: string): Promise<ListResponse> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;
     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
-    const url = `${baseUrl}/api/${adminRoute}/subSkuFamily/list`;
+    // Use the SKU Family endpoint for embedded sub SKU families
+    const url = `${baseUrl}/api/${adminRoute}/skuFamily/list-sub-sku-families`;
 
     const body: any = { page, limit };
     if (skuFamilyId) {
