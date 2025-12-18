@@ -2065,6 +2065,218 @@ const navigate = useNavigate();
                   </div>
                 </div>
 
+                {/* Margins & Costs Details Section */}
+                {Array.isArray(selectedProduct.countryDeliverables) && selectedProduct.countryDeliverables.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                      Margins & Costs Details
+                    </h3>
+                    <div className="space-y-4">
+                      {selectedProduct.countryDeliverables.map((cd: any, idx: number) => (
+                        <div key={idx} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <h4 className="text-md font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                            <i className="fas fa-globe text-blue-600"></i>
+                            {cd.country || 'N/A'}
+                            {cd.currency && (
+                              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                                ({cd.currency})
+                              </span>
+                            )}
+                          </h4>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* Margins Section */}
+                            <div>
+                              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                <i className="fas fa-chart-line text-blue-600"></i>
+                                Margins
+                                {cd.margins && Array.isArray(cd.margins) && cd.margins.length > 0 && (
+                                  <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                                    ({cd.margins.length})
+                                  </span>
+                                )}
+                              </h5>
+                              {cd.margins && Array.isArray(cd.margins) && cd.margins.length > 0 ? (
+                                <div className="space-y-2">
+                                  {cd.margins.map((margin: any, mIdx: number) => (
+                                    <div
+                                      key={mIdx}
+                                      className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800"
+                                    >
+                                      <div className="flex items-start justify-between mb-1">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                            {margin.name || 'N/A'}
+                                          </p>
+                                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                            Type: <span className="font-medium capitalize">{margin.type || 'N/A'}</span>
+                                          </p>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                            +{formatPrice(margin.calculatedAmount || 0)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                          <div>
+                                            <span className="text-gray-600 dark:text-gray-400">Margin Type:</span>
+                                            <span className="ml-1 font-medium text-gray-800 dark:text-gray-200 capitalize">
+                                              {margin.marginType || 'N/A'}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="text-gray-600 dark:text-gray-400">Value:</span>
+                                            <span className="ml-1 font-medium text-gray-800 dark:text-gray-200">
+                                              {margin.marginType === 'percentage' 
+                                                ? `${margin.marginValue || 0}%` 
+                                                : `$${formatPrice(margin.marginValue || 0)}`}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        {margin.description && (
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                                            {margin.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-500 dark:text-gray-400 italic">No margins applied</p>
+                              )}
+                            </div>
+
+                            {/* Costs Section */}
+                            <div>
+                              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                <i className="fas fa-dollar-sign text-green-600"></i>
+                                Costs
+                                {cd.costs && Array.isArray(cd.costs) && cd.costs.length > 0 && (
+                                  <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                                    ({cd.costs.length})
+                                  </span>
+                                )}
+                              </h5>
+                              {cd.costs && Array.isArray(cd.costs) && cd.costs.length > 0 ? (
+                                <div className="space-y-2">
+                                  {cd.costs.map((cost: any, cIdx: number) => (
+                                    <div
+                                      key={cIdx}
+                                      className={`p-3 rounded-md border ${
+                                        cost.isExpressDelivery || cost.isSameLocationCharge
+                                          ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                                          : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between mb-1">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                            {cost.name || 'N/A'}
+                                            {(cost.isExpressDelivery || cost.isSameLocationCharge) && (
+                                              <span className="ml-2 text-xs px-1.5 py-0.5 bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded">
+                                                {cost.isExpressDelivery ? 'Express' : 'Same Location'}
+                                              </span>
+                                            )}
+                                          </p>
+                                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                            Field: <span className="font-medium capitalize">{cost.costField || 'N/A'}</span>
+                                          </p>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                                            +{formatPrice(cost.calculatedAmount || 0)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                          <div>
+                                            <span className="text-gray-600 dark:text-gray-400">Cost Type:</span>
+                                            <span className="ml-1 font-medium text-gray-800 dark:text-gray-200">
+                                              {cost.costType || 'N/A'}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="text-gray-600 dark:text-gray-400">Value:</span>
+                                            <span className="ml-1 font-medium text-gray-800 dark:text-gray-200">
+                                              {cost.costType === 'Percentage' 
+                                                ? `${cost.value || 0}%` 
+                                                : `$${formatPrice(cost.value || 0)}`}
+                                            </span>
+                                          </div>
+                                          {cost.costUnit && (
+                                            <div className="col-span-2">
+                                              <span className="text-gray-600 dark:text-gray-400">Unit:</span>
+                                              <span className="ml-1 font-medium text-gray-800 dark:text-gray-200 capitalize">
+                                                {cost.costUnit}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {cost.groupId && (
+                                            <div className="col-span-2">
+                                              <span className="text-gray-600 dark:text-gray-400">Group ID:</span>
+                                              <span className="ml-1 font-medium text-gray-800 dark:text-gray-200">
+                                                {cost.groupId}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-500 dark:text-gray-400 italic">No costs applied</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Summary */}
+                          {(cd.margins && cd.margins.length > 0) || (cd.costs && cd.costs.length > 0) ? (
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">Base Price:</span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200">
+                                  ${formatPrice(cd.basePrice || 0)}
+                                </span>
+                              </div>
+                              {cd.margins && cd.margins.length > 0 && (
+                                <div className="flex items-center justify-between text-sm mt-1">
+                                  <span className="text-gray-600 dark:text-gray-400">Total Margins:</span>
+                                  <span className="font-medium text-blue-600 dark:text-blue-400">
+                                    +${formatPrice(
+                                      cd.margins.reduce((sum: number, m: any) => sum + (m.calculatedAmount || 0), 0)
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {cd.costs && cd.costs.length > 0 && (
+                                <div className="flex items-center justify-between text-sm mt-1">
+                                  <span className="text-gray-600 dark:text-gray-400">Total Costs:</span>
+                                  <span className="font-medium text-green-600 dark:text-green-400">
+                                    +${formatPrice(
+                                      cd.costs.reduce((sum: number, c: any) => sum + (c.calculatedAmount || 0), 0)
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between text-sm font-semibold mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <span className="text-gray-800 dark:text-gray-200">Final Price:</span>
+                                <span className="text-lg text-blue-600 dark:text-blue-400">
+                                  ${formatPrice(cd.calculatedPrice || cd.usd || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Additional Details Section */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
