@@ -312,6 +312,27 @@ export class ProductService {
     }
   };
 
+  // Update product images and videos
+  static updateProductImagesVideos = async (id: string, formData: FormData): Promise<any> => {
+    const baseUrl = import.meta.env.VITE_BASE_URL;
+    const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
+    const url = `${baseUrl}/api/${adminRoute}/product/update-images-videos`;
+
+    try {
+      const res = await api.post(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      toastHelper.showTost(res.data.message || 'Product images and videos updated successfully!', 'success');
+      return res.data;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to update product images and videos';
+      toastHelper.showTost(errorMessage, 'error');
+      throw new Error(errorMessage);
+    }
+  };
+
   // Get product list with pagination and search
   static getProductList = async (page: number, limit: number, search?: string, moveToTop?: boolean, expiredOnly?: boolean, soldOut?: boolean, showTimer?: boolean): Promise<ListResponse> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;

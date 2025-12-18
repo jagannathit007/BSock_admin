@@ -10,6 +10,7 @@ import VariantSelectionModal from "./VariantSelectionModal";
 import SellerProductReviewModal from "./SellerProductReviewModal";
 import SellerProductPermissionModal from "./SellerProductPermissionModal";
 import SubmitAdminDetailsModal from "./SubmitAdminDetailsModal";
+import ProductImageVideoModal from "./ProductImageVideoModal";
 import {
   ProductService,
   Product,
@@ -63,6 +64,8 @@ const navigate = useNavigate();
   const [isSellerRequestView, setIsSellerRequestView] = useState<boolean>(false);
   const [isAdminDetailsModalOpen, setIsAdminDetailsModalOpen] = useState<boolean>(false);
   const [selectedProductForDetails, setSelectedProductForDetails] = useState<Product | null>(null);
+  const [isImageVideoModalOpen, setIsImageVideoModalOpen] = useState<boolean>(false);
+  const [selectedProductForImages, setSelectedProductForImages] = useState<Product | null>(null);
 
   // Helper to extract seller id from various shapes
   const getProductSellerId = (product: any): string | null => {
@@ -863,13 +866,18 @@ const navigate = useNavigate();
 
   const getProductImageSrc = (product: Product): string => {
     try {
-      // Get image from skuFamilyId
+      // ✅ Try to get image from product itself first (product-specific images)
+      if (product && (product as any).images && Array.isArray((product as any).images) && (product as any).images.length > 0) {
+        const first = (product as any).images[0];
+        if (first) return buildImageUrl(first);
+      }
+      
+      // Fallback: Get image from skuFamilyId
       const sku = product?.skuFamilyId as any;
-      const first =
-        Array.isArray(sku?.images) && sku.images.length > 0
-          ? sku.images[0]
-          : "";
-      if (first) return buildImageUrl(first);
+      if (sku && typeof sku === 'object') {
+        const skuImage = Array.isArray(sku?.images) && sku.images.length > 0 ? sku.images[0] : null;
+        if (skuImage) return buildImageUrl(skuImage);
+      }
     } catch (_) {}
     return placeholderImage;
   };
@@ -1279,11 +1287,16 @@ const navigate = useNavigate();
                       <img
                         src={getProductImageSrc(item) || placeholderImage}
                         alt={getSkuFamilyText(item?.skuFamilyId) || "Product"}
-                        className="w-12 h-12 object-cover rounded-md border border-gray-200 dark:border-gray-600"
+                        className="w-12 h-12 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => {
+                          setSelectedProductForImages(item);
+                          setIsImageVideoModalOpen(true);
+                        }}
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src =
                             placeholderImage;
                         }}
+                        title="Click to manage images and videos"
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -1649,6 +1662,21 @@ const navigate = useNavigate();
           }}
           product={selectedProductForDetails}
           onSuccess={fetchProducts}
+        />
+      )}
+
+      {/* Product Image/Video Modal */}
+      {selectedProductForImages && (
+        <ProductImageVideoModal
+          isOpen={isImageVideoModalOpen}
+          onClose={() => {
+            setIsImageVideoModalOpen(false);
+            setSelectedProductForImages(null);
+          }}
+          product={selectedProductForImages}
+          onUpdate={() => {
+            fetchProducts();
+          }}
         />
       )}
 
