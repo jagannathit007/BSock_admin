@@ -12,15 +12,29 @@ interface BusinessRequest {
   businessName: string;
   country: string;
   address?: string;
-  status: "Approved" | "Pending" | "Rejected";
+  status: "Approved" | "Pending" | "Rejected" | "Verified";
   name?: string;
   email?: string;
   mobileNumber?: string;
   whatsappNumber?: string;
+  businessProfile?: {
+    status?: string;
+    verifiedBy?: {
+      _id?: string;
+      name?: string;
+      email?: string;
+    } | string | null;
+    approvedBy?: {
+      _id?: string;
+      name?: string;
+      email?: string;
+    } | string | null;
+  };
 }
 
 const BusinessRequestsTable: React.FC = () => {
   const { canVerifyApprove } = useModulePermissions('/business-requests');
+  const [currentAdminId, setCurrentAdminId] = useState<string>("");
   const [businessRequests, setBusinessRequests] = useState<BusinessRequest[]>(
     []
   );
@@ -41,7 +55,7 @@ const BusinessRequestsTable: React.FC = () => {
     left: number;
   } | null>(null);
   const [statusOverrides, setStatusOverrides] = useState<
-    Record<string, "Approved" | "Pending" | "Rejected">
+    Record<string, "Approved" | "Pending" | "Rejected" | "Verified">
   >({});
   const [totalDocs, setTotalDocs] = useState<number>(0);
 
@@ -115,8 +129,9 @@ const BusinessRequestsTable: React.FC = () => {
         const statusStr: string | undefined = (bp?.status || "")
           .toString()
           .toLowerCase();
-        let status: "Approved" | "Pending" | "Rejected" = "Pending";
+        let status: "Approved" | "Pending" | "Rejected" | "Verified" = "Pending";
         if (statusStr === "approved") status = "Approved";
+        else if (statusStr === "verified") status = "Verified";
         else if (statusStr === "rejected") status = "Rejected";
         else status = "Pending";
 
@@ -132,6 +147,11 @@ const BusinessRequestsTable: React.FC = () => {
           email: d?.email ?? "-",
           mobileNumber: d?.mobileNumber ?? "-",
           whatsappNumber: d?.whatsappNumber ?? "-",
+          businessProfile: {
+            status: bp?.status,
+            verifiedBy: bp?.verifiedBy || null,
+            approvedBy: bp?.approvedBy || null,
+          },
         } as BusinessRequest;
       });
 
@@ -174,7 +194,7 @@ const BusinessRequestsTable: React.FC = () => {
     }
 
     if (statusFilter !== "All") {
-      filtered = filtered.filter((item) => item.status === statusFilter);
+      filtered = filtered.filter((item) => getDisplayStatus(item) === statusFilter);
     }
 
     setFilteredRequests(filtered);
@@ -184,6 +204,50 @@ const BusinessRequestsTable: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Get current admin ID
+  useEffect(() => {
+    let adminId = localStorage.getItem(LOCAL_STORAGE_KEYS.ADMIN_ID);
+    if (!adminId) {
+      adminId = localStorage.getItem(LOCAL_STORAGE_KEYS.USER_ID) || "";
+    }
+    if (!adminId) {
+      const userStr = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          adminId = user._id || user.id || "";
+        } catch (e) {
+          console.error('Error parsing user from localStorage:', e);
+        }
+      }
+    }
+    setCurrentAdminId(adminId || "");
+  }, []);
+
+  const handleVerify = async (id: string) => {
+    const confirmed = await Swal.fire({
+      title: "Are you sure?",
+      text: "Verify this business request?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, verify it!",
+      cancelButtonText: "No, cancel!",
+    });
+
+    if (confirmed.isConfirmed) {
+      try {
+        await BusinessRequestsService.verifyCustomer(id);
+        await fetchData();
+      } catch (err) {
+        console.error("Error verifying business request:", err);
+        await fetchData();
+      } finally {
+        setOpenDropdownId(null);
+        setDropdownPosition(null);
+      }
+    }
+  };
 
   const handleStatusChange = async (
     id: string,
@@ -237,10 +301,12 @@ const BusinessRequestsTable: React.FC = () => {
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
 
   // Updated status styling and icon functions
-  const getStatusStyles = (status: "Approved" | "Pending" | "Rejected") => {
+  const getStatusStyles = (status: "Approved" | "Pending" | "Rejected" | "Verified") => {
     switch (status) {
       case "Approved":
         return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700";
+      case "Verified":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-700";
       case "Pending":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700";
       case "Rejected":
@@ -250,10 +316,12 @@ const BusinessRequestsTable: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: "Approved" | "Pending" | "Rejected") => {
+  const getStatusIcon = (status: "Approved" | "Pending" | "Rejected" | "Verified") => {
     switch (status) {
       case "Approved":
         return "fa-check-circle";
+      case "Verified":
+        return "fa-check";
       case "Pending":
         return "fa-clock";
       case "Rejected":
@@ -261,6 +329,28 @@ const BusinessRequestsTable: React.FC = () => {
       default:
         return "";
     }
+  };
+
+  // Helper function to get display status from businessProfile
+  const getDisplayStatus = (item: BusinessRequest): "Approved" | "Pending" | "Rejected" | "Verified" => {
+    const statusOverride = item._id ? statusOverrides[item._id] : undefined;
+    if (statusOverride) {
+      return statusOverride;
+    }
+    const profileStatus = item.businessProfile?.status?.toLowerCase();
+    if (profileStatus === 'approved') return "Approved";
+    if (profileStatus === 'verified') return "Verified";
+    if (profileStatus === 'rejected') return "Rejected";
+    return item.status || "Pending";
+  };
+
+  // Helper function to check if current admin can approve (not the verifier)
+  const canApprove = (item: BusinessRequest): boolean => {
+    if (!item.businessProfile?.verifiedBy) return false;
+    const verifiedById = typeof item.businessProfile.verifiedBy === 'object' 
+      ? item.businessProfile.verifiedBy._id?.toString()
+      : item.businessProfile.verifiedBy.toString();
+    return verifiedById !== currentAdminId;
   };
 
   const placeholderImage =
@@ -294,8 +384,9 @@ const BusinessRequestsTable: React.FC = () => {
                 className="pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] appearance-none cursor-pointer"
               >
                 <option value="All">All Status</option>
-                <option value="Approved">Approved</option>
                 <option value="Pending">Pending</option>
+                <option value="Verified">Verified</option>
+                <option value="Approved">Approved</option>
                 <option value="Rejected">Rejected</option>
               </select>
               <i className="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
@@ -397,11 +488,11 @@ const BusinessRequestsTable: React.FC = () => {
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider ${getStatusStyles(
-                            item.status
+                            getDisplayStatus(item)
                           )}`}
                         >
-                          <i className={`fas ${getStatusIcon(item.status)} text-xs`}></i>
-                          {item.status}
+                          <i className={`fas ${getStatusIcon(getDisplayStatus(item))} text-xs`}></i>
+                          {getDisplayStatus(item)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-center relative">
@@ -461,28 +552,35 @@ const BusinessRequestsTable: React.FC = () => {
                                   <i className="fas fa-eye mr-2 text-blue-600"></i>{" "}
                                   View
                                 </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (item._id)
-                                      handleStatusChange(item._id, "Approved");
-                                  }}
-                                  className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600"
-                                >
-                                  <i className="fas fa-check mr-2 text-green-600"></i>{" "}
-                                  Approved
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (item._id)
-                                      handleStatusChange(item._id, "Pending");
-                                  }}
-                                  className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-yellow-600"
-                                >
-                                  <i className="fas fa-pause mr-2 text-yellow-600"></i>{" "}
-                                  Pending
-                                </button>
+                                {/* Show Verify button only if status is Pending and not verified */}
+                                {getDisplayStatus(item) === "Pending" && !item.businessProfile?.verifiedBy && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (item._id)
+                                        handleVerify(item._id);
+                                    }}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600"
+                                  >
+                                    <i className="fas fa-check-circle mr-2 text-blue-600"></i>{" "}
+                                    Verify
+                                  </button>
+                                )}
+                                {/* Show Approve button only if status is Verified and current admin is not the verifier */}
+                                {getDisplayStatus(item) === "Verified" && canApprove(item) && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (item._id)
+                                        handleStatusChange(item._id, "Approved");
+                                    }}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600"
+                                  >
+                                    <i className="fas fa-check mr-2 text-green-600"></i>{" "}
+                                    Approve
+                                  </button>
+                                )}
+                                {/* Show Rejected button always (for rejection) */}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -492,7 +590,7 @@ const BusinessRequestsTable: React.FC = () => {
                                   className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
                                 >
                                   <i className="fas fa-times mr-2 text-red-600"></i>{" "}
-                                  Rejected
+                                  Reject
                                 </button>
                               </div>
                             )}
