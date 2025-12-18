@@ -11,6 +11,35 @@ import SellerProductReviewModal from "./SellerProductReviewModal";
 import SellerProductPermissionModal from "./SellerProductPermissionModal";
 import SubmitAdminDetailsModal from "./SubmitAdminDetailsModal";
 import ProductImageVideoModal from "./ProductImageVideoModal";
+
+// Tooltip Component for Action Items
+interface ActionTooltipProps {
+  text: string;
+}
+
+const ActionTooltip: React.FC<ActionTooltipProps> = ({ text }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div className="relative inline-flex items-center">
+      <button
+        type="button"
+        className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <i className="fas fa-info-circle text-xs"></i>
+      </button>
+      {showTooltip && (
+        <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 z-50 w-48 p-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg whitespace-normal">
+          {text}
+          <div className="absolute left-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-gray-900 dark:border-l-gray-700"></div>
+        </div>
+      )}
+    </div>
+  );
+};
 import {
   ProductService,
   Product,
@@ -1100,79 +1129,100 @@ const navigate = useNavigate();
                         <div className="py-1" role="menu">
                           {canWrite && (
                             <button
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                               onClick={() => {
                                 setBulkActionDropdownOpen(false);
                                 handleBulkEdit();
                               }}
                             >
-                              <i className="fas fa-edit text-xs text-blue-600"></i>
-                              Edit Products
+                              <div className="flex items-center gap-2">
+                                <i className="fas fa-edit text-xs text-blue-600"></i>
+                                Edit Products
+                              </div>
+                              <ActionTooltip text="Edit multiple selected products at once. Opens the variant selection modal to choose editing mode." />
                             </button>
                           )}
                           {canWrite && (
                             <button
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                               onClick={() => {
                                 setBulkActionDropdownOpen(false);
                                 handleToggleSequence();
                               }}
                             >
-                              <i className="fas fa-sort-numeric-down text-xs text-yellow-600"></i>
-                              Toggle Sequence
+                              <div className="flex items-center gap-2">
+                                <i className="fas fa-sort-numeric-down text-xs text-yellow-600"></i>
+                                Toggle Sequence
+                              </div>
+                              <ActionTooltip text="Toggle the display sequence/order of selected products. This affects how products appear in listings." />
                             </button>
                           )}
                           {canVerifyApprove && (
                             <>
                               <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                                 onClick={() => {
                                   setBulkActionDropdownOpen(false);
                                   handleBulkExpire();
                                 }}
                               >
-                                <i className="fas fa-clock text-xs text-red-600"></i>
-                                Expire
+                                <div className="flex items-center gap-2">
+                                  <i className="fas fa-clock text-xs text-red-600"></i>
+                                  Expire
+                                </div>
+                                <ActionTooltip text="Mark selected products as expired. Expired products are no longer available for purchase." />
                               </button>
                               <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                                 onClick={() => {
                                   setBulkActionDropdownOpen(false);
                                   handleBulkToggleTimer();
                                 }}
                               >
-                                <i className="fas fa-stopwatch text-xs text-purple-600"></i>
-                                Toggle Timer
+                                <div className="flex items-center gap-2">
+                                  <i className="fas fa-stopwatch text-xs text-purple-600"></i>
+                                  Toggle Timer
+                                </div>
+                                <ActionTooltip text="Enable or disable the countdown timer display for selected products. Useful for flash deals and time-sensitive offers." />
                               </button>
                               <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                                 onClick={() => {
                                   setBulkActionDropdownOpen(false);
                                   handleMarkSoldOut();
                                 }}
                               >
-                                <i className="fas fa-box text-xs text-orange-600"></i>
-                                Mark as Sold Out
+                                <div className="flex items-center gap-2">
+                                  <i className="fas fa-box text-xs text-orange-600"></i>
+                                  Mark as Sold Out
+                                </div>
+                                <ActionTooltip text="Mark selected products as sold out. This updates the stock status and prevents further orders." />
                               </button>
                               <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                                 onClick={() => {
                                   setBulkActionDropdownOpen(false);
                                   handleBulkVerify();
                                 }}
                               >
-                                <i className="fas fa-check-circle text-xs text-green-600"></i>
-                                Verify
+                                <div className="flex items-center gap-2">
+                                  <i className="fas fa-check-circle text-xs text-green-600"></i>
+                                  Verify
+                                </div>
+                                <ActionTooltip text="Verify selected products. Verified products have been checked for accuracy and are ready for approval." />
                               </button>
                               <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                                 onClick={() => {
                                   setBulkActionDropdownOpen(false);
                                   handleBulkApprove();
                                 }}
                               >
-                                <i className="fas fa-check-double text-xs text-blue-600"></i>
-                                Approve
+                                <div className="flex items-center gap-2">
+                                  <i className="fas fa-check-double text-xs text-blue-600"></i>
+                                  Approve
+                                </div>
+                                <ActionTooltip text="Approve selected products. Approved products are published and visible to customers. Products must be verified before approval." />
                               </button>
                             </>
                           )}
@@ -1380,26 +1430,32 @@ const navigate = useNavigate();
                                       e.stopPropagation();
                                       handleAddDetails(item);
                                     }}
-                                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-orange-600"
+                                    className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-orange-600 group"
                                   >
-                                    <i className="fas fa-edit"></i>
-                                    Add Details
+                                    <div className="flex items-center gap-2">
+                                      <i className="fas fa-edit"></i>
+                                      Add Details
+                                    </div>
+                                    <ActionTooltip text="Add or update admin-specific details for this product. Required for seller-submitted products before verification." />
                                   </button>
                                 ) : null}
                                 {/* Show Verify button only if admin details submitted and not verified */}
                                 {((item as any).adminDetailsSubmitted || !(item as any).needsAdminDetails) && 
                                  canVerifyApprove && item.canVerify && item.verifiedBy !== loggedInAdminId && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleVerify(item);
-                                    }}
-                                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600"
-                                  >
-                                    <i className="fas fa-check"></i>
-                                    Verify
-                                  </button>
-                                )}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleVerify(item);
+                                      }}
+                                      className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600 group"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <i className="fas fa-check"></i>
+                                        Verify
+                                      </div>
+                                      <ActionTooltip text="Verify this product. Verified products have been checked for accuracy and are ready for approval by another admin." />
+                                    </button>
+                                  )}
                                 {/* Show Approve button only if verified and not approved */}
                                 {item.isVerified && !item.isApproved && canVerifyApprove && item.canApprove && 
                                  item.verifiedBy !== loggedInAdminId && (
@@ -1408,10 +1464,13 @@ const navigate = useNavigate();
                                       e.stopPropagation();
                                       handleApprove(item);
                                     }}
-                                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600"
+                                    className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 group"
                                   >
-                                    <i className="fas fa-thumbs-up"></i>
-                                    Approve
+                                    <div className="flex items-center gap-2">
+                                      <i className="fas fa-thumbs-up"></i>
+                                      Approve
+                                    </div>
+                                    <ActionTooltip text="Approve this product. Approved products are published and visible to customers. Product must be verified before approval." />
                                   </button>
                                 )}
                                 <button
@@ -1420,10 +1479,13 @@ const navigate = useNavigate();
                                     setSelectedSellerRequest(item);
                                     setIsSellerReviewModalOpen(true);
                                   }}
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600"
+                                  className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 group"
                                 >
-                                  <i className="fas fa-eye"></i>
-                                  Review
+                                  <div className="flex items-center gap-2">
+                                    <i className="fas fa-eye"></i>
+                                    Review
+                                  </div>
+                                  <ActionTooltip text="Review this seller-submitted product. Check all details and approve or request changes before it goes live." />
                                 </button>
                               </>
                             ) : (
@@ -1435,10 +1497,13 @@ const navigate = useNavigate();
                                       e.stopPropagation();
                                       handleAddDetails(item);
                                     }}
-                                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-orange-600"
+                                    className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-orange-600 group"
                                   >
-                                    <i className="fas fa-edit"></i>
-                                    Add Details
+                                    <div className="flex items-center gap-2">
+                                      <i className="fas fa-edit"></i>
+                                      Add Details
+                                    </div>
+                                    <ActionTooltip text="Add or update admin-specific details for this product. Required for seller-submitted products before verification." />
                                   </button>
                                 )}
                                 {/* Show Verify button only if admin details submitted (for seller products) or not a seller product */}
@@ -1450,10 +1515,13 @@ const navigate = useNavigate();
                                         e.stopPropagation();
                                         handleVerify(item);
                                       }}
-                                      className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600"
+                                      className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600 group"
                                     >
-                                      <i className="fas fa-check"></i>
-                                      Verify
+                                      <div className="flex items-center gap-2">
+                                        <i className="fas fa-check"></i>
+                                        Verify
+                                      </div>
+                                      <ActionTooltip text="Verify this product. Verified products have been checked for accuracy and are ready for approval by another admin." />
                                     </button>
                                   )}
                                 <button
@@ -1461,10 +1529,13 @@ const navigate = useNavigate();
                                     e.stopPropagation();
                                     handleView(item);
                                   }}
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600"
+                                  className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 group"
                                 >
-                                  <i className="fas fa-eye"></i>
-                                  View
+                                  <div className="flex items-center gap-2">
+                                    <i className="fas fa-eye"></i>
+                                    View
+                                  </div>
+                                  <ActionTooltip text="View detailed information about this product including all specifications, pricing, and status." />
                                 </button>
                               </>
                             )}
@@ -1473,10 +1544,13 @@ const navigate = useNavigate();
                                 e.stopPropagation();
                                 handleHistory(item);
                               }}
-                              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-purple-600"
+                              className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-purple-600 group"
                             >
-                              <i className="fas fa-history"></i>
-                              History
+                              <div className="flex items-center gap-2">
+                                <i className="fas fa-history"></i>
+                                History
+                              </div>
+                              <ActionTooltip text="View the complete change history of this product including all edits, status changes, and modifications." />
                             </button>
                             {canVerifyApprove && item.canApprove &&
                               item.verifiedBy !== loggedInAdminId && (
@@ -1485,10 +1559,13 @@ const navigate = useNavigate();
                                     e.stopPropagation();
                                     handleApprove(item);
                                   }}
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600"
+                                  className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600 group"
                                 >
-                                  <i className="fas fa-thumbs-up"></i>
-                                  Approve
+                                  <div className="flex items-center gap-2">
+                                    <i className="fas fa-thumbs-up"></i>
+                                    Approve
+                                  </div>
+                                  <ActionTooltip text="Approve this product. Approved products are published and visible to customers. Product must be verified before approval." />
                                 </button>
                               )}
                             {canWrite && (
@@ -1498,20 +1575,26 @@ const navigate = useNavigate();
                                     e.stopPropagation();
                                     handleMoveToTop(item);
                                   }}
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-orange-600"
+                                  className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-orange-600 group"
                                 >
-                                  <i className="fas fa-arrow-up"></i>
-                                  Move to Top
+                                  <div className="flex items-center gap-2">
+                                    <i className="fas fa-arrow-up"></i>
+                                    Move to Top
+                                  </div>
+                                  <ActionTooltip text="Move this product to the top of the listing. This gives it priority in search results and product listings." />
                                 </button>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEdit(item);
                                   }}
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600"
+                                  className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600 group"
                                 >
-                                  <i className="fas fa-edit"></i>
-                                  Edit
+                                  <div className="flex items-center gap-2">
+                                    <i className="fas fa-edit"></i>
+                                    Edit
+                                  </div>
+                                  <ActionTooltip text="Edit this product's details including specifications, pricing, margins, costs, and other attributes." />
                                 </button>
                                 {isSuperAdmin && (
                                   <button
@@ -1519,10 +1602,13 @@ const navigate = useNavigate();
                                       e.stopPropagation();
                                       handleDelete(item);
                                     }}
-                                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
+                                    className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600 group"
                                   >
-                                    <i className="fas fa-trash"></i>
-                                    Delete
+                                    <div className="flex items-center gap-2">
+                                      <i className="fas fa-trash"></i>
+                                      Delete
+                                    </div>
+                                    <ActionTooltip text="Permanently delete this product. This action cannot be undone. Only super admins can delete products." />
                                   </button>
                                 )}
                               </>
@@ -1533,10 +1619,13 @@ const navigate = useNavigate();
                                   e.stopPropagation();
                                   handleExpire(item);
                                 }}
-                                className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
+                                className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600 group"
                               >
-                                <i className="fas fa-clock"></i>
-                                Expire
+                                <div className="flex items-center gap-2">
+                                  <i className="fas fa-clock"></i>
+                                  Expire
+                                </div>
+                                <ActionTooltip text="Mark this product as expired. Expired products are no longer available for purchase and will be hidden from customer view." />
                               </button>
                             )}
                           </div>
