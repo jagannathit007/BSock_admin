@@ -14,6 +14,7 @@ interface MarginSelectionModalProps {
   onClose: () => void;
   onNext: (selection: MarginSelection) => void;
   products: any[];
+  initialSelection?: MarginSelection;
 }
 
 const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
@@ -21,6 +22,7 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
   onClose,
   onNext,
   products,
+  initialSelection,
 }) => {
   const [selection, setSelection] = useState<MarginSelection>({
     brand: false,
@@ -32,16 +34,20 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      // ✅ FIX #1: Reset selection when modal opens (fresh state, no stale closure)
-      setSelection({
-        brand: false,
-        productCategory: false,
-        conditionCategory: false,
-        sellerCategory: false,
-        customerCategory: false,
-      });
+      // Pre-populate with initial selection if provided, otherwise reset
+      if (initialSelection) {
+        setSelection(initialSelection);
+      } else {
+        setSelection({
+          brand: false,
+          productCategory: false,
+          conditionCategory: false,
+          sellerCategory: false,
+          customerCategory: false,
+        });
+      }
     }
-  }, [isOpen, products]); // ✅ NO DEPENDENCY ON selection (removes circular dependency)
+  }, [isOpen, products, initialSelection]); // Include initialSelection in dependencies
 
   const handleToggle = (key: keyof MarginSelection) => {
     setSelection(prev => {
@@ -87,7 +93,7 @@ const MarginSelectionModal: React.FC<MarginSelectionModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-[60]">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">

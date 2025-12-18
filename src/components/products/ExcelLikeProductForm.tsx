@@ -1038,16 +1038,88 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
       return;
     }
     
-    // If editing, bypass margin/cost flow and directly save
-    if (editProducts && editProducts.length > 0) {
-      // Direct save for edit mode - preserve existing margins and costs
-      onSave(rowsWithListingNos, variantType === 'multi' ? totalMoq : undefined);
-      return;
-    }
-    
-    // Store rows and open margin modal (only for create mode)
+    // Store rows for margin/cost/preview flow (both create and edit mode)
     setPendingRows(rowsWithListingNos);
     setPendingTotalMoq(variantType === 'multi' ? totalMoq : undefined);
+    
+    // Extract existing margins and costs from editProducts if editing
+    if (editProducts && editProducts.length > 0) {
+      // Extract existing margins from first product's countryDeliverables
+      const existingMargins: MarginSelection = {
+        brand: false,
+        productCategory: false,
+        conditionCategory: false,
+        sellerCategory: false,
+        customerCategory: false,
+      };
+      
+      // Check if any product has margins - check all countryDeliverables
+      editProducts.forEach((product: any) => {
+        if (product.countryDeliverables && Array.isArray(product.countryDeliverables)) {
+          product.countryDeliverables.forEach((cd: any) => {
+            if (cd.margins && Array.isArray(cd.margins) && cd.margins.length > 0) {
+              cd.margins.forEach((margin: any) => {
+                if (margin.type === 'brand') existingMargins.brand = true;
+                if (margin.type === 'productCategory') existingMargins.productCategory = true;
+                if (margin.type === 'conditionCategory') existingMargins.conditionCategory = true;
+                if (margin.type === 'sellerCategory') existingMargins.sellerCategory = true;
+                if (margin.type === 'customerCategory') existingMargins.customerCategory = true;
+              });
+            }
+          });
+        }
+      });
+      
+      // Extract existing costs from products' countryDeliverables
+      const existingCostsHK: SelectedCost[] = [];
+      const existingCostsDubai: SelectedCost[] = [];
+      const costIdSetHK = new Set<string>();
+      const costIdSetDubai = new Set<string>();
+      
+      editProducts.forEach((product: any) => {
+        if (product.countryDeliverables && Array.isArray(product.countryDeliverables)) {
+          product.countryDeliverables.forEach((cd: any) => {
+            if (cd.costs && Array.isArray(cd.costs) && cd.costs.length > 0) {
+              const country = cd.country;
+              const costArray = country === 'Hongkong' ? existingCostsHK : existingCostsDubai;
+              const costIdSet = country === 'Hongkong' ? costIdSetHK : costIdSetDubai;
+              
+              cd.costs.forEach((cost: any) => {
+                const costId = cost.costId || cost._id || '';
+                // Check if cost already exists to avoid duplicates
+                if (costId && !costIdSet.has(costId)) {
+                  costIdSet.add(costId);
+                  costArray.push({
+                    costId: costId,
+                    name: cost.name || '',
+                    costType: cost.costType || 'Fixed',
+                    costField: cost.costField || 'product',
+                    costUnit: cost.costUnit,
+                    value: cost.value || 0,
+                    groupId: cost.groupId,
+                    isExpressDelivery: cost.isExpressDelivery,
+                    isSameLocationCharge: cost.isSameLocationCharge,
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+      
+      // Pre-populate with existing values
+      setMarginSelection(existingMargins);
+      setSelectedCosts({
+        Hongkong: existingCostsHK,
+        Dubai: existingCostsDubai,
+      });
+    } else {
+      // Reset for create mode
+      setMarginSelection(null);
+      setSelectedCosts({ Hongkong: [], Dubai: [] });
+    }
+    
+    // Open margin modal (for both create and edit mode)
     setShowMarginModal(true);
   };
 
@@ -1428,39 +1500,76 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
                 })));
               }
               
-              // ✅ FILTER: Only selected margins
+              // ✅ FILTER: Only selected margins - PRESERVE ALL FIELDS from API response
               const filteredMargins = (cd.margins || []).filter((margin: any) => {
                 const marginType = margin.type;
                 return marginSelection[marginType as keyof MarginSelection] === true;
-              });
+              }).map((margin: any) => ({
+                // ✅ PRESERVE ALL margin fields from backend calculation
+                type: margin.type,
+                name: margin.name,
+                marginType: margin.marginType,
+                marginValue: margin.marginValue,
+                calculatedAmount: margin.calculatedAmount,
+                description: margin.description,
+                // Include any other fields that might be present
+                ...(margin._id && { _id: margin._id }),
+                ...(margin.marginId && { marginId: margin.marginId }),
+              }));
               
-              // ✅ FILTER: Only selected costs (check both costId and _id for compatibility)
+              // ✅ FILTER: Only selected costs - PRESERVE ALL FIELDS from API response
               const filteredCosts = (cd.costs || []).filter((cost: any) => {
                 // Check both costId and _id to handle different API response formats
                 const costIdMatch = cost.costId && countrySelectedCostIds.includes(cost.costId);
                 const idMatch = cost._id && countrySelectedCostIds.includes(cost._id);
                 return costIdMatch || idMatch;
-              });
+              }).map((cost: any) => ({
+                // ✅ PRESERVE ALL cost fields from backend calculation
+                costId: cost.costId || cost._id,
+                name: cost.name,
+                costType: cost.costType,
+                costField: cost.costField,
+                costUnit: cost.costUnit,
+                value: cost.value,
+                calculatedAmount: cost.calculatedAmount,
+                groupId: cost.groupId || null,
+                isExpressDelivery: cost.isExpressDelivery || false,
+                isSameLocationCharge: cost.isSameLocationCharge || false,
+                // Include any other fields that might be present
+                ...(cost._id && { _id: cost._id }),
+                ...(cost.minValue !== undefined && { minValue: cost.minValue }),
+                ...(cost.maxValue !== undefined && { maxValue: cost.maxValue }),
+              }));
               
               // ✅ DEBUG: Log filtered results for Dubai
               if (country === 'Dubai') {
                 console.log(`  Filtered Costs:`, filteredCosts.map((c: any) => ({
                   costId: c.costId,
                   _id: c._id,
-                  name: c.name
+                  name: c.name,
+                  calculatedAmount: c.calculatedAmount
                 })));
               }
               
               return {
                 country: cd.country,
+                currency: cd.currency || 'USD',
                 basePrice: cd.basePrice,
                 calculatedPrice: cd.calculatedPrice,
-                margins: filteredMargins,  // ✅ ONLY SELECTED
-                costs: filteredCosts,      // ✅ ONLY SELECTED
-                exchangeRate: cd.xe,
+                exchangeRate: cd.xe || cd.exchangeRate || null,
+                // ✅ NEW margins from user's selection (replaces old ones) - COMPLETE STRUCTURE
+                margins: filteredMargins,  // ✅ ONLY SELECTED MARGINS WITH ALL FIELDS
+                // ✅ NEW costs from user's selection (replaces old ones) - COMPLETE STRUCTURE
+                costs: filteredCosts,      // ✅ ONLY SELECTED COSTS WITH ALL FIELDS
+                charges: cd.charges || [],
                 // Preserve local currency calculations for preview rendering
                 hkd: cd.hkd,
                 aed: cd.aed,
+                // Legacy fields for compatibility
+                usd: cd.usd || cd.calculatedPrice || 0,
+                xe: cd.xe || cd.exchangeRate || null,
+                local: cd.local || null,
+                price: cd.price || cd.basePrice || 0,
               };
             }),
           };
@@ -1691,29 +1800,122 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         };
       });
 
-      // Create all products
-      const createPromises = productsToCreate.map(product => 
-        ProductService.createProduct(product)
-      );
+      // Check if we're in edit mode
+      if (editProducts && editProducts.length > 0) {
+        // Edit mode: Transform calculated products back to ProductRowData format and call onSave
+        // IMPORTANT: Use the NEW calculated countryDeliverables which contain the UPDATED margins and costs
+        const updatedRows: ProductRowData[] = calculationResults.map((result, index) => {
+          const row = result.product;
+          const originalRow = pendingRows[index];
+          const editProduct = editProducts[index];
+          
+          // ✅ CRITICAL: Use the NEW calculated countryDeliverables from the calculation results
+          // These contain the UPDATED margins and costs based on user's new selections
+          // The old margins and costs are completely replaced by these new ones
+          const newCountryDeliverables = result.countryDeliverables.map((cd: any) => {
+            // ✅ PRESERVE COMPLETE STRUCTURE with all margin and cost fields
+            // This ensures the backend receives complete data to replace old margins/costs
+            return {
+              country: cd.country,
+              currency: cd.currency || 'USD',
+              basePrice: cd.basePrice || 0,
+              calculatedPrice: cd.calculatedPrice || 0,
+              exchangeRate: cd.exchangeRate || null,
+              // ✅ NEW margins from calculation (replaces old ones) - COMPLETE STRUCTURE
+              margins: (cd.margins || []).map((m: any) => ({
+                type: m.type,
+                name: m.name,
+                marginType: m.marginType,
+                marginValue: m.marginValue,
+                calculatedAmount: m.calculatedAmount,
+                description: m.description,
+                ...(m._id && { _id: m._id }),
+                ...(m.marginId && { marginId: m.marginId }),
+              })),
+              // ✅ NEW costs from calculation (replaces old ones) - COMPLETE STRUCTURE
+              costs: (cd.costs || []).map((c: any) => ({
+                costId: c.costId || c._id,
+                name: c.name,
+                costType: c.costType,
+                costField: c.costField,
+                costUnit: c.costUnit,
+                value: c.value,
+                calculatedAmount: c.calculatedAmount,
+                groupId: c.groupId || null,
+                isExpressDelivery: c.isExpressDelivery || false,
+                isSameLocationCharge: c.isSameLocationCharge || false,
+                ...(c._id && { _id: c._id }),
+                ...(c.minValue !== undefined && { minValue: c.minValue }),
+                ...(c.maxValue !== undefined && { maxValue: c.maxValue }),
+              })),
+              charges: cd.charges || [],
+              // Legacy fields for compatibility
+              usd: cd.usd || cd.calculatedPrice || 0,
+              xe: cd.xe || cd.exchangeRate || null,
+              hkd: cd.hkd || null,
+              aed: cd.aed || null,
+              local: cd.local || null,
+              price: cd.price || cd.basePrice || 0,
+            };
+          });
+          
+          // Merge calculated countryDeliverables into the row
+          // Include product _id so handleFormSave knows which product to update
+          return {
+            ...originalRow,
+            // ✅ Attach NEW calculated countryDeliverables with UPDATED margins and costs
+            // This will completely replace the old countryDeliverables in the database
+            countryDeliverables: newCountryDeliverables,
+            // Include product ID for update
+            _id: editProduct?._id,
+          } as any;
+        });
+        
+        // ✅ DEBUG: Log the updated rows to verify new margins and costs are included
+        console.log('🔄 UPDATING PRODUCTS WITH NEW MARGINS AND COSTS:', {
+          rowCount: updatedRows.length,
+          firstRowCountryDeliverables: updatedRows[0]?.countryDeliverables?.map((cd: any) => ({
+            country: cd.country,
+            currency: cd.currency,
+            marginsCount: cd.margins?.length || 0,
+            costsCount: cd.costs?.length || 0,
+            margins: cd.margins?.map((m: any) => ({ name: m.name, type: m.type })) || [],
+            costs: cd.costs?.map((c: any) => ({ name: c.name, costId: c.costId || c._id })) || [],
+          })),
+        });
+        
+        // Call onSave which will handle the update through handleFormSave
+        onSave(updatedRows, variantType === 'multi' ? pendingTotalMoq : undefined);
+        
+        // Close preview modal
+        setShowPreviewModal(false);
+        setPendingRows([]);
+        setPendingTotalMoq(undefined);
+        setMarginSelection(null);
+        setSelectedCosts({ Hongkong: [], Dubai: [] });
+        setCalculationResults([]);
+      } else {
+        // Create mode: Create all products directly
+        const createPromises = productsToCreate.map(product => 
+          ProductService.createProduct(product)
+        );
 
-      await Promise.all(createPromises);
-      
-      // Clear localStorage on successful save
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch (error) {
-        console.error('Error clearing localStorage:', error);
+        await Promise.all(createPromises);
+        
+        // Clear localStorage on successful save
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+          console.error('Error clearing localStorage:', error);
+        }
+        
+        toastHelper.showTost('Products created successfully!', 'success');
+        setShowPreviewModal(false);
+        // Navigate to products list after a short delay
+        setTimeout(() => {
+          window.location.href = '/adminapp/#/products';
+        }, 1000);
       }
-      
-      toastHelper.showTost('Products created successfully!', 'success');
-      setShowPreviewModal(false);
-      // Products are already created in handleFinalSubmit
-      // Don't call onSave here as it would trigger handleFormSave in ProductVariantForm
-      // which would create duplicate products
-      // Navigate to products list after a short delay
-      setTimeout(() => {
-        window.location.href = '/adminapp/#/products';
-      }, 1000);
     } catch (error: any) {
       console.error('Error creating products:', error);
       toastHelper.showTost(error.message || 'Failed to create products', 'error');
@@ -3304,6 +3506,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         onClose={() => setShowMarginModal(false)}
         onNext={handleMarginNext}
         products={pendingRows}
+        initialSelection={marginSelection || undefined}
       />
 
       {currentCostCountry && (
@@ -3316,6 +3519,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           onNext={handleCostNext}
           products={pendingRows}
           country={currentCostCountry}
+          initialCosts={currentCostCountry === 'Hongkong' ? selectedCosts.Hongkong : selectedCosts.Dubai}
         />
       )}
 

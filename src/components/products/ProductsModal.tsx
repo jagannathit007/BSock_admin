@@ -10,6 +10,11 @@ import { ConstantsService, Constants } from "../../services/constants/constants.
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from 'react-select';
+import MarginSelectionModal, { MarginSelection } from './MarginSelectionModal';
+import CostModuleSelectionModal, { SelectedCost } from './CostModuleSelectionModal';
+import ProductPreviewModal from './ProductPreviewModal';
+import { ProductCalculationResult } from '../../utils/priceCalculation';
+import toastHelper from '../../utils/toastHelper';
 
 interface CountryDeliverable {
   country: string;
@@ -161,6 +166,21 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {}
   );
+  
+  // Margin/Cost/Preview flow state (for edit mode)
+  const [showMarginModal, setShowMarginModal] = useState(false);
+  const [showCostModal, setShowCostModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [marginSelection, setMarginSelection] = useState<MarginSelection | null>(null);
+  const [selectedCosts, setSelectedCosts] = useState<{ Hongkong: SelectedCost[]; Dubai: SelectedCost[] }>({
+    Hongkong: [],
+    Dubai: [],
+  });
+  const [currentCostCountry, setCurrentCostCountry] = useState<'Hongkong' | 'Dubai' | null>(null);
+  const [calculationResults, setCalculationResults] = useState<ProductCalculationResult[]>([]);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+  
   const [touched, setTouched] = useState<TouchedFields>({
     skuFamilyId: false,
     simType: false,
@@ -785,6 +805,174 @@ const ProductModal: React.FC<ProductModalProps> = ({
     setValidationErrors((prev) => ({ ...prev, [name]: error }));
   };
 
+  // Handle margin selection - opens cost modal
+  const handleMarginNext = (selection: MarginSelection) => {
+    setMarginSelection(selection);
+    setShowMarginModal(false);
+    
+    if (!pendingFormData) return;
+    
+    // Check which countries have deliverables
+    const hasHKProducts = pendingFormData.countryDeliverables.some(cd => cd.country === 'Hongkong');
+    const hasDubai = pendingFormData.countryDeliverables.some(cd => cd.country === 'Dubai');
+    
+    // Open cost modal for first country
+    if (hasHKProducts) {
+      setCurrentCostCountry('Hongkong');
+      setShowCostModal(true);
+    } else if (hasDubai) {
+      setCurrentCostCountry('Dubai');
+      setShowCostModal(true);
+    } else {
+      // No country deliverables, proceed to calculation
+      proceedToCalculation();
+    }
+  };
+
+  // Handle cost selection - opens next cost modal or proceeds to calculation
+  const handleCostNext = (costs: SelectedCost[]) => {
+    if (!currentCostCountry || !pendingFormData) return;
+    
+    const country = currentCostCountry;
+    
+    // Update selected costs
+    setSelectedCosts(prev => ({
+      ...prev,
+      [country]: costs,
+    }));
+    
+    setShowCostModal(false);
+    
+    // Check if we need to open cost modal for other country
+    const hasHKProducts = pendingFormData.countryDeliverables.some(cd => cd.country === 'Hongkong');
+    const hasDubai = pendingFormData.countryDeliverables.some(cd => cd.country === 'Dubai');
+    
+    if (country === 'Hongkong' && hasDubai) {
+      // Open Dubai modal
+      setCurrentCostCountry('Dubai');
+      setShowCostModal(true);
+    } else {
+      // All countries processed - proceed to calculation
+      proceedToCalculation();
+    }
+  };
+
+  // Calculate prices and show preview
+  const proceedToCalculation = async () => {
+    if (!pendingFormData || !marginSelection || !editItem) return;
+    
+    try {
+      setIsCalculating(true);
+      
+      // Fetch SKU Family to get brandCode and productCategoryCode
+      const skuFamilyId = typeof pendingFormData.skuFamilyId === 'object' 
+        ? (pendingFormData.skuFamilyId as any)._id 
+        : pendingFormData.skuFamilyId;
+      
+      const skuFamily = skuFamilies.find(sf => sf._id === skuFamilyId);
+      
+      // Get seller code
+      const sellerId = pendingFormData.sellerId;
+      const seller = sellers.find(s => s._id === sellerId);
+      
+      // Get condition code - need to fetch from condition category
+      let conditionCode = '';
+      if (pendingFormData.condition) {
+        // Try to get condition code from SKU Family's conditionCategoryId
+        if (skuFamily && typeof skuFamily.conditionCategoryId === 'object') {
+          conditionCode = (skuFamily.conditionCategoryId as any).code || '';
+        }
+      }
+      
+      // Prepare product data for calculation with all required codes
+      const productForCalculation: any = {
+        ...pendingFormData,
+        _id: editItem._id,
+        skuFamilyId: skuFamilyId,
+        brandCode: skuFamily?.brand?.code || (skuFamily?.brand as any)?.code || '',
+        productCategoryCode: skuFamily?.productcategoriesId?.code || (skuFamily?.productcategoriesId as any)?.code || '',
+        conditionCode: conditionCode,
+        sellerCode: seller?.code || '',
+        countryDeliverables: (pendingFormData.countryDeliverables || []).map((cd: any) => ({
+          country: cd.country,
+          currency: cd.currency || 'USD',
+          basePrice: typeof cd.basePrice === 'string' ? parseFloat(cd.basePrice) : (cd.basePrice || 0),
+          usd: cd.usd || (cd.currency === 'USD' ? (typeof cd.basePrice === 'string' ? parseFloat(cd.basePrice) : cd.basePrice) : null),
+          hkd: cd.hkd || (cd.currency === 'HKD' ? (typeof cd.basePrice === 'string' ? parseFloat(cd.basePrice) : cd.basePrice) : null),
+          aed: cd.aed || (cd.currency === 'AED' ? (typeof cd.basePrice === 'string' ? parseFloat(cd.basePrice) : cd.basePrice) : null),
+          xe: cd.exchangeRate || cd.xe || null,
+        })),
+      };
+      
+      // Prepare selected costs as array of IDs for each country
+      const selectedCostsHK = selectedCosts.Hongkong.map(c => c.costId);
+      const selectedCostsDubai = selectedCosts.Dubai.map(c => c.costId);
+      
+      // Call calculation API
+      const response = await ProductService.calculateProductPrices(
+        [productForCalculation],
+        marginSelection,
+        {
+          Hongkong: selectedCostsHK,
+          Dubai: selectedCostsDubai,
+        }
+      );
+      
+      if (response.status === 200 && response.data) {
+        // Transform response to ProductCalculationResult format
+        const results: ProductCalculationResult[] = response.data.map((product: any) => ({
+          product: product,
+          countryDeliverables: product.countryDeliverables || [],
+        }));
+        
+        setCalculationResults(results);
+        setShowPreviewModal(true);
+      } else {
+        toastHelper.showTost('Failed to calculate prices', 'error');
+      }
+    } catch (error: any) {
+      console.error('Calculation error:', error);
+      toastHelper.showTost(error.response?.data?.message || 'Failed to calculate prices', 'error');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  // Handle preview submit - final submission
+  const handlePreviewSubmit = async () => {
+    if (!pendingFormData || !editItem || calculationResults.length === 0) return;
+    
+    try {
+      setIsCalculating(true);
+      
+      // Get calculated product from results
+      const calculatedProduct = calculationResults[0].product;
+      
+      // Merge calculated data with pending form data
+      // Keep all original form fields but update countryDeliverables with calculated prices
+      const finalFormData = {
+        ...pendingFormData,
+        countryDeliverables: calculatedProduct.countryDeliverables || pendingFormData.countryDeliverables,
+      };
+      
+      // Submit the update
+      onSave(finalFormData);
+      
+      // Close modals and reset state
+      setShowPreviewModal(false);
+      setPendingFormData(null);
+      setMarginSelection(null);
+      setSelectedCosts({ Hongkong: [], Dubai: [] });
+      setCalculationResults([]);
+      setCurrentCostCountry(null);
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      toastHelper.showTost(error.response?.data?.message || 'Failed to update product', 'error');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -893,7 +1081,72 @@ const ProductModal: React.FC<ProductModalProps> = ({
     };
     
     console.log("Transformed form data:", transformedFormData);
-    onSave(transformedFormData);
+    
+    // If editing, trigger margin/cost/preview flow
+    if (editItem) {
+      // Save form data for later submission
+      setPendingFormData(transformedFormData);
+      
+      // Extract existing margins from product's countryDeliverables
+      const existingMargins: MarginSelection = {
+        brand: false,
+        productCategory: false,
+        conditionCategory: false,
+        sellerCategory: false,
+        customerCategory: false,
+      };
+      
+      // Check if any country deliverable has margins
+      if (transformedFormData.countryDeliverables && transformedFormData.countryDeliverables.length > 0) {
+        const firstDeliverable = transformedFormData.countryDeliverables[0];
+        if (firstDeliverable.margins && Array.isArray(firstDeliverable.margins) && firstDeliverable.margins.length > 0) {
+          firstDeliverable.margins.forEach((margin: any) => {
+            if (margin.type === 'brand') existingMargins.brand = true;
+            if (margin.type === 'productCategory') existingMargins.productCategory = true;
+            if (margin.type === 'conditionCategory') existingMargins.conditionCategory = true;
+            if (margin.type === 'sellerCategory') existingMargins.sellerCategory = true;
+            if (margin.type === 'customerCategory') existingMargins.customerCategory = true;
+          });
+        }
+      }
+      
+      // Extract existing costs from product's countryDeliverables
+      const existingCostsHK: SelectedCost[] = [];
+      const existingCostsDubai: SelectedCost[] = [];
+      
+      transformedFormData.countryDeliverables.forEach((cd: any) => {
+        if (cd.costs && Array.isArray(cd.costs) && cd.costs.length > 0) {
+          const costArray = cd.country === 'Hongkong' ? existingCostsHK : existingCostsDubai;
+          cd.costs.forEach((cost: any) => {
+            costArray.push({
+              costId: cost.costId || cost._id || '',
+              name: cost.name || '',
+              costType: cost.costType || 'Fixed',
+              costField: cost.costField || 'product',
+              costUnit: cost.costUnit,
+              value: cost.value || 0,
+              groupId: cost.groupId,
+              isExpressDelivery: cost.isExpressDelivery,
+              isSameLocationCharge: cost.isSameLocationCharge,
+            });
+          });
+        }
+      });
+      
+      // Pre-populate with existing values
+      setMarginSelection(existingMargins);
+      setSelectedCosts({
+        Hongkong: existingCostsHK,
+        Dubai: existingCostsDubai,
+      });
+      setCalculationResults([]);
+      
+      // Open margin modal
+      setShowMarginModal(true);
+    } else {
+      // Create mode: proceed with direct save
+      onSave(transformedFormData);
+    }
   };
 
   if (!isOpen) return null;
@@ -2016,6 +2269,53 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Margin Selection Modal */}
+      {showMarginModal && pendingFormData && (
+        <MarginSelectionModal
+          isOpen={showMarginModal}
+          onClose={() => {
+            setShowMarginModal(false);
+            setPendingFormData(null);
+          }}
+          onNext={handleMarginNext}
+          products={[pendingFormData]}
+          initialSelection={marginSelection || undefined}
+        />
+      )}
+
+      {/* Cost Selection Modal */}
+      {showCostModal && currentCostCountry && pendingFormData && (
+        <CostModuleSelectionModal
+          isOpen={showCostModal}
+          onClose={() => {
+            setShowCostModal(false);
+            setCurrentCostCountry(null);
+            setPendingFormData(null);
+          }}
+          onNext={handleCostNext}
+          products={[pendingFormData]}
+          country={currentCostCountry}
+          initialCosts={currentCostCountry === 'Hongkong' ? selectedCosts.Hongkong : selectedCosts.Dubai}
+        />
+      )}
+
+      {/* Preview Modal */}
+      {showPreviewModal && calculationResults.length > 0 && (
+        <ProductPreviewModal
+          isOpen={showPreviewModal}
+          onClose={() => {
+            setShowPreviewModal(false);
+            setPendingFormData(null);
+            setMarginSelection(null);
+            setSelectedCosts({ Hongkong: [], Dubai: [] });
+            setCalculationResults([]);
+          }}
+          onSubmit={handlePreviewSubmit}
+          calculationResults={calculationResults}
+          loading={isCalculating}
+        />
+      )}
     </div>
   );
 };

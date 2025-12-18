@@ -72,7 +72,7 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const MAX_IMAGES = 10;
-  const MAX_VIDEOS = 10;
+  const MAX_VIDEOS = 2;
 
   const base = (import.meta as { env?: { VITE_BASE_URL?: string } }).env?.VITE_BASE_URL || "";
 

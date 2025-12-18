@@ -179,7 +179,7 @@ export class ProductService {
     const url = `${baseUrl}/api/${adminRoute}/product/update`;
 
     try {
-      // Transform data to match backend expectations
+      // ✅ Transform data to match backend expectations - INCLUDE ALL FIELDS
       const transformedData: any = {
         id,
         // Extract _id if skuFamilyId/subSkuFamilyId are objects
@@ -191,6 +191,8 @@ export class ProductService {
               ? (productData.subSkuFamilyId as any)._id || productData.subSkuFamilyId
               : productData.subSkuFamilyId)
           : null,
+        gradeId: productData.gradeId || null,
+        sellerId: productData.sellerId || null,
         specification: productData.specification || null,
         simType: productData.simType || null,
         // Handle color: if it's a comma-separated string, take the first value
@@ -199,6 +201,7 @@ export class ProductService {
           : null,
         ram: productData.ram || null,
         storage: productData.storage || null,
+        weight: productData.weight || null,
         condition: productData.condition || null,
         stock: typeof productData.stock === 'string' ? parseInt(productData.stock, 10) : productData.stock,
         country: productData.country || null,
@@ -218,16 +221,68 @@ export class ProductService {
         startTime: productData.startTime || null,
         expiryTime: productData.expiryTime || null,
         groupCode: productData.groupCode || null,
+        sequence: productData.sequence || null,
+        // ✅ CRITICAL: Include countryDeliverables with new margins and costs
+        countryDeliverables: productData.countryDeliverables || null,
+        // Additional fields
+        supplierListingNumber: productData.supplierListingNumber || null,
+        customerListingNumber: productData.customerListingNumber || null,
+        packing: productData.packing || null,
+        currentLocation: productData.currentLocation || null,
+        deliveryLocation: productData.deliveryLocation || null,
+        customMessage: productData.customMessage || null,
+        paymentTerm: productData.paymentTerm || null,
+        paymentMethod: productData.paymentMethod || null,
+        shippingTime: productData.shippingTime || null,
+        vendor: productData.vendor || null,
+        vendorListingNo: productData.vendorListingNo || null,
+        carrier: productData.carrier || null,
+        carrierListingNo: productData.carrierListingNo || null,
+        uniqueListingNo: productData.uniqueListingNo || null,
+        tags: productData.tags || null,
+        adminCustomMessage: productData.adminCustomMessage || null,
+        remark: productData.remark || null,
+        warranty: productData.warranty || null,
+        batteryHealth: productData.batteryHealth || null,
+        lockUnlock: typeof productData.lockUnlock === 'boolean' ? productData.lockUnlock : false,
+        // Preserve additional fields if they exist
+        status: productData.status,
+        isVerified: productData.isVerified,
+        verifiedBy: productData.verifiedBy,
+        isApproved: productData.isApproved,
+        approvedBy: productData.approvedBy,
+        isShowTimer: productData.isShowTimer,
+        customFields: productData.customFields,
+        pricingMetadata: (productData as any).pricingMetadata,
       };
 
-      // Remove null/undefined values to avoid sending unnecessary data
+      // ✅ Remove only truly empty/null/undefined values, but keep 0, false, empty arrays for countryDeliverables
       Object.keys(transformedData).forEach(key => {
-        if (transformedData[key] === null || transformedData[key] === undefined || transformedData[key] === '') {
-          // Keep id, but remove other null/undefined/empty string values
-          if (key !== 'id') {
+        const value = transformedData[key];
+        // Keep countryDeliverables even if empty array (might be intentional)
+        if (key === 'countryDeliverables') {
+          if (value === null || value === undefined) {
             delete transformedData[key];
           }
+          return;
         }
+        // Remove null/undefined/empty string, but keep 0, false, empty arrays
+        if (value === null || value === undefined || value === '') {
+          delete transformedData[key];
+        }
+      });
+      
+      // ✅ DEBUG: Log what's being sent to backend
+      console.log('📤 SENDING PRODUCT UPDATE TO BACKEND:', {
+        id: transformedData.id,
+        hasCountryDeliverables: !!transformedData.countryDeliverables,
+        countryDeliverablesCount: transformedData.countryDeliverables?.length || 0,
+        allFields: Object.keys(transformedData),
+        marginsAndCosts: transformedData.countryDeliverables?.map((cd: any) => ({
+          country: cd.country,
+          marginsCount: cd.margins?.length || 0,
+          costsCount: cd.costs?.length || 0,
+        })) || [],
       });
       
       const res = await api.post(url, transformedData);

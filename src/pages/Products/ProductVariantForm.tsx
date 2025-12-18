@@ -297,17 +297,48 @@ const ProductVariantForm: React.FC = () => {
           return val;
         };
         
-        // When editing, preserve existing countryDeliverables with margins and costs
+        // ✅ Get existing product data for edit mode (needed for preserving fields)
+        const existingProduct = isEditMode 
+          ? (variantType === 'single' ? editProduct : (editProducts[rowIndex] || null))
+          : null;
+        
+        // When editing, use NEW countryDeliverables from calculation flow if available
         let countryDeliverables: any[] = [];
         
-        // Check if row already has countryDeliverables (from calculation/preview flow)
+        // ✅ CRITICAL: Check if row has NEW countryDeliverables from calculation/preview flow
+        // These contain the UPDATED margins and costs based on user's new selections
+        // The old margins and costs will be completely replaced by these new ones
         if ((row as any).countryDeliverables && Array.isArray((row as any).countryDeliverables)) {
-          // Use the pre-calculated countryDeliverables with margins and costs
-          countryDeliverables = (row as any).countryDeliverables;
-        } else if (editId) {
+          // ✅ USE NEW calculated countryDeliverables with UPDATED margins and costs
+          // IMPORTANT: Use them DIRECTLY without any modification - they already contain complete data
+          // This completely replaces the old countryDeliverables in the database
+          countryDeliverables = JSON.parse(JSON.stringify((row as any).countryDeliverables)); // Deep copy to avoid mutations
+          
+          // ✅ DEBUG: Log to verify new margins and costs are being used
+          console.log(`✅ Using NEW countryDeliverables for row ${rowIndex + 1} (EDIT MODE):`, {
+            countryDeliverablesCount: countryDeliverables.length,
+            marginsAndCosts: countryDeliverables.map((cd: any) => ({
+              country: cd.country,
+              currency: cd.currency,
+              marginsCount: cd.margins?.length || 0,
+              costsCount: cd.costs?.length || 0,
+              margins: cd.margins?.map((m: any) => ({ 
+                name: m.name, 
+                type: m.type,
+                marginValue: m.marginValue,
+                calculatedAmount: m.calculatedAmount
+              })) || [],
+              costs: cd.costs?.map((c: any) => ({ 
+                name: c.name, 
+                costId: c.costId || c._id,
+                value: c.value,
+                calculatedAmount: c.calculatedAmount
+              })) || [],
+            })),
+          });
+        } else if (editId && existingProduct) {
           // For edit mode, preserve existing countryDeliverables structure
-          const existingProduct = variantType === 'single' ? editProduct : (editProducts[rowIndex] || null);
-          if (existingProduct && (existingProduct as any).countryDeliverables) {
+          if ((existingProduct as any).countryDeliverables) {
             // Preserve existing countryDeliverables with margins and costs
             countryDeliverables = (existingProduct as any).countryDeliverables.map((cd: any) => {
               // Update prices from form data
@@ -427,7 +458,10 @@ const ProductVariantForm: React.FC = () => {
           }
         }
 
-        return {
+        // ✅ BUILD COMPLETE PRODUCT OBJECT with ALL fields
+        // Include all fields from row data + existing product data (for edit mode) + new countryDeliverables
+        const productData: any = {
+          // ✅ Core product fields from row
           skuFamilyId: row.skuFamilyId, // Already validated above - required field
           gradeId: (row.grade && isValidObjectId(row.grade)) ? row.grade : null,
           sellerId: (row.supplierId && isValidObjectId(row.supplierId)) ? row.supplierId : null,
@@ -445,7 +479,6 @@ const ProductVariantForm: React.FC = () => {
           purchaseType: (row.purchaseType === 'full' || row.purchaseType === 'partial') ? row.purchaseType : 'partial',
           isNegotiable: row.negotiableFixed === '1',
           // Use flashDeal field from form (code value from constants), convert to boolean string
-          // Assuming code '1' or 'true' means flash deal enabled, empty or '0'/'false' means disabled
           isFlashDeal: row.flashDeal && (row.flashDeal === '1' || row.flashDeal === 'true' || row.flashDeal.toLowerCase() === 'yes') ? 'true' : 'false',
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
           expiryTime: cleanString(row.endTime) ? new Date(row.endTime).toISOString() : '',
@@ -453,6 +486,7 @@ const ProductVariantForm: React.FC = () => {
             ? ((editId || editIds.length > 0) && editProducts.length > 0 ? (editProducts[0] as any).groupCode : (row.groupCode || `GROUP-${Date.now()}`))
             : undefined,
           sequence: row.sequence || null,
+          // ✅ NEW countryDeliverables with updated margins and costs
           countryDeliverables,
           // Additional fields that need to be stored - convert empty strings to null
           supplierListingNumber: cleanString(row.supplierListingNumber) || '',
@@ -504,6 +538,39 @@ const ProductVariantForm: React.FC = () => {
           batteryHealth: cleanString(row.batteryHealth) || '',
           lockUnlock: row.lockUnlock === '1',
         };
+        
+        // ✅ For edit mode: Preserve additional fields from existing product that might not be in row
+        if (isEditMode && existingProduct) {
+          // Preserve status, verification, approval fields if they exist
+          if ((existingProduct as any).status !== undefined) productData.status = (existingProduct as any).status;
+          if ((existingProduct as any).isVerified !== undefined) productData.isVerified = (existingProduct as any).isVerified;
+          if ((existingProduct as any).verifiedBy !== undefined) productData.verifiedBy = (existingProduct as any).verifiedBy;
+          if ((existingProduct as any).isApproved !== undefined) productData.isApproved = (existingProduct as any).isApproved;
+          if ((existingProduct as any).approvedBy !== undefined) productData.approvedBy = (existingProduct as any).approvedBy;
+          if ((existingProduct as any).isShowTimer !== undefined) productData.isShowTimer = (existingProduct as any).isShowTimer;
+          // Preserve customFields if they exist
+          if ((existingProduct as any).customFields) productData.customFields = (existingProduct as any).customFields;
+          // Preserve pricingMetadata if it exists
+          if ((existingProduct as any).pricingMetadata) productData.pricingMetadata = (existingProduct as any).pricingMetadata;
+        }
+        
+        // ✅ DEBUG: Log complete product data being sent
+        if (isEditMode) {
+          console.log(`📦 COMPLETE PRODUCT DATA FOR UPDATE (Row ${rowIndex + 1}):`, {
+            id: existingProduct?._id,
+            hasCountryDeliverables: !!countryDeliverables && countryDeliverables.length > 0,
+            countryDeliverablesCount: countryDeliverables.length,
+            marginsAndCosts: countryDeliverables.map((cd: any) => ({
+              country: cd.country,
+              marginsCount: cd.margins?.length || 0,
+              costsCount: cd.costs?.length || 0,
+            })),
+            allFields: Object.keys(productData),
+            productData: productData,
+          });
+        }
+        
+        return productData;
       });
 
       // Update or create products
