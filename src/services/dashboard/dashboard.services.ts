@@ -3,6 +3,7 @@ import api from '../api/api';
 export interface DashboardStats {
   customers: {
     total: number;
+    active: number;
     today: number;
     change: number;
     isPositive: boolean;
@@ -25,7 +26,9 @@ export interface DashboardStats {
     active: number; // Approved products count
   };
   bids: {
-    active: number;
+    activeLots: number;
+    activeLotwiseCustomerBids: number;
+    customerWiseLotWiseBids: number;
   };
   wallet: {
     total: number; // Total wallet balance
