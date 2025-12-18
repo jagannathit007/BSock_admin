@@ -22,6 +22,9 @@ export interface Product {
   startTime: string; // ISO string (e.g., "2025-10-30T03:30:00.000Z")
   expiryTime: string; // ISO string (e.g., "2025-10-30T03:30:00.000Z")
   groupCode?: string;
+  gradeId?: any;
+  sellerId?: any;
+  weight?: any;
   status?: string;
   isVerified?: boolean;
   verifiedBy?: string;
@@ -32,6 +35,29 @@ export interface Product {
   canApprove?: boolean;
   sequence?: number | null;
   isShowTimer?: boolean;
+  supplierListingNumber?: any;
+  customerListingNumber?: any;
+  packing?: any;
+  currentLocation?: any;
+  deliveryLocation?: any;
+  customMessage?: any;
+  paymentTerm?: any;
+  paymentMethod?: any;
+  shippingTime?: any;
+  vendor?: any;
+  vendorListingNo?: any;
+  carrier?: any;
+  carrierListingNo?: any;
+  uniqueListingNo?: any;
+  tags?: any;
+  adminCustomMessage?: any;
+  remark?: any;
+  warranty?: any;
+  batteryHealth?: any;
+  lockUnlock?: any;
+  customFields?: any;
+  pricingMetadata?: any;
+  images?: string[];
   // Optional per-country delivery pricing details (e.g. Hongkong, Dubai)
   countryDeliverables?: Array<{
     country: string;
@@ -313,7 +339,7 @@ export class ProductService {
   };
 
   // Update product images and videos
-  static updateProductImagesVideos = async (id: string, formData: FormData): Promise<any> => {
+  static updateProductImagesVideos = async (_id: string, formData: FormData): Promise<any> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;
     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
     const url = `${baseUrl}/api/${adminRoute}/product/update-images-videos`;
@@ -870,7 +896,7 @@ export class ProductService {
   // Calculate product prices with margins and costs
   static calculateProductPrices = async (
     products: any[],
-    selectedMargins: Record<string, boolean>,
+    selectedMargins: any,
     selectedCosts: Record<string, string[]>
   ): Promise<any> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;

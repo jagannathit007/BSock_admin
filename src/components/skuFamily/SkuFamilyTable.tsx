@@ -932,58 +932,67 @@ const SkuFamilyTable: React.FC = () => {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const currentPage = subSkuFamilyData[item._id!].currentPage;
+                                        const itemId = item._id as string;
+                                        const currentPage = subSkuFamilyData[itemId].currentPage;
                                         if (currentPage > 1) {
-                                          fetchSubSkuFamilies(item._id!, currentPage - 1);
+                                          fetchSubSkuFamilies(itemId, currentPage - 1);
                                         }
                                       }}
-                                      disabled={subSkuFamilyData[item._id].currentPage === 1}
+                                      disabled={subSkuFamilyData[item._id as string].currentPage === 1}
                                       className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-xs transition-colors"
                                     >
                                       Previous
                                     </button>
-                                    <div className="flex space-x-1">
-                                      {Array.from({ length: Math.min(subSkuFamilyData[item._id].totalPages, 5) }, (_, i) => {
-                                        const pageNum = i + 1;
-                                        const currentPage = subSkuFamilyData[item._id].currentPage;
-                                        // Show pages around current page
-                                        let displayPage = pageNum;
-                                        if (subSkuFamilyData[item._id].totalPages > 5) {
-                                          if (currentPage <= 3) {
-                                            displayPage = pageNum;
-                                          } else if (currentPage >= subSkuFamilyData[item._id].totalPages - 2) {
-                                            displayPage = subSkuFamilyData[item._id].totalPages - 4 + pageNum;
-                                          } else {
-                                            displayPage = currentPage - 2 + pageNum;
-                                          }
-                                        }
-                                        return (
-                                          <button
-                                            key={displayPage}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              fetchSubSkuFamilies(item._id!, displayPage);
-                                            }}
-                                            className={`px-2 py-1.5 rounded-lg text-xs ${
-                                              subSkuFamilyData[item._id].currentPage === displayPage
-                                                ? "bg-[#0071E0] text-white dark:bg-blue-500 dark:text-white border border-blue-600 dark:border-blue-500"
-                                                : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                            } transition-colors`}
-                                          >
-                                            {displayPage}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
+                                      <div className="flex space-x-1">
+                                        {(() => {
+                                          const itemId = item._id as string;
+                                          const totalPages = subSkuFamilyData[itemId].totalPages;
+                                          const currentPage = subSkuFamilyData[itemId].currentPage;
+                                          return Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                            const pageNum = i + 1;
+                                            // Show pages around current page
+                                            let displayPage = pageNum;
+                                            if (totalPages > 5) {
+                                              if (currentPage <= 3) {
+                                                displayPage = pageNum;
+                                              } else if (currentPage >= totalPages - 2) {
+                                                displayPage = totalPages - 4 + pageNum;
+                                              } else {
+                                                displayPage = currentPage - 2 + pageNum;
+                                              }
+                                            }
+                                            return (
+                                              <button
+                                                key={displayPage}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  fetchSubSkuFamilies(itemId, displayPage);
+                                                }}
+                                                className={`px-2 py-1.5 rounded-lg text-xs ${
+                                                  subSkuFamilyData[itemId].currentPage === displayPage
+                                                    ? "bg-[#0071E0] text-white dark:bg-blue-500 dark:text-white border border-blue-600 dark:border-blue-500"
+                                                    : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                                } transition-colors`}
+                                              >
+                                                {displayPage}
+                                              </button>
+                                            );
+                                          });
+                                        })()}
+                                      </div>
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const currentPage = subSkuFamilyData[item._id!].currentPage;
-                                        if (currentPage < subSkuFamilyData[item._id!].totalPages) {
-                                          fetchSubSkuFamilies(item._id!, currentPage + 1);
+                                        const itemId = item._id as string;
+                                        const currentPage = subSkuFamilyData[itemId].currentPage;
+                                        if (currentPage < subSkuFamilyData[itemId].totalPages) {
+                                          fetchSubSkuFamilies(itemId, currentPage + 1);
                                         }
                                       }}
-                                      disabled={subSkuFamilyData[item._id].currentPage === subSkuFamilyData[item._id].totalPages}
+                                      disabled={(() => {
+                                        const itemId = item._id as string;
+                                        return subSkuFamilyData[itemId].currentPage === subSkuFamilyData[itemId].totalPages;
+                                      })()}
                                       className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-xs transition-colors"
                                     >
                                       Next

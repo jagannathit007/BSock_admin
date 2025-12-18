@@ -1805,7 +1805,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         // Edit mode: Transform calculated products back to ProductRowData format and call onSave
         // IMPORTANT: Use the NEW calculated countryDeliverables which contain the UPDATED margins and costs
         const updatedRows: ProductRowData[] = calculationResults.map((result, index) => {
-          const row = result.product;
           const originalRow = pendingRows[index];
           const editProduct = editProducts[index];
           

@@ -28,6 +28,7 @@ import Payment from "./pages/Payment/Payment";
 import CustomerCart from "./pages/Customer/CustomerCart";
 import BusinessRequests from "./pages/BusinessRequests/BusinessRequests";
 import Orders from "./pages/Orders/Orders";
+import WTBRequests from "./pages/WTBRequests/WTBRequests";
 import CurrencyConversion from "./pages/CurrencyConversion/CurrencyConversion";
 import Activities from "./pages/Activities/Activities";
 import Customers from "./pages/Customers/Customers";
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/sku-family" element={<SkuFamily />} />
             <Route path="/products" element={<Products />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/wtb-requests" element={<WTBRequests />} />
             <Route path="/activities" element={<Activities />} />
             <Route path="/cost-module" element={<CostModule />} />
             <Route path="/wallet-amount" element={<WalletAmount />} />

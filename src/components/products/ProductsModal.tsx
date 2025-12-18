@@ -844,7 +844,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
     setShowCostModal(false);
     
     // Check if we need to open cost modal for other country
-    const hasHKProducts = pendingFormData.countryDeliverables.some(cd => cd.country === 'Hongkong');
     const hasDubai = pendingFormData.countryDeliverables.some(cd => cd.country === 'Dubai');
     
     if (country === 'Hongkong' && hasDubai) {
@@ -879,8 +878,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
       let conditionCode = '';
       if (pendingFormData.condition) {
         // Try to get condition code from SKU Family's conditionCategoryId
-        if (skuFamily && typeof skuFamily.conditionCategoryId === 'object') {
-          conditionCode = (skuFamily.conditionCategoryId as any).code || '';
+        if (skuFamily && typeof (skuFamily as any).conditionCategoryId === 'object') {
+          conditionCode = ((skuFamily as any).conditionCategoryId as any).code || '';
         }
       }
       
@@ -889,8 +888,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
         ...pendingFormData,
         _id: editItem._id,
         skuFamilyId: skuFamilyId,
-        brandCode: skuFamily?.brand?.code || (skuFamily?.brand as any)?.code || '',
-        productCategoryCode: skuFamily?.productcategoriesId?.code || (skuFamily?.productcategoriesId as any)?.code || '',
+        brandCode: (skuFamily as any)?.brand?.code || (skuFamily as any)?.brand?.code || '',
+        productCategoryCode: (skuFamily as any)?.productcategoriesId?.code || (skuFamily as any)?.productcategoriesId?.code || '',
         conditionCode: conditionCode,
         sellerCode: seller?.code || '',
         countryDeliverables: (pendingFormData.countryDeliverables || []).map((cd: any) => ({

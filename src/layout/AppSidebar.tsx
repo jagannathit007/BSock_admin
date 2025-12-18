@@ -75,6 +75,11 @@ const navItems: NavItem[] = [
     path: "/orders",
   },
   {
+    icon: <i className="fas fa-shopping-cart"></i>,
+    name: "WTB Requests",
+    path: "/wtb-requests",
+  },
+  {
     icon: <i className="fas fa-handshake"></i>,
     name: "Negotiations",
     path: "/negotiations",
