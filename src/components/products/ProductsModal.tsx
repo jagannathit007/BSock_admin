@@ -869,9 +869,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
         ...pendingFormData,
         _id: editItem._id,
         skuFamilyId: skuFamilyId,
-        brandCode: skuFamily?.brand?.code || (skuFamily?.brand as any)?.code || '',
-        productCategoryCode: skuFamily?.productcategoriesId?.code || (skuFamily?.productcategoriesId as any)?.code || '',
-        conditionCode: skuFamily?.conditionCategoryId?.code || (skuFamily?.conditionCategoryId as any)?.code || '',
+        brandCode: (skuFamily?.brand as any)?.code || '',
+        productCategoryCode: ((skuFamily as any)?.productcategoriesId as any)?.code || '',
+        conditionCode: ((skuFamily as any)?.conditionCategoryId as any)?.code || '',
         sellerCode: seller?.code || '',
         countryDeliverables: (pendingFormData.countryDeliverables || []).map((cd: any) => ({
           country: cd.country,

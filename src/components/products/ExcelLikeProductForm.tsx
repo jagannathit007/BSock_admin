@@ -1715,6 +1715,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           ram: cleanString(row.ram) || '',
           storage: row.storage || '',
           weight: row.weight ? parseFloat(String(row.weight)) : null,
+          condition: null, // Condition removed from form, set to null
           stock: parseFloat(String(row.totalQty)) || 0,
           country: (cleanString(row.country) || null) as string | null,
           moq: parseFloat(String(row.moqPerVariant)) || 1,
@@ -2067,8 +2068,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
   
   // Get status options from constants (show name, store code)
   const statusOptions = constants?.status || [];
-  
-  const conditionOptions = ['AAA', 'A+', 'Mixed'];
   
   // Get lockStatus options from constants (show name, store code)
   const lockUnlockOptions = constants?.lockStatus || [];
