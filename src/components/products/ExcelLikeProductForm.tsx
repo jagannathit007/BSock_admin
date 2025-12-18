@@ -24,7 +24,6 @@ export interface ProductRowData {
   version: string;
   grade: string;
   status: string;
-  condition: string;
   lockUnlock: string;
   warranty: string;
   batteryHealth: string;
@@ -219,7 +218,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           version: product.specification || '',
           grade: grade,
           status: (product as any).status || '',
-          condition: product.condition || '',
           lockUnlock: (product as any).lockUnlock ? '1' : '0',
           warranty: (product as any).warranty || '',
           batteryHealth: (product as any).batteryHealth || '',
@@ -504,7 +502,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     version: '',
     grade: '',
     status: '', // Will be set from constants
-    condition: '',
     lockUnlock: '',
     warranty: '',
     batteryHealth: '',
@@ -1398,13 +1395,21 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           }
         }
 
+        // Extract condition category code - should be populated from list endpoint
+        let conditionCode = '';
+        if (skuFamily?.conditionCategoryId) {
+          if (skuFamily.conditionCategoryId && typeof skuFamily.conditionCategoryId === 'object' && skuFamily.conditionCategoryId.code) {
+            conditionCode = skuFamily.conditionCategoryId.code;
+          }
+        }
+
         return {
           ...row,
           countryDeliverables,
           sellerCode: seller?.code || '',
           brandCode: brandCode,
           productCategoryCode: productCategoryCode,
-          conditionCode: row.condition || '',
+          conditionCode: conditionCode,
           moq: parseFloat(String(row.moqPerVariant)) || 1,
           weight: parseFloat(String(row.weight)) || 0,
         };
@@ -1710,7 +1715,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           ram: cleanString(row.ram) || '',
           storage: row.storage || '',
           weight: row.weight ? parseFloat(String(row.weight)) : null,
-          condition: cleanString(row.condition) || null,
           stock: parseFloat(String(row.totalQty)) || 0,
           country: (cleanString(row.country) || null) as string | null,
           moq: parseFloat(String(row.moqPerVariant)) || 1,
@@ -1812,52 +1816,129 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           // ✅ CRITICAL: Use the NEW calculated countryDeliverables from the calculation results
           // These contain the UPDATED margins and costs based on user's new selections
           // The old margins and costs are completely replaced by these new ones
-          const newCountryDeliverables = result.countryDeliverables.map((cd: any) => {
-            // ✅ PRESERVE COMPLETE STRUCTURE with all margin and cost fields
-            // This ensures the backend receives complete data to replace old margins/costs
-            return {
-              country: cd.country,
-              currency: cd.currency || 'USD',
-              basePrice: cd.basePrice || 0,
-              calculatedPrice: cd.calculatedPrice || 0,
-              exchangeRate: cd.exchangeRate || null,
-              // ✅ NEW margins from calculation (replaces old ones) - COMPLETE STRUCTURE
-              margins: (cd.margins || []).map((m: any) => ({
+          // ✅ IMPORTANT: Expand deliverables to include USD, HKD, and AED entries (same as create mode)
+          const newCountryDeliverables: any[] = [];
+          
+          // Track which countries we've processed to avoid duplicates
+          const processedCountries = new Set<string>();
+          
+          result.countryDeliverables.forEach((cd: any) => {
+            const countryKey = `${cd.country}_USD`;
+            
+            // Only process each country once
+            if (processedCountries.has(countryKey)) {
+              return;
+            }
+            processedCountries.add(countryKey);
+            
+            // Helper function to map margins with currency conversion
+            const mapMargins = (margins: any[], rate: number = 1) => {
+              return (margins || []).map((m: any) => ({
                 type: m.type,
                 name: m.name,
                 marginType: m.marginType,
                 marginValue: m.marginValue,
-                calculatedAmount: m.calculatedAmount,
+                calculatedAmount: (m.calculatedAmount || 0) * rate,
                 description: m.description,
                 ...(m._id && { _id: m._id }),
                 ...(m.marginId && { marginId: m.marginId }),
-              })),
-              // ✅ NEW costs from calculation (replaces old ones) - COMPLETE STRUCTURE
-              costs: (cd.costs || []).map((c: any) => ({
+              }));
+            };
+            
+            // Helper function to map costs with currency conversion
+            const mapCosts = (costs: any[], rate: number = 1) => {
+              return (costs || []).map((c: any) => ({
                 costId: c.costId || c._id,
                 name: c.name,
                 costType: c.costType,
                 costField: c.costField,
                 costUnit: c.costUnit,
                 value: c.value,
-                calculatedAmount: c.calculatedAmount,
+                calculatedAmount: (c.calculatedAmount || 0) * rate,
                 groupId: c.groupId || null,
                 isExpressDelivery: c.isExpressDelivery || false,
                 isSameLocationCharge: c.isSameLocationCharge || false,
                 ...(c._id && { _id: c._id }),
                 ...(c.minValue !== undefined && { minValue: c.minValue }),
                 ...(c.maxValue !== undefined && { maxValue: c.maxValue }),
-              })),
+              }));
+            };
+            
+            // Add USD entry (always required)
+            const usdBasePrice = cd.basePrice || 0;
+            const usdCalculatedPrice = cd.calculatedPrice || 0;
+            const exchangeRate = cd.exchangeRate || cd.xe || null;
+            
+            newCountryDeliverables.push({
+              country: cd.country,
+              currency: 'USD',
+              basePrice: usdBasePrice,
+              calculatedPrice: usdCalculatedPrice,
+              exchangeRate: exchangeRate,
+              // ✅ NEW margins from calculation (replaces old ones) - COMPLETE STRUCTURE
+              margins: mapMargins(cd.margins || [], 1),
+              // ✅ NEW costs from calculation (replaces old ones) - COMPLETE STRUCTURE
+              costs: mapCosts(cd.costs || [], 1),
               charges: cd.charges || [],
               // Legacy fields for compatibility
-              usd: cd.usd || cd.calculatedPrice || 0,
-              xe: cd.xe || cd.exchangeRate || null,
+              usd: cd.usd || usdCalculatedPrice,
+              xe: exchangeRate,
               hkd: cd.hkd || null,
               aed: cd.aed || null,
-              local: cd.local || null,
-              price: cd.price || cd.basePrice || 0,
-            };
+              local: null,
+              price: usdBasePrice,
+            });
+            
+            // Add local currency entry if exchange rate exists (same logic as create mode)
+            if (exchangeRate && cd.country === 'Hongkong') {
+              const hkdBasePrice = usdBasePrice * exchangeRate;
+              const hkdCalculatedPrice = usdCalculatedPrice * exchangeRate;
+              newCountryDeliverables.push({
+                country: 'Hongkong',
+                currency: 'HKD',
+                basePrice: hkdBasePrice,
+                calculatedPrice: hkdCalculatedPrice,
+                exchangeRate: exchangeRate,
+                // ✅ NEW margins from calculation (replaces old ones) - converted to HKD
+                margins: mapMargins(cd.margins || [], exchangeRate),
+                // ✅ NEW costs from calculation (replaces old ones) - converted to HKD
+                costs: mapCosts(cd.costs || [], exchangeRate),
+                charges: cd.charges || [],
+                // Legacy fields for compatibility
+                hkd: cd.hkd || hkdCalculatedPrice,
+                local: cd.local || hkdCalculatedPrice,
+                usd: null,
+                xe: exchangeRate,
+                price: null,
+              });
+            } else if (exchangeRate && cd.country === 'Dubai') {
+              const aedBasePrice = usdBasePrice * exchangeRate;
+              const aedCalculatedPrice = usdCalculatedPrice * exchangeRate;
+              newCountryDeliverables.push({
+                country: 'Dubai',
+                currency: 'AED',
+                basePrice: aedBasePrice,
+                calculatedPrice: aedCalculatedPrice,
+                exchangeRate: exchangeRate,
+                // ✅ NEW margins from calculation (replaces old ones) - converted to AED
+                margins: mapMargins(cd.margins || [], exchangeRate),
+                // ✅ NEW costs from calculation (replaces old ones) - converted to AED
+                costs: mapCosts(cd.costs || [], exchangeRate),
+                charges: cd.charges || [],
+                // Legacy fields for compatibility
+                aed: cd.aed || aedCalculatedPrice,
+                local: cd.local || aedCalculatedPrice,
+                usd: null,
+                xe: exchangeRate,
+                price: null,
+              });
+            }
           });
+          
+          // Remove duplicates based on country + currency combination
+          const uniqueCountryDeliverables = newCountryDeliverables.filter((cd, index, self) =>
+            index === self.findIndex((t) => t.country === cd.country && t.currency === cd.currency)
+          );
           
           // Merge calculated countryDeliverables into the row
           // Include product _id so handleFormSave knows which product to update
@@ -1865,7 +1946,8 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
             ...originalRow,
             // ✅ Attach NEW calculated countryDeliverables with UPDATED margins and costs
             // This will completely replace the old countryDeliverables in the database
-            countryDeliverables: newCountryDeliverables,
+            // ✅ EXPANDED: Includes USD, HKD, and AED entries (same as create mode)
+            countryDeliverables: uniqueCountryDeliverables,
             // Include product ID for update
             _id: editProduct?._id,
           } as any;
@@ -1938,7 +2020,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     { key: 'version', label: 'VERSION', width: 120, group: 'Product Detail' },
     { key: 'grade', label: 'GRADE*', width: 120, group: 'Product Detail' },
     { key: 'status', label: 'STATUS*', width: 100, group: 'Product Detail' },
-    { key: 'condition', label: 'CONDITION', width: 120, group: 'Product Detail' },
     { key: 'lockUnlock', label: 'LOCK/UNLOCK*', width: 120, group: 'Product Detail' },
     { key: 'warranty', label: 'WARRANTY', width: 120, group: 'Product Detail' },
     { key: 'batteryHealth', label: 'BATTERY HEALTH', width: 130, group: 'Product Detail' },
@@ -2234,22 +2315,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
                 {opt.name}
               </option>
             ))}
-          </select>
-        );
-
-      case 'condition':
-        return (
-          <select
-            value={value as string}
-            onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
-            className="w-full px-2 py-1.5 text-xs border-0 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 cursor-pointer appearance-none"
-            onFocus={() => {
-              setFocusedCell({ row: rowIndex, col: column.key });
-              setSelectedRowIndex(rowIndex);
-            }}
-          >
-            <option value="" className="bg-white dark:bg-gray-800">Select Condition</option>
-            {conditionOptions.map(opt => <option key={opt} value={opt} className="bg-white dark:bg-gray-800">{opt}</option>)}
           </select>
         );
 

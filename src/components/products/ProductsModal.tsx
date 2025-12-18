@@ -45,7 +45,6 @@ interface FormData {
   ram: string;
   storage: string;
   weight: number | string;
-  condition: string | null;
   stock: number | string;
   country: string | null;
   moq: number | string;
@@ -89,7 +88,6 @@ interface TouchedFields {
   ram: boolean;
   storage: boolean;
   weight: boolean;
-  condition: boolean;
   price: boolean;
   stock: boolean;
   country: boolean;
@@ -123,7 +121,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
     ram: "",
     storage: "",
     weight: "",
-    condition: "",
     stock: 0,
     country: "",
     moq: 0,
@@ -188,7 +185,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
     ram: false,
     storage: false,
     weight: false,
-    condition: false,
     price: false,
     stock: false,
     country: false,
@@ -233,7 +229,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
   };
   const ramOptions = ["4GB", "6GB", "8GB", "16GB", "32GB"];
   const storageOptions = ["128GB", "256GB", "512GB", "1TB"];
-  const conditionOptions = ["AAA", "A+", "Mixed"];
 
   // Function to extract data from SKU Family
   const extractSkuFamilyData = (skuFamily: any) => {
@@ -352,7 +347,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           ram: editItem.ram,
           storage: editItem.storage,
           weight: (editItem as any).weight || "",
-          condition: editItem.condition || null,
           stock: editItem.stock,
           country: editItem.country || null,
           moq: editItem.moq,
@@ -403,7 +397,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           ram: "",
           storage: "",
           weight: "",
-          condition: "",
           stock: 0,
           country: "",
           moq: 0,
@@ -672,8 +665,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           return "Weight must be a valid number >= 0";
         }
         return undefined;
-      case "condition":
-        return !value ? "Condition is required" : undefined;
       case "stock":
         if (value === "" || value === null || value === undefined)
           return "Stock is required";
@@ -715,7 +706,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
       "color",
       "ram",
       "storage",
-      "condition",
       "stock",
       "country",
       "moq",
@@ -875,15 +865,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
       const sellerId = pendingFormData.sellerId;
       const seller = sellers.find(s => s._id === sellerId);
       
-      // Get condition code - need to fetch from condition category
-      let conditionCode = '';
-      if (pendingFormData.condition) {
-        // Try to get condition code from SKU Family's conditionCategoryId
-        if (skuFamily && typeof skuFamily.conditionCategoryId === 'object') {
-          conditionCode = (skuFamily.conditionCategoryId as any).code || '';
-        }
-      }
-      
       // Prepare product data for calculation with all required codes
       const productForCalculation: any = {
         ...pendingFormData,
@@ -891,7 +872,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
         skuFamilyId: skuFamilyId,
         brandCode: skuFamily?.brand?.code || (skuFamily?.brand as any)?.code || '',
         productCategoryCode: skuFamily?.productcategoriesId?.code || (skuFamily?.productcategoriesId as any)?.code || '',
-        conditionCode: conditionCode,
+        conditionCode: skuFamily?.conditionCategoryId?.code || (skuFamily?.conditionCategoryId as any)?.code || '',
         sellerCode: seller?.code || '',
         countryDeliverables: (pendingFormData.countryDeliverables || []).map((cd: any) => ({
           country: cd.country,
@@ -982,7 +963,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
       color: true,
       ram: true,
       storage: true,
-      condition: true,
       price: true,
       stock: true,
       country: true,
@@ -1609,40 +1589,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 {touched.weight && validationErrors.weight && (
                   <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                     {validationErrors.weight}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-950 dark:text-gray-200 mb-2">
-                  Condition
-                </label>
-                <div className="relative">
-                  <select
-                    name="condition"
-                    value={formData.condition || ''}
-                    onChange={handleInputChange}
-                    onBlur={handleBlur}
-                    className={`w-full pl-3 pr-8 py-2.5 border rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-sm appearance-none cursor-pointer ${
-                      touched.condition && validationErrors.condition
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-gray-200 dark:border-gray-700"
-                    }`}
-                    required
-                  >
-                    <option value="" disabled>
-                      Select Condition
-                    </option>
-                    {conditionOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  <i className="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
-                </div>
-                {touched.condition && validationErrors.condition && (
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                    {validationErrors.condition}
                   </p>
                 )}
               </div>
