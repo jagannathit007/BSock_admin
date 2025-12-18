@@ -1883,14 +1883,6 @@ const navigate = useNavigate();
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Condition
-                      </label>
-                      <p className="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                        {selectedProduct.condition || 'N/A'}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Flash Deal
                       </label>
                       <p className={`text-sm font-medium bg-gray-50 dark:bg-gray-800 p-3 rounded-md ${selectedProduct.isFlashDeal ? "text-green-600" : "text-red-600"}`}>
