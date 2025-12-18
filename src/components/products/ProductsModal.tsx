@@ -834,7 +834,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
     setShowCostModal(false);
     
     // Check if we need to open cost modal for other country
-    const hasHKProducts = pendingFormData.countryDeliverables.some(cd => cd.country === 'Hongkong');
     const hasDubai = pendingFormData.countryDeliverables.some(cd => cd.country === 'Dubai');
     
     if (country === 'Hongkong' && hasDubai) {
@@ -870,9 +869,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
         ...pendingFormData,
         _id: editItem._id,
         skuFamilyId: skuFamilyId,
-        brandCode: skuFamily?.brand?.code || (skuFamily?.brand as any)?.code || '',
-        productCategoryCode: skuFamily?.productcategoriesId?.code || (skuFamily?.productcategoriesId as any)?.code || '',
-        conditionCode: skuFamily?.conditionCategoryId?.code || (skuFamily?.conditionCategoryId as any)?.code || '',
+        brandCode: (skuFamily?.brand as any)?.code || '',
+        productCategoryCode: ((skuFamily as any)?.productcategoriesId as any)?.code || '',
+        conditionCode: ((skuFamily as any)?.conditionCategoryId as any)?.code || '',
         sellerCode: seller?.code || '',
         countryDeliverables: (pendingFormData.countryDeliverables || []).map((cd: any) => ({
           country: cd.country,

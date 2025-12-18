@@ -55,7 +55,7 @@ const ProductImageVideoModal: React.FC<ProductImageVideoModalProps> = ({
     if (isOpen && product) {
       if (product.images) {
         const imageArray = Array.isArray(product.images) 
-          ? product.images.filter(img => img && String(img).trim() !== "")
+          ? product.images.filter((img: string) => img && String(img).trim() !== "")
           : [];
         setExistingImages(imageArray);
       } else {
@@ -64,7 +64,7 @@ const ProductImageVideoModal: React.FC<ProductImageVideoModalProps> = ({
 
       if ((product as any).videos) {
         const videoArray = Array.isArray((product as any).videos)
-          ? (product as any).videos.filter(vid => vid && String(vid).trim() !== "")
+          ? (product as any).videos.filter((vid: string) => vid && String(vid).trim() !== "")
           : [];
         setExistingVideos(videoArray);
       } else {

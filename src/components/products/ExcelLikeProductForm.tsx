@@ -1715,6 +1715,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           ram: cleanString(row.ram) || '',
           storage: row.storage || '',
           weight: row.weight ? parseFloat(String(row.weight)) : null,
+          condition: null, // Condition removed from form, set to null
           stock: parseFloat(String(row.totalQty)) || 0,
           country: (cleanString(row.country) || null) as string | null,
           moq: parseFloat(String(row.moqPerVariant)) || 1,
@@ -1809,7 +1810,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         // Edit mode: Transform calculated products back to ProductRowData format and call onSave
         // IMPORTANT: Use the NEW calculated countryDeliverables which contain the UPDATED margins and costs
         const updatedRows: ProductRowData[] = calculationResults.map((result, index) => {
-          const row = result.product;
           const originalRow = pendingRows[index];
           const editProduct = editProducts[index];
           
@@ -2071,8 +2071,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     { code: 'active', name: 'Active' },
     { code: 'nonactive', name: 'Non Active' }
   ];
-  
-  const conditionOptions = ['AAA', 'A+', 'Mixed'];
   
   // Get lockStatus options from constants (show name, store code)
   const lockUnlockOptions = constants?.lockStatus || [];
