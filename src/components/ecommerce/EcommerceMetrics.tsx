@@ -63,15 +63,22 @@ export default function EcommerceMetrics() {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                Customers
-              </p>
+              <div className="flex flex-col">
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                  Customers
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-0.5">
+                  Active vs Total
+                </p>
+              </div>
             </div>
             <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-              {stats ? formatNumber(stats.customers.total) : '0'}
+              {stats ? formatNumber(stats.customers.active) : '0'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
-              {stats && stats.customers.today > 0 ? `${stats.customers.today} today` : 'Registered users'}
+              {stats
+                ? `${formatNumber(stats.customers.active)} active / ${formatNumber(stats.customers.total)} total${stats.customers.today > 0 ? ` • ${stats.customers.today} new today` : ""}`
+                : "Registered users"}
             </p>
           </div>
           <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl">
@@ -168,6 +175,75 @@ export default function EcommerceMetrics() {
           </div>
           <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-xl">
             <DollarLineIcon className="text-teal-600 dark:text-teal-400 size-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* <!-- Active Lots Card --> */}
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                Active Lots
+              </p>
+            </div>
+            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">
+              {stats ? formatNumber(stats.bids.activeLots || 0) : "0"}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">
+              Lots currently open for bidding
+            </p>
+          </div>
+          <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
+            <BoxIcon className="text-amber-600 dark:text-amber-400 size-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* <!-- Active Lotwise Customer Bids Card --> */}
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                Active Lotwise Bids
+              </p>
+            </div>
+            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">
+              {stats ? formatNumber(stats.bids.activeLotwiseCustomerBids || 0) : "0"}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">
+              Active lots that have at least one bid
+            </p>
+          </div>
+          <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
+            <BoxIcon className="text-amber-600 dark:text-amber-400 size-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* <!-- Customer-wise Lot-wise Bids Card --> */}
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                Customer-wise Lot-wise Bids
+              </p>
+            </div>
+            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">
+              {stats ? formatNumber(stats.bids.customerWiseLotWiseBids || 0) : "0"}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">
+              Unique (customer, lot) bid combinations on active lots
+            </p>
+          </div>
+          <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
+            <BoxIcon className="text-amber-600 dark:text-amber-400 size-6" />
           </div>
         </div>
       </div>
