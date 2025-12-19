@@ -55,6 +55,33 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
     }
   }, [isOpen, country, initialCosts]);
 
+  // Helper function to check if same location applies for the current country
+  const isSameLocation = () => {
+    const countryCode = country === 'Hongkong' ? 'HK' : 'D';
+    
+    const normalizeDeliveryLocation = (deliveryLocation: any): string[] => {
+      if (Array.isArray(deliveryLocation)) {
+        return deliveryLocation;
+      }
+      if (typeof deliveryLocation === 'string') {
+        try {
+          const parsed = JSON.parse(deliveryLocation);
+          return Array.isArray(parsed) ? parsed : [deliveryLocation];
+        } catch {
+          return [deliveryLocation];
+        }
+      }
+      return [];
+    };
+    
+    // Check if any product has same location (currentLocation matches country AND country is in deliveryLocation)
+    return products.some(p => {
+      if (!p.currentLocation) return false;
+      const deliveryLocations = normalizeDeliveryLocation(p.deliveryLocation);
+      return p.currentLocation === countryCode && deliveryLocations.includes(countryCode);
+    });
+  };
+
   useEffect(() => {
     // Group costs by groupId
     const grouped: Record<string, any[]> = {};
@@ -72,8 +99,54 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
         grouped['_standalone'].push(cost);
       }
     });
-    setGroupedCosts(grouped);
-  }, [costs]);
+    
+    const sameLocationApplies = isSameLocation();
+    
+    // Find groups that have any cost with isSameLocationCharge: true
+    const groupsWithSameLocation = new Set<string>();
+    // Find groups that have any cost with isExpressDelivery: true
+    const groupsWithExpressDelivery = new Set<string>();
+    
+    Object.entries(grouped).forEach(([groupId, groupCosts]) => {
+      if (groupId !== '_standalone') {
+        const hasSameLocationCharge = groupCosts.some(cost => cost.isSameLocationCharge === true);
+        const hasExpressDelivery = groupCosts.some(cost => cost.isExpressDelivery === true);
+        
+        if (hasSameLocationCharge) {
+          groupsWithSameLocation.add(groupId);
+        }
+        if (hasExpressDelivery) {
+          groupsWithExpressDelivery.add(groupId);
+        }
+      }
+    });
+    
+    // Filter costs based on same location logic
+    const filteredGrouped: Record<string, any[]> = {};
+    Object.entries(grouped).forEach(([groupId, groupCosts]) => {
+      if (sameLocationApplies) {
+        // If same location applies:
+        // 1. If group has same location charge, hide entire group
+        // 2. If group has express delivery, hide entire group
+        // 3. For standalone costs (no group), hide express delivery costs
+        if (groupId === '_standalone') {
+          // For standalone costs, hide express delivery costs
+          filteredGrouped[groupId] = groupCosts.filter(cost => !cost.isExpressDelivery);
+        } else if (groupsWithSameLocation.has(groupId) || groupsWithExpressDelivery.has(groupId)) {
+          // Hide entire group if it has same location charge OR express delivery
+          // Don't add to filteredGrouped
+        } else {
+          // Group doesn't have same location or express delivery, show all costs
+          filteredGrouped[groupId] = groupCosts;
+        }
+      } else {
+        // If same location doesn't apply, show all costs
+        filteredGrouped[groupId] = groupCosts;
+      }
+    });
+    
+    setGroupedCosts(filteredGrouped);
+  }, [costs, country, products]);
 
   const fetchCosts = async () => {
     setLoading(true);
@@ -95,17 +168,40 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
   };
 
   const handleCostToggle = (costId: string, cost: any) => {
-    // ✅ FIX #3: PURE FUNCTION - Calculate group membership from source array, not derived state
     const newSelected = new Set(selectedCosts);
     
-    // ✅ CRITICAL FIX: Express delivery and same location costs should ALWAYS be individually selectable
-    // They should NOT be auto-selected when a group is selected
-    if (cost.isExpressDelivery || cost.isSameLocationCharge) {
-      // ✅ INDIVIDUAL SELECTION: Express delivery and same location costs are always individually selectable
+    // If cost belongs to a group, handle group selection
+    if (cost.groupId) {
+      // Find ALL costs in the same group (including express delivery and same location)
+      const groupMembers = costs.filter(c => c.groupId === cost.groupId);
+      
+      // Check if all group members are currently selected
+      const allGroupSelected = groupMembers.every(c => newSelected.has(c._id));
+      
+      if (allGroupSelected) {
+        // DESELECT ALL: Remove all costs in this group
+        groupMembers.forEach(c => newSelected.delete(c._id));
+      } else {
+        // SELECT ALL: Add all costs in this group
+        groupMembers.forEach(c => {
+          // For express delivery costs, ensure only one express delivery is selected at a time
+          if (c.isExpressDelivery) {
+            // Remove all other express delivery costs (even from other groups)
+            costs.forEach(otherCost => {
+              if (otherCost.isExpressDelivery && otherCost._id !== c._id) {
+                newSelected.delete(otherCost._id);
+              }
+            });
+          }
+          newSelected.add(c._id);
+        });
+      }
+    } else {
+      // INDIVIDUAL COST: Toggle single cost (no group)
       if (newSelected.has(costId)) {
         newSelected.delete(costId);
       } else {
-        // ✅ EXPRESS DELIVERY: Only one can be selected
+        // For express delivery costs, ensure only one express delivery is selected at a time
         if (cost.isExpressDelivery) {
           // Remove all other express delivery costs
           costs.forEach(c => {
@@ -114,33 +210,6 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
             }
           });
         }
-        newSelected.add(costId);
-      }
-    } else if (cost.groupId) {
-      // ✅ GROUP SELECTION: For non-express/same-location costs in a group
-      // ✅ DETERMINISTIC: Find group members from costs array (source of truth, not groupedCosts state)
-      // Exclude express delivery and same location costs from group auto-selection
-      const groupMembers = costs.filter(c => 
-        c.groupId === cost.groupId && 
-        !c.isExpressDelivery && 
-        !c.isSameLocationCharge
-      );
-      
-      // ✅ CHECK: Are all non-express group members currently selected?
-      const allGroupSelected = groupMembers.every(c => newSelected.has(c._id));
-      
-      if (allGroupSelected) {
-        // ✅ DESELECT ALL: Remove all non-express group members
-        groupMembers.forEach(c => newSelected.delete(c._id));
-      } else {
-        // ✅ SELECT ALL: Add all non-express group members
-        groupMembers.forEach(c => newSelected.add(c._id));
-      }
-    } else {
-      // ✅ INDIVIDUAL COST: Toggle single cost (no group, not express/same location)
-      if (newSelected.has(costId)) {
-        newSelected.delete(costId);
-      } else {
         newSelected.add(costId);
       }
     }
