@@ -217,7 +217,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           sim: product.simType || '',
           version: product.specification || '',
           grade: grade,
-          status: (product as any).status || '',
+          status: (product as any).isStatus || (product as any).status || 'active', // Use isStatus from backend, fallback to status or 'active'
           lockUnlock: (product as any).lockUnlock ? '1' : '0',
           warranty: (product as any).warranty || '',
           batteryHealth: (product as any).batteryHealth || '',
@@ -501,7 +501,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     sim: '',
     version: '',
     grade: '',
-    status: '', // Will be set from constants
+    status: 'active', // Default to active for isStatus field
     lockUnlock: '',
     warranty: '',
     batteryHealth: '',
@@ -2066,8 +2066,11 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     return country?.SIM || [];
   };
   
-  // Get status options from constants (show name, store code)
-  const statusOptions = constants?.status || [];
+  // Status options for isStatus field (active/nonactive)
+  const statusOptions = [
+    { code: 'active', name: 'Active' },
+    { code: 'nonactive', name: 'Non Active' }
+  ];
   
   // Get lockStatus options from constants (show name, store code)
   const lockUnlockOptions = constants?.lockStatus || [];
@@ -2296,9 +2299,12 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         );
 
       case 'status':
+        // Handle both 'active'/'nonactive' and legacy values
+        const statusValue = value as string;
+        const normalizedStatusValue = statusValue === 'non active' ? 'nonactive' : (statusValue || 'active');
         return (
           <select
-            value={value as string}
+            value={normalizedStatusValue}
             onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
             className="w-full px-2 py-1.5 text-xs border-0 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 cursor-pointer appearance-none"
             required

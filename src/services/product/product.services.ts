@@ -273,6 +273,7 @@ export class ProductService {
         lockUnlock: typeof productData.lockUnlock === 'boolean' ? productData.lockUnlock : false,
         // Preserve additional fields if they exist
         status: productData.status,
+        isStatus: (productData as any).isStatus, // Add isStatus field (will be included if provided)
         isVerified: productData.isVerified,
         verifiedBy: productData.verifiedBy,
         isApproved: productData.isApproved,
@@ -301,6 +302,7 @@ export class ProductService {
       // ✅ DEBUG: Log what's being sent to backend
       console.log('📤 SENDING PRODUCT UPDATE TO BACKEND:', {
         id: transformedData.id,
+        isStatus: transformedData.isStatus,
         hasCountryDeliverables: !!transformedData.countryDeliverables,
         countryDeliverablesCount: transformedData.countryDeliverables?.length || 0,
         allFields: Object.keys(transformedData),

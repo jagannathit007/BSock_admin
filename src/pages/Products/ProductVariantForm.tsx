@@ -537,6 +537,27 @@ const ProductVariantForm: React.FC = () => {
           warranty: cleanString(row.warranty) || '',
           batteryHealth: cleanString(row.batteryHealth) || '',
           lockUnlock: row.lockUnlock === '1',
+          // Map status field from form to isStatus field in backend
+          // Always use the status from the form if provided, otherwise use existing or default
+          isStatus: (() => {
+            // If status is provided in the form, use it (normalize "non active" to "nonactive")
+            if (row.status && row.status.trim() !== '') {
+              const statusValue = row.status.trim();
+              if (statusValue === 'nonactive' || statusValue === 'active') {
+                return statusValue;
+              }
+              // Handle "non active" with space
+              if (statusValue === 'non active' || statusValue.toLowerCase() === 'non active') {
+                return 'nonactive';
+              }
+              return 'active';
+            }
+            // If no status in form, use existing isStatus from product (for edit mode) or default to active
+            if (isEditMode && existingProduct && (existingProduct as any).isStatus) {
+              return (existingProduct as any).isStatus;
+            }
+            return 'active';
+          })(),
         };
         
         // ✅ For edit mode: Preserve additional fields from existing product that might not be in row
@@ -552,22 +573,6 @@ const ProductVariantForm: React.FC = () => {
           if ((existingProduct as any).customFields) productData.customFields = (existingProduct as any).customFields;
           // Preserve pricingMetadata if it exists
           if ((existingProduct as any).pricingMetadata) productData.pricingMetadata = (existingProduct as any).pricingMetadata;
-        }
-        
-        // ✅ DEBUG: Log complete product data being sent
-        if (isEditMode) {
-          console.log(`📦 COMPLETE PRODUCT DATA FOR UPDATE (Row ${rowIndex + 1}):`, {
-            id: existingProduct?._id,
-            hasCountryDeliverables: !!countryDeliverables && countryDeliverables.length > 0,
-            countryDeliverablesCount: countryDeliverables.length,
-            marginsAndCosts: countryDeliverables.map((cd: any) => ({
-              country: cd.country,
-              marginsCount: cd.margins?.length || 0,
-              costsCount: cd.costs?.length || 0,
-            })),
-            allFields: Object.keys(productData),
-            productData: productData,
-          });
         }
         
         return productData;
