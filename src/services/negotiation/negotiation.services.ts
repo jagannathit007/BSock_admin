@@ -36,6 +36,11 @@ export interface Negotiation {
   message?: string;
   status: 'negotiation' | 'accepted' | 'rejected';
   isRead: boolean;
+  confirmationToken?: string | null;
+  confirmationExpiry?: string | Date | null;
+  isConfirmedByCustomer?: boolean;
+  confirmedAt?: string | Date | null;
+  orderId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

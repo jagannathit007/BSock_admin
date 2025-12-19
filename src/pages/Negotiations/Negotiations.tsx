@@ -180,10 +180,17 @@ const Negotiations = () => {
     try {
       const result = await NegotiationService.placeOrderFromNegotiation(negotiation._id);
       if (result) {
-        toastHelper.showTost('Order placed successfully!', 'success');
+        // Check if email was sent or order was placed
+        if (result.emailSent) {
+          toastHelper.showTost('Confirmation email has been sent to customer. Order will be placed automatically after customer confirms.', 'success');
+        } else {
+          toastHelper.showTost('Order placed successfully!', 'success');
+        }
         fetchData(); // Refresh data
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to process order';
+      toastHelper.showTost(errorMessage, 'error');
       console.error('Error placing order:', error);
     }
   };
@@ -635,14 +642,55 @@ const getCustomerDetails = (customer: any) => {
                     {negotiation.message}
                   </p>
                 )}
+                {/* Confirmation Status */}
+                <div className="mt-2">
+                  {negotiation.isConfirmedByCustomer ? (
+                    <div className="flex items-center space-x-2 text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Confirmed by Customer</span>
+                      {negotiation.confirmedAt && (
+                        <span className="text-gray-500">
+                          ({formatDate(negotiation.confirmedAt)})
+                        </span>
+                      )}
+                    </div>
+                  ) : negotiation.confirmationToken ? (
+                    <div className="flex items-center space-x-2 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                      <Clock className="w-3 h-3" />
+                      <span>Confirmation Email Sent - Waiting for Customer</span>
+                      {negotiation.confirmationExpiry && new Date(negotiation.confirmationExpiry) < new Date() && (
+                        <span className="text-red-600">(Expired)</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2 text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded">
+                      <span>Ready to Place Order</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <button
                 onClick={() => handlePlaceOrder(negotiation)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+                disabled={negotiation.isPlacedOrder && negotiation.isConfirmedByCustomer}
+                className={`w-full py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors ${
+                  negotiation.isPlacedOrder && negotiation.isConfirmedByCustomer
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
               >
                 <ShoppingCart className="w-4 h-4" />
-                <span>{negotiation.isPlacedOrder ? 'Place Order Again' : 'Place Order'}</span>
+                <span>
+                  {negotiation.isPlacedOrder && negotiation.isConfirmedByCustomer
+                    ? 'Order Already Placed'
+                    : negotiation.isConfirmedByCustomer && !negotiation.isPlacedOrder
+                    ? 'Place Order'
+                    : negotiation.isConfirmedByCustomer && negotiation.isPlacedOrder
+                    ? 'Place Order Again'
+                    : negotiation.confirmationToken
+                    ? 'Resend Confirmation Email'
+                    : 'Send Confirmation Email'}
+                </span>
               </button>
             </div>
           );
