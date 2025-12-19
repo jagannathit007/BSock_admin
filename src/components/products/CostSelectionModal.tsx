@@ -92,37 +92,76 @@ const CostSelectionModal: React.FC<CostSelectionModalProps> = ({
     return true; // Other costs are always applicable
   };
 
-  // Helper: ensure only one express cost per country
+  // Helper: ensure only one express cost per country and handle group selection
   const toggleCost = (country: string, cost: CostCharge) => {
     setLocalSelected((prev) => {
       const prevList = prev[country] || [];
+      const countryCosts = costsByCountry[country] || [];
+      const prevSet = new Set(prevList);
 
-      // If already selected, remove
-      if (prevList.includes(cost._id)) {
-        return { ...prev, [country]: prevList.filter((id) => id !== cost._id) };
-      }
-
-      let nextList = [...prevList];
-
-      // Enforce express delivery single selection
-      if (cost.isExpressDelivery) {
-        nextList = nextList.filter((id) => {
-          const existing = costsByCountry[country]?.find((c) => c._id === id);
-          return existing ? !existing.isExpressDelivery : true;
-        });
-      }
-
-      // Enforce group selection: if any in group, add all in group
+      // If cost belongs to a group, handle group selection
       if (cost.groupId) {
-        const groupMembers = costsByCountry[country]?.filter((c) => c.groupId === cost.groupId) || [];
+        // Find ALL costs in the same group for this country
+        const groupMembers = countryCosts.filter((c) => c.groupId === cost.groupId);
         const groupIds = groupMembers.map((c) => c._id);
-        const set = new Set([...nextList, ...groupIds]);
-        nextList = Array.from(set);
+        
+        // Check if all group members are currently selected
+        const allGroupSelected = groupIds.length > 0 && groupIds.every((id) => prevSet.has(id));
+        
+        let nextList: string[];
+        
+        if (allGroupSelected) {
+          // DESELECT ALL: Remove all costs in this group
+          nextList = prevList.filter((id) => !groupIds.includes(id));
+        } else {
+          // SELECT ALL: Add all costs in this group
+          nextList = [...prevList];
+          groupIds.forEach((id) => {
+            if (!nextList.includes(id)) {
+              nextList.push(id);
+            }
+          });
+          
+          // For express delivery costs in the group, ensure only one express delivery is selected
+          groupMembers.forEach((groupCost) => {
+            if (groupCost.isExpressDelivery) {
+              // Remove all other express delivery costs (even from other groups)
+              countryCosts.forEach((otherCost) => {
+                if (otherCost.isExpressDelivery && otherCost._id !== groupCost._id) {
+                  const index = nextList.indexOf(otherCost._id);
+                  if (index > -1) {
+                    nextList.splice(index, 1);
+                  }
+                }
+              });
+            }
+          });
+        }
+        
+        return { ...prev, [country]: nextList };
       } else {
-        nextList.push(cost._id);
+        // INDIVIDUAL COST: Toggle single cost (no group)
+        if (prevSet.has(cost._id)) {
+          // DESELECT: Remove the cost
+          return { ...prev, [country]: prevList.filter((id) => id !== cost._id) };
+        } else {
+          // SELECT: Add the cost
+          let nextList = [...prevList, cost._id];
+          
+          // For express delivery costs, ensure only one express delivery is selected
+          if (cost.isExpressDelivery) {
+            nextList = nextList.filter((id) => {
+              const existing = countryCosts.find((c) => c._id === id);
+              return existing ? !existing.isExpressDelivery || existing._id === cost._id : true;
+            });
+            if (!nextList.includes(cost._id)) {
+              nextList.push(cost._id);
+            }
+          }
+          
+          return { ...prev, [country]: nextList };
+        }
       }
-
-      return { ...prev, [country]: nextList };
     });
   };
 
@@ -149,24 +188,83 @@ const CostSelectionModal: React.FC<CostSelectionModalProps> = ({
             <p className="text-gray-500 dark:text-gray-400">No countries found in the Excel file.</p>
           )}
 
-          {countries.map((country) => {
-            const charges = costsByCountry[country] || [];
-            const selected = new Set(localSelected[country] || []);
+           {countries.map((country) => {
+             const charges = costsByCountry[country] || [];
+             const selected = new Set(localSelected[country] || []);
+             
+             // Check if same location applies for this country
+             const countryCode = country === 'Hongkong' ? 'HK' : 'D';
+             const normalizeDeliveryLocation = (deliveryLocation: any): string[] => {
+               if (Array.isArray(deliveryLocation)) {
+                 return deliveryLocation;
+               }
+               if (typeof deliveryLocation === 'string') {
+                 try {
+                   const parsed = JSON.parse(deliveryLocation);
+                   return Array.isArray(parsed) ? parsed : [deliveryLocation];
+                 } catch {
+                   return [deliveryLocation];
+                 }
+               }
+               return [];
+             };
+             
+             const sameLocationApplies = products.some(p => {
+               if (!p.currentLocation) return false;
+               const deliveryLocations = normalizeDeliveryLocation(p.deliveryLocation);
+               return p.currentLocation === countryCode && deliveryLocations.includes(countryCode);
+             });
+             
+             // Find groups that have any cost with isSameLocationCharge: true for this country
+             const groupsWithSameLocation = new Set<string>();
+             // Find groups that have any cost with isExpressDelivery: true for this country
+             const groupsWithExpressDelivery = new Set<string>();
+             
+             charges.forEach(cost => {
+               if (cost.groupId) {
+                 if (cost.isSameLocationCharge === true) {
+                   groupsWithSameLocation.add(cost.groupId);
+                 }
+                 if (cost.isExpressDelivery === true) {
+                   groupsWithExpressDelivery.add(cost.groupId);
+                 }
+               }
+             });
+             
+             // Filter costs based on same location logic
+             const filteredCharges = charges.filter(cost => {
+               if (sameLocationApplies) {
+                 // If same location applies:
+                 // 1. If group has same location charge, hide entire group
+                 if (cost.groupId && groupsWithSameLocation.has(cost.groupId)) {
+                   return false;
+                 }
+                 // 2. If group has express delivery, hide entire group
+                 if (cost.groupId && groupsWithExpressDelivery.has(cost.groupId)) {
+                   return false;
+                 }
+                 // 3. For standalone costs (no group), hide express delivery costs
+                 if (!cost.groupId && cost.isExpressDelivery === true) {
+                   return false;
+                 }
+               }
+               return true;
+             });
 
-            return (
-              <div key={country} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{country}</h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {selected.size} selected
-                  </span>
-                </div>
+             return (
+               <div key={country} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                 <div className="flex items-center justify-between mb-3">
+                   <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{country}</h3>
+                   <span className="text-sm text-gray-500 dark:text-gray-400">
+                     {selected.size} selected
+                   </span>
+                 </div>
 
-                {charges.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">No costs available for this country.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {charges.filter(cost => isCostApplicable(cost, country)).map((cost) => {
+                 {filteredCharges.length === 0 ? (
+                   <p className="text-gray-500 dark:text-gray-400">No costs available for this country.</p>
+                 ) : (
+                   <div className="space-y-2">
+                     {filteredCharges.filter(cost => isCostApplicable(cost, country)).map((cost) => {
                       const isSelected = selected.has(cost._id);
                       const isSameLocation = cost.isSameLocationCharge;
                       const isExpress = cost.isExpressDelivery;

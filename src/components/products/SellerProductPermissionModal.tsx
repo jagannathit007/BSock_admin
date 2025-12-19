@@ -26,6 +26,7 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
   const [isGlobal, _setIsGlobal] = useState(!sellerId);
 
   // Group fields by category
+  const supplierInfoFields = permissions.filter(p => p.group === 'supplierInfo');
   const productDetailFields = permissions.filter(p => p.group === 'productDetail');
   const pricingFields = permissions.filter(p => p.group === 'pricing');
   const otherInfoFields = permissions.filter(p => p.group === 'otherInfo');
@@ -78,7 +79,7 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
     );
   };
 
-  const handleSelectAll = (group: 'productDetail' | 'pricing' | 'otherInfo' | 'all') => {
+  const handleSelectAll = (group: 'supplierInfo' | 'productDetail' | 'pricing' | 'otherInfo' | 'all') => {
     setPermissions(prev =>
       prev.map(p => {
         if (group === 'all' || p.group === group) {
@@ -89,7 +90,7 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
     );
   };
 
-  const handleDeselectAll = (group: 'productDetail' | 'pricing' | 'otherInfo' | 'all') => {
+  const handleDeselectAll = (group: 'supplierInfo' | 'productDetail' | 'pricing' | 'otherInfo' | 'all') => {
     setPermissions(prev =>
       prev.map(p => {
         if (group === 'all' || p.group === group) {
@@ -109,17 +110,17 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
       setSaving(true);
       
       // Validate that required fields have permission
-      const requiredFieldsWithoutPermission = permissions.filter(
-        p => p.isRequired && !p.hasPermission
-      );
+      // const requiredFieldsWithoutPermission = permissions.filter(
+      //   p => p.isRequired && !p.hasPermission  
+      // );
       
-      if (requiredFieldsWithoutPermission.length > 0) {
-        toastHelper.showTost(
-          `Required fields must have permission: ${requiredFieldsWithoutPermission.map(f => f.label).join(', ')}`,
-          'error'
-        );
-        return;
-      }
+      // if (requiredFieldsWithoutPermission.length > 0) {
+      //   toastHelper.showTost(
+      //     `Required fields must have permission: ${requiredFieldsWithoutPermission.map(f => f.label).join(', ')}`,
+      //     'error'
+      //   );
+      //   return;
+      // }
 
       await SellerProductPermissionService.updateSellerProductPermissions(
         permissions,
@@ -191,6 +192,55 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
             </div>
           ) : (
             <>
+              {/* Supplier Info Group */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    Supplier Info Group
+                  </h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleSelectAll('supplierInfo')}
+                      className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={() => handleDeselectAll('supplierInfo')}
+                      className="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {supplierInfoFields.map(field => (
+                    <label
+                      key={field.fieldName}
+                      className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                        field.hasPermission
+                          ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700'
+                          : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                      } ${field.isRequired ? 'border-l-4 border-l-orange-500' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={field.hasPermission}
+                        onChange={() => handlePermissionToggle(field.fieldName)}
+                        // disabled={field.isRequired}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {field.label}
+                        {field.isRequired && (
+                          <span className="text-orange-500 ml-1">*</span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* Product Detail Group */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
@@ -226,7 +276,7 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
                         type="checkbox"
                         checked={field.hasPermission}
                         onChange={() => handlePermissionToggle(field.fieldName)}
-                        disabled={field.isRequired}
+                        // disabled={field.isRequired}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -275,7 +325,7 @@ const SellerProductPermissionModal: React.FC<SellerProductPermissionModalProps> 
                         type="checkbox"
                         checked={field.hasPermission}
                         onChange={() => handlePermissionToggle(field.fieldName)}
-                        disabled={field.isRequired}
+                        // disabled={field.isRequired}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">

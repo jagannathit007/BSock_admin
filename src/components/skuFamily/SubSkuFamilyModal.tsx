@@ -42,13 +42,13 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
   const [ramText, setRamText] = useState<string>("");
   const [colorText, setColorText] = useState<string>("");
   const [storages, setStorages] = useState<
-    { _id?: string; title: string }[]
+    { _id?: string; title: string; code?: string }[]
   >([]);
   const [rams, setRams] = useState<
-    { _id?: string; title: string }[]
+    { _id?: string; title: string; code?: string }[]
   >([]);
   const [colors, setColors] = useState<
-    { _id?: string; title: string }[]
+    { _id?: string; title: string; code?: string }[]
   >([]);
   const [storageLoading, setStorageLoading] = useState<boolean>(false);
   const [ramLoading, setRamLoading] = useState<boolean>(false);
@@ -102,6 +102,49 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
     ).join(' ');
   };
 
+  // Helper function to generate code for master data
+  // Pattern: PREFIX + 2 digits + 1 letter (e.g., STO00A, RAM00B, COL00A)
+  const generateMasterCode = (prefix: string, existingItems: Array<{ code?: string }>): string => {
+    // Filter items with codes matching the prefix pattern
+    const prefixPattern = new RegExp(`^${prefix}\\d{2}[A-Z]$`);
+    const matchingCodes = existingItems
+      .filter(item => item.code && prefixPattern.test(item.code))
+      .map(item => item.code!)
+      .sort();
+
+    if (matchingCodes.length === 0) {
+      // Start with 00A
+      return `${prefix}00A`;
+    }
+
+    // Get the last code
+    const lastCode = matchingCodes[matchingCodes.length - 1];
+    
+    // Extract number and letter
+    const match = lastCode.match(new RegExp(`^${prefix}(\\d{2})([A-Z])$`));
+    if (!match) {
+      // If pattern doesn't match, start fresh
+      return `${prefix}00A`;
+    }
+
+    const number = parseInt(match[1], 10);
+    const letter = match[2];
+
+    // Increment: if letter is Z, move to next number and reset to A
+    let nextNumber = number;
+    let nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
+
+    if (nextLetter > 'Z') {
+      nextNumber += 1;
+      nextLetter = 'A';
+    }
+
+    // Format number with leading zeros (2 digits)
+    const formattedNumber = nextNumber.toString().padStart(2, '0');
+    
+    return `${prefix}${formattedNumber}${nextLetter}`;
+  };
+
   // Helper function to find or create storage
   const findOrCreateStorage = async (title: string): Promise<string> => {
     if (!title || !title.trim()) return "";
@@ -113,9 +156,15 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
       return existing._id;
     }
     
-    // Create new storage
+    // Generate code for new storage
+    const storageCode = generateMasterCode('STO', storages);
+    
+    // Create new storage with generated code
     try {
-      const response = await StorageService.createStorage({ title: capitalizedTitle });
+      const response = await StorageService.createStorage({ 
+        title: capitalizedTitle,
+        code: storageCode
+      });
       const newStorageId = response?.data?._id || response?.data?.data?._id;
       if (newStorageId) {
         // Refresh storages list
@@ -142,9 +191,15 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
       return existing._id;
     }
     
-    // Create new RAM
+    // Generate code for new RAM
+    const ramCode = generateMasterCode('RAM', rams);
+    
+    // Create new RAM with generated code
     try {
-      const response = await RamService.createRam({ title: capitalizedTitle });
+      const response = await RamService.createRam({ 
+        title: capitalizedTitle,
+        code: ramCode
+      });
       const newRamId = response?.data?._id || response?.data?.data?._id;
       if (newRamId) {
         // Refresh RAMs list
@@ -171,9 +226,15 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
       return existing._id;
     }
     
-    // Create new color
+    // Generate code for new color
+    const colorCode = generateMasterCode('COL', colors);
+    
+    // Create new color with generated code
     try {
-      const response = await ColorService.createColor({ title: capitalizedTitle });
+      const response = await ColorService.createColor({ 
+        title: capitalizedTitle,
+        code: colorCode
+      });
       const newColorId = response?.data?._id || response?.data?.data?._id;
       if (newColorId) {
         // Refresh colors list
