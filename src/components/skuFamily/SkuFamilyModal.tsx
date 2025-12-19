@@ -48,13 +48,13 @@ const SkuFamilyModal: React.FC<SkuFamilyModalProps> = ({
   const [productCategoryText, setProductCategoryText] = useState<string>("");
   const [conditionCategoryText, setConditionCategoryText] = useState<string>("");
   const [productCategories, setProductCategories] = useState<
-    { _id?: string; title: string }[]
+    { _id?: string; title: string; code?: string }[]
   >([]);
   const [brands, setBrands] = useState<
-    { _id?: string; title: string }[]
+    { _id?: string; title: string; code?: string }[]
   >([]);
   const [conditionCategories, setConditionCategories] = useState<
-    { _id?: string; title: string }[]
+    { _id?: string; title: string; code?: string }[]
   >([]);
   const [productCategoryLoading, setProductCategoryLoading] = useState<boolean>(false);
   const [brandLoading, setBrandLoading] = useState<boolean>(false);
@@ -211,6 +211,49 @@ const SkuFamilyModal: React.FC<SkuFamilyModalProps> = ({
     ).join(' ');
   };
 
+  // Helper function to generate code for master data
+  // Pattern: PREFIX + 2 digits + 1 letter (e.g., BRD00B, CAT00A)
+  const generateMasterCode = (prefix: string, existingItems: Array<{ code?: string }>): string => {
+    // Filter items with codes matching the prefix pattern
+    const prefixPattern = new RegExp(`^${prefix}\\d{2}[A-Z]$`);
+    const matchingCodes = existingItems
+      .filter(item => item.code && prefixPattern.test(item.code))
+      .map(item => item.code!)
+      .sort();
+
+    if (matchingCodes.length === 0) {
+      // Start with 00A
+      return `${prefix}00A`;
+    }
+
+    // Get the last code
+    const lastCode = matchingCodes[matchingCodes.length - 1];
+    
+    // Extract number and letter
+    const match = lastCode.match(new RegExp(`^${prefix}(\\d{2})([A-Z])$`));
+    if (!match) {
+      // If pattern doesn't match, start fresh
+      return `${prefix}00A`;
+    }
+
+    const number = parseInt(match[1], 10);
+    const letter = match[2];
+
+    // Increment: if letter is Z, move to next number and reset to A
+    let nextNumber = number;
+    let nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
+
+    if (nextLetter > 'Z') {
+      nextNumber += 1;
+      nextLetter = 'A';
+    }
+
+    // Format number with leading zeros (2 digits)
+    const formattedNumber = nextNumber.toString().padStart(2, '0');
+    
+    return `${prefix}${formattedNumber}${nextLetter}`;
+  };
+
   // Helper function to find or create brand
   const findOrCreateBrand = async (title: string): Promise<string> => {
     if (!title || !title.trim()) return "";
@@ -222,9 +265,15 @@ const SkuFamilyModal: React.FC<SkuFamilyModalProps> = ({
       return existing._id;
     }
     
-    // Create new brand
+    // Generate code for new brand
+    const brandCode = generateMasterCode('BRD', brands);
+    
+    // Create new brand with generated code
     try {
-      const response = await BrandService.createBrand({ title: capitalizedTitle });
+      const response = await BrandService.createBrand({ 
+        title: capitalizedTitle,
+        code: brandCode
+      });
       const newBrandId = response?.data?._id || response?.data?.data?._id;
       if (newBrandId) {
         // Refresh brands list
@@ -251,9 +300,15 @@ const SkuFamilyModal: React.FC<SkuFamilyModalProps> = ({
       return existing._id;
     }
     
-    // Create new category
+    // Generate code for new product category
+    const categoryCode = generateMasterCode('CAT', productCategories);
+    
+    // Create new category with generated code
     try {
-      const response = await ProductCategoryService.createProductCategory({ title: capitalizedTitle });
+      const response = await ProductCategoryService.createProductCategory({ 
+        title: capitalizedTitle,
+        code: categoryCode
+      });
       const newCategoryId = response?.data?._id || response?.data?.data?._id;
       if (newCategoryId) {
         // Refresh categories list
@@ -280,9 +335,15 @@ const SkuFamilyModal: React.FC<SkuFamilyModalProps> = ({
       return existing._id;
     }
     
-    // Create new category
+    // Generate code for new condition category
+    const categoryCode = generateMasterCode('COND', conditionCategories);
+    
+    // Create new category with generated code
     try {
-      const response = await ConditionCategoryService.createConditionCategory({ title: capitalizedTitle });
+      const response = await ConditionCategoryService.createConditionCategory({ 
+        title: capitalizedTitle,
+        code: categoryCode
+      });
       const newCategoryId = response?.data?._id || response?.data?.data?._id;
       if (newCategoryId) {
         // Refresh categories list

@@ -6,7 +6,7 @@ export interface SellerProductFieldPermission {
   label: string;
   hasPermission: boolean;
   isRequired: boolean;
-  group: 'productDetail' | 'pricing' | 'otherInfo';
+  group: 'supplierInfo' | 'productDetail' | 'pricing' | 'otherInfo';
 }
 
 export interface SellerProductPermission {
@@ -27,7 +27,13 @@ export class SellerProductPermissionService {
   // Get all available product fields
   static getAvailableFields = (): SellerProductFieldPermission[] => {
     return [
+      // Supplier Info Group
+      { fieldName: 'supplierId', label: 'Supplier ID', hasPermission: false, isRequired: false, group: 'supplierInfo' },
+      { fieldName: 'supplierListingNumber', label: 'Supplier Listing No', hasPermission: false, isRequired: true, group: 'supplierInfo' },
+      { fieldName: 'customerListingNumber', label: 'Customer Listing No', hasPermission: false, isRequired: true, group: 'supplierInfo' },
+      
       // Product Detail Group
+      { fieldName: 'skuFamilyId', label: 'SKU Family', hasPermission: false, isRequired: true, group: 'productDetail' },
       { fieldName: 'subModelName', label: 'Sub Model Name', hasPermission: false, isRequired: true, group: 'productDetail' },
       { fieldName: 'storage', label: 'Storage', hasPermission: false, isRequired: true, group: 'productDetail' },
       { fieldName: 'colour', label: 'Colour', hasPermission: false, isRequired: true, group: 'productDetail' },
@@ -56,6 +62,7 @@ export class SellerProductPermissionService {
       { fieldName: 'moqPerVariant', label: 'MOQ/Variant', hasPermission: false, isRequired: true, group: 'pricing' },
       { fieldName: 'weight', label: 'Weight', hasPermission: false, isRequired: false, group: 'pricing' },
       { fieldName: 'purchaseType', label: 'Purchase Type', hasPermission: false, isRequired: true, group: 'pricing' },
+      { fieldName: 'totalMoq', label: 'MOQ PER CART (Multi-Variant)', hasPermission: false, isRequired: false, group: 'pricing' },
       { fieldName: 'paymentTerm', label: 'Payment Term', hasPermission: false, isRequired: false, group: 'pricing' },
       { fieldName: 'paymentMethod', label: 'Payment Method', hasPermission: false, isRequired: false, group: 'pricing' },
       
