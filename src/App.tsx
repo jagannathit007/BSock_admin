@@ -25,6 +25,8 @@ import Admins from "./pages/Admin/Admins";
 import CostModule from "./pages/CostModule/CostModule";
 import WalletAmount from "./pages/WalletAmount/WalletAmount";
 import Payment from "./pages/Payment/Payment";
+import OrderPayments from "./pages/Payment/OrderPayments";
+import Payments from "./pages/Payment/Payments";
 import CustomerCart from "./pages/Customer/CustomerCart";
 import BusinessRequests from "./pages/BusinessRequests/BusinessRequests";
 import Orders from "./pages/Orders/Orders";
@@ -76,6 +78,8 @@ export default function App() {
             <Route path="/cost-module" element={<CostModule />} />
             <Route path="/wallet-amount" element={<WalletAmount />} />
             <Route path="/payments" element={<Payment />}></Route>
+            <Route path="/order-payments" element={<OrderPayments />}></Route>
+            <Route path="/payments-management" element={<Payments />}></Route>
             <Route path="/customer-cart" element={<CustomerCart />} />
 
             <Route path="/bid-products" element={<BidProducts />} />

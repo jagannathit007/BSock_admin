@@ -3,10 +3,12 @@ import Swal from "sweetalert2";
 import { format } from "date-fns";
 import toastHelper from "../../utils/toastHelper";
 import { AdminOrderService, Order, TrackingItem, OrderItem } from "../../services/order/adminOrder.services";
+import { OrderPaymentService } from "../../services/orderPayment/orderPayment.services";
 import { LOCAL_STORAGE_KEYS } from "../../constants/localStorage";
 import OrderDetailsModal from "./OrderDetailsModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermissions } from "../../context/PermissionsContext";
+import api from "../../services/api/api";
 
 const OrdersTable: React.FC = () => {
   const { hasPermission } = usePermissions();
@@ -24,6 +26,7 @@ const OrdersTable: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [itemsPerPage] = useState<number>(10);
   const [loading, setLoading] = useState<boolean>(false);
+  const [fullyPaidOrders, setFullyPaidOrders] = useState<Set<string>>(new Set());
 
   const allStatusOptions = ["requested", "rejected", "verify", "approved", "confirm", "waiting_for_payment", "payment_received", "packing", "ready_to_ship", "on_the_way", "ready_to_pick", "delivered", "cancelled"];
   
@@ -330,7 +333,8 @@ const OrdersTable: React.FC = () => {
       let selectedStatus = currentStatus;
       let editedCartItems: OrderItem[] = [...order.cartItems];
       let message = "";
-      // Payment method removed - will be handled in separate module
+      let selectedPaymentMethod: string | undefined = order.adminSelectedPaymentMethod || undefined;
+      let availablePaymentMethods: string[] = [];
       let selectedOtherCharges: number | null = order.otherCharges || null;
       let selectedDiscount: number | null = order.discount || null;
       let selectedImages: File[] = [];
@@ -502,6 +506,13 @@ const OrdersTable: React.FC = () => {
               <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Other charges will be added to the order total.</p>
             `}
           </div>
+          <div id="paymentMethodContainer" style="margin-bottom: 20px; display: none;">
+            <label for="paymentMethodSelect" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Payment Method <span style="color: #EF4444;">*</span></label>
+            <select id="paymentMethodSelect" style="width: 100%; padding: 10px; font-size: 14px; margin:0px; border: 1px solid #D1D5DB; border-radius: 6px; background-color: #F9FAFB; color: #1F2937; outline: none; transition: border-color 0.2s;">
+              <option value="">Select Payment Method</option>
+            </select>
+            <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Select the payment method for this order. Customer will use this method to submit payment.</p>
+          </div>
           <div id="discountContainer" style="margin-bottom: 20px; display: none;">
             <label for="discountInput" style="display: block; font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Discount</label>
             ${order.discount !== null && order.discount !== undefined && Number(order.discount) > 0 ? `
@@ -660,6 +671,7 @@ const OrdersTable: React.FC = () => {
             const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
             const discountInput = document.getElementById("discountInput") as HTMLInputElement;
             const imagesInput = document.getElementById("imagesInput") as HTMLInputElement;
+            const paymentMethodSelect = document.getElementById("paymentMethodSelect") as HTMLSelectElement;
 
             if (!statusSelect) {
               Swal.showValidationMessage('Status select element not found');
@@ -668,7 +680,15 @@ const OrdersTable: React.FC = () => {
 
             selectedStatus = statusSelect.value;
             message = messageInput?.value || "";
-            // Payment method removed - will be handled in separate module
+            
+            // Get payment method if status is waiting_for_payment
+            if (selectedStatus === 'waiting_for_payment') {
+              if (!paymentMethodSelect || !paymentMethodSelect.value) {
+                Swal.showValidationMessage('Please select a payment method');
+                return false;
+              }
+              selectedPaymentMethod = paymentMethodSelect.value;
+            }
             
             // Get otherCharges
             if (otherChargesInput) {
@@ -864,6 +884,103 @@ const OrdersTable: React.FC = () => {
               if (cartItemsContainer) {
                 const allowByStatus = currentStatus === "requested";
                 cartItemsContainer.style.display = canEditOrder && allowByStatus ? "block" : "none";
+              }
+              
+              // Set initial visibility for payment method container - show when status is waiting_for_payment
+              const paymentMethodContainer = document.getElementById("paymentMethodContainer") as HTMLElement;
+              const paymentMethodSelect = document.getElementById("paymentMethodSelect") as HTMLSelectElement;
+              
+              // Function to fetch and populate payment methods
+              const fetchAndPopulatePaymentMethods = async () => {
+                if (!paymentMethodSelect) return;
+                
+                // Show loading state
+                paymentMethodSelect.disabled = true;
+                paymentMethodSelect.innerHTML = '<option value="">Loading payment methods...</option>';
+                
+                try {
+                  // Call backend to get available payment methods
+                  // Backend will return availablePaymentMethods when status is waiting_for_payment without paymentMethod
+                  const baseUrl = import.meta.env.VITE_BASE_URL;
+                  const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
+                  const url = `${baseUrl}/api/${adminRoute}/order/update-status`;
+                  
+                  const formData = new FormData();
+                  formData.append('orderId', order._id);
+                  formData.append('status', 'waiting_for_payment');
+                  // Don't include paymentMethod - this will make backend return available methods without updating status
+                  
+                  // Temporarily suppress toast notifications
+                  const originalShowTost = toastHelper.showTost;
+                  let toastSuppressed = false;
+                  
+                  try {
+                    const response = await api.post(url, formData);
+                    
+                    // Check if backend returned available payment methods
+                    if (response.data && response.data.data && response.data.data.availablePaymentMethods) {
+                      availablePaymentMethods = response.data.data.availablePaymentMethods;
+                    } else if (response.data && response.data.availablePaymentMethods) {
+                      availablePaymentMethods = response.data.availablePaymentMethods;
+                    } else {
+                      // Fallback: use default payment methods
+                      availablePaymentMethods = ['Cash', 'TT', 'ThirdParty'];
+                    }
+                  } catch (error: any) {
+                    console.error('Error fetching payment methods:', error);
+                    // Check if error response contains payment methods
+                    if (error?.response?.data?.data?.availablePaymentMethods) {
+                      availablePaymentMethods = error.response.data.data.availablePaymentMethods;
+                    } else if (error?.response?.data?.availablePaymentMethods) {
+                      availablePaymentMethods = error.response.data.availablePaymentMethods;
+                    } else {
+                      // Fallback: use default payment methods
+                      availablePaymentMethods = ['Cash', 'TT', 'ThirdParty'];
+                    }
+                  }
+                } catch (error: any) {
+                  console.error('Error fetching payment methods:', error);
+                  // Fallback: use default payment methods
+                  availablePaymentMethods = ['Cash', 'TT', 'ThirdParty'];
+                }
+                
+                // Populate dropdown
+                paymentMethodSelect.innerHTML = '<option value="">Select Payment Method</option>';
+                availablePaymentMethods.forEach((method: string) => {
+                  const option = document.createElement('option');
+                  option.value = method;
+                  option.textContent = method;
+                  if (order.adminSelectedPaymentMethod === method) {
+                    option.selected = true;
+                  }
+                  paymentMethodSelect.appendChild(option);
+                });
+                
+                paymentMethodSelect.disabled = false;
+              };
+              
+              // Function to show/hide payment method container
+              const updatePaymentMethodVisibility = () => {
+                if (paymentMethodContainer && statusSelect) {
+                  const currentModalStatus = statusSelect.value;
+                  if (currentModalStatus === 'waiting_for_payment') {
+                    paymentMethodContainer.style.display = 'block';
+                    // Fetch payment methods when showing
+                    fetchAndPopulatePaymentMethods();
+                  } else {
+                    paymentMethodContainer.style.display = 'none';
+                  }
+                }
+              };
+              
+              // Set initial visibility
+              if (paymentMethodContainer) {
+                updatePaymentMethodVisibility();
+              }
+              
+              // Add event listener to status select to show/hide payment method
+              if (statusSelect) {
+                statusSelect.addEventListener('change', updatePaymentMethodVisibility);
               }
               
               // Set initial visibility for discount container - only before waiting_for_payment
@@ -1219,11 +1336,19 @@ const OrdersTable: React.FC = () => {
             selectedStatus,
             cartItemsToSend,
             message || undefined,
-            undefined, // Payment method removed - will be handled in separate module
+            selectedPaymentMethod, // Payment method for waiting_for_payment status
             selectedOtherCharges !== null ? selectedOtherCharges : undefined,
             selectedImages.length > 0 ? selectedImages : undefined,
             selectedDiscount !== null ? selectedDiscount : undefined
           );
+          
+          // Check if backend requires payment method selection
+          if (response && response.data && response.data.requiresPaymentMethodSelection) {
+            // Backend returned available payment methods - show error and don't close modal
+            availablePaymentMethods = response.data.availablePaymentMethods || [];
+            Swal.showValidationMessage('Please select a payment method before proceeding');
+            return; // Don't proceed, let user select payment method
+          }
 
           console.log('Update response:', response);
 
@@ -1467,6 +1592,119 @@ const OrdersTable: React.FC = () => {
     }
   };
 
+  // Check if an order is fully paid
+  const checkIfOrderFullyPaid = async (order: Order) => {
+    try {
+      // Check paymentDetails (array of ObjectIds) or paymentIds
+      const paymentIds = Array.isArray(order.paymentDetails) 
+        ? order.paymentDetails 
+        : order.paymentDetails 
+          ? [order.paymentDetails] 
+          : order.paymentIds || [];
+
+      console.log(`Checking payments for order ${order._id}, paymentDetails:`, order.paymentDetails, 'paymentIds:', order.paymentIds, 'resolved paymentIds:', paymentIds);
+
+      // If no payment IDs, check by orderId
+      if (paymentIds.length === 0) {
+        console.log(`No payment IDs found for order ${order._id}, checking by orderId`);
+        // Fetch all payments for this order by orderId
+        const paymentsResponse = await OrderPaymentService.listPayments(
+          1,
+          100,
+          order._id,
+          undefined,
+          undefined
+        );
+        const payments = paymentsResponse?.data?.docs || [];
+        
+        if (payments.length === 0) {
+          console.log(`No payments found for order ${order._id}`);
+          return false;
+        }
+
+        return checkPaymentsStatus(payments, order);
+      }
+
+      // Fetch payments by their IDs
+      const paymentsPromises = paymentIds.map((paymentId: string) => 
+        OrderPaymentService.getPayment(paymentId)
+          .then((res: any) => res?.data?.data || res?.data || null)
+          .catch(() => null)
+      );
+      
+      const payments = (await Promise.all(paymentsPromises))
+        .filter((payment: any) => payment !== null);
+
+      console.log(`Found ${payments.length} payments for order ${order._id} by IDs:`, payments.map((p: any) => ({ id: p._id, status: p.status, amount: p.amount, calculatedAmount: p.calculatedAmount })));
+
+      if (payments.length === 0) {
+        console.log(`No payments found for order ${order._id} by payment IDs`);
+        return false;
+      }
+
+      return checkPaymentsStatus(payments, order);
+    } catch (error) {
+      console.error(`Error checking if order ${order._id} is fully paid:`, error);
+      return false;
+    }
+  };
+
+  // Helper function to check payments status and amounts
+  const checkPaymentsStatus = (payments: any[], order: Order): boolean => {
+    // Check if all payments are paid
+    const allPaid = payments.every((payment: any) => payment.status === 'paid');
+    console.log(`All payments paid for order ${order._id}:`, allPaid);
+    if (!allPaid) {
+      return false;
+    }
+
+    // Calculate total paid amount
+    const totalPaid = payments.reduce((sum: number, payment: any) => {
+      // Use calculatedAmount if available, otherwise use amount
+      const paymentAmount = payment.calculatedAmount || payment.amount || 0;
+      const amountValue = typeof paymentAmount === 'number' ? paymentAmount : parseFloat(String(paymentAmount)) || 0;
+      console.log(`Payment ${payment._id}: amount=${paymentAmount}, amountValue=${amountValue}`);
+      return sum + amountValue;
+    }, 0);
+
+    // Compare with order total amount (with tolerance for floating point)
+    const orderTotal = typeof order.totalAmount === 'number' ? order.totalAmount : parseFloat(String(order.totalAmount || '0'));
+    const isFullyPaid = Math.abs(totalPaid - orderTotal) < 0.01; // Tolerance of 1 cent
+
+    console.log(`Order ${order._id}: totalPaid=${totalPaid}, orderTotal=${orderTotal}, difference=${Math.abs(totalPaid - orderTotal)}, isFullyPaid=${isFullyPaid}`);
+
+    return isFullyPaid;
+  };
+
+  // Check all orders for fully paid status
+  useEffect(() => {
+    const checkFullyPaidOrders = async () => {
+      const paidOrderIds = new Set<string>();
+      
+      console.log('Checking fully paid orders, total orders:', ordersData.length);
+      
+      // Check all orders, not just those with paymentIds
+      // This ensures we check orders even if paymentIds field is not populated
+      for (const order of ordersData) {
+        console.log(`Checking order ${order._id}, paymentIds:`, order.paymentIds);
+        const isFullyPaid = await checkIfOrderFullyPaid(order);
+        console.log(`Order ${order._id} is fully paid:`, isFullyPaid);
+        if (isFullyPaid) {
+          paidOrderIds.add(order._id);
+        }
+      }
+      
+      console.log('Fully paid order IDs:', Array.from(paidOrderIds));
+      setFullyPaidOrders(paidOrderIds);
+    };
+
+    if (ordersData.length > 0) {
+      checkFullyPaidOrders();
+    } else {
+      setFullyPaidOrders(new Set());
+    }
+  }, [ordersData]);
+
   // Combined status function that merges status and verification into one message
   const getCombinedStatusBadge = (order: Order) => {
     const status = order.status?.toLowerCase() || 'request';
@@ -1669,12 +1907,17 @@ const OrdersTable: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                ordersData.map((order: Order) => (
+                ordersData.map((order: Order) => {
+                  const isFullyPaid = fullyPaidOrders.has(order._id);
+                  console.log(`Rendering order ${order._id}, isFullyPaid:`, isFullyPaid);
+                  return (
                   <tr
                     key={order._id}
                     className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                      order.isConfirmedByCustomer && order.quantitiesModified
-                        ? "bg-green-50 dark:bg-green-900/20 border-l-4 border-l-green-500"
+                      isFullyPaid
+                        ? "bg-green-100 dark:bg-green-900/30 border-l-4 border-l-green-600 shadow-sm"
+                        : order.isConfirmedByCustomer && order.quantitiesModified
+                        ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500"
                         : ""
                     }`}
                   >
@@ -1738,6 +1981,12 @@ const OrdersTable: React.FC = () => {
                                 Confirmed by Customer
                               </span>
                             )}
+                            {isFullyPaid && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
+                                <i className="fas fa-money-bill-wave mr-1"></i>
+                                Payment Done
+                              </span>
+                            )}
                           </div>
                         );
                       })()}
@@ -1797,7 +2046,8 @@ const OrdersTable: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

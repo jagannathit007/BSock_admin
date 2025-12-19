@@ -75,6 +75,11 @@ const navItems: NavItem[] = [
     path: "/orders",
   },
   {
+    icon: <i className="fas fa-credit-card"></i>,
+    name: "Payments",
+    path: "/payments-management",
+  },
+  {
     icon: <i className="fas fa-shopping-cart"></i>,
     name: "WTB Requests",
     path: "/wtb-requests",
@@ -95,6 +100,7 @@ const navItems: NavItem[] = [
     path: "/configuration", // Add path for matching
     subItems: [
       { name: "Payment Config", path: "/payments" },
+      { name: "Order Payments", path: "/order-payments" },
       { name: "Cost Config", path: "/cost-module" },
     ],
   },

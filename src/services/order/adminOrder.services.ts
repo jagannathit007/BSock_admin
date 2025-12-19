@@ -64,6 +64,8 @@ export interface Order {
   deliveryOTPExpiry?: string | Date | null;
   deliveryOTPVerified?: boolean;
   deliveryOTPVerifiedAt?: string | Date | null;
+  paymentIds?: string[]; // Array of payment IDs
+  paymentDetails?: string | string[]; // Can be single ObjectId or array of ObjectIds
 }
 
 export interface TrackingItem {
@@ -191,6 +193,13 @@ export class AdminOrderService {
       throw new Error(errorMessage);
     }
 
+      // Check if backend requires payment method selection
+      if (res.status === 200 && res.data && res.data.data && res.data.data.requiresPaymentMethodSelection) {
+        // Don't show success toast - this is not a successful update, just a request for payment method
+        // Return the data so component can handle it
+        return res.data;
+      }
+      
       if (res.status === 200 && res.data.data) {
         toastHelper.showTost(res.data.message || `Order status updated to ${status}!`, 'success');
         return res.data;
