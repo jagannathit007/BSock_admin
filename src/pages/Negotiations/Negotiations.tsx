@@ -355,7 +355,7 @@ const getCustomerDetails = (customer: any) => {
     }).format(price);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
