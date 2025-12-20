@@ -275,20 +275,28 @@ const OrderPayments: React.FC = () => {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {payments.map((payment) => {
-                    const order = typeof payment.orderId === 'object' ? payment.orderId : null;
-                    const customer = typeof payment.customerId === 'object' ? payment.customerId : null;
+                    const order = typeof payment.orderId === 'object' ? payment.orderId : 
+                                 typeof payment.order === 'object' ? payment.order : null;
+                    const customer = typeof payment.customerId === 'object' ? payment.customerId :
+                                    typeof payment.customer === 'object' ? payment.customer : null;
+                    const orderNo = order && typeof order === 'object' ? order.orderNo : 
+                                   (typeof payment.orderId === 'string' ? payment.orderId : 
+                                    typeof payment.order === 'string' ? payment.order : '');
+                    const customerName = customer && typeof customer === 'object' ? customer.name :
+                                        (typeof payment.customerId === 'string' ? payment.customerId :
+                                         typeof payment.customer === 'string' ? payment.customer : '');
                     
                     return (
                       <tr key={payment._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {order?.orderNo || payment.orderId}
+                          {orderNo || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {customer?.name || payment.customerId}
+                          {customerName || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPaymentMethodBadgeColor(payment.paymentMethod)}`}>
-                            {payment.paymentMethod}
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPaymentMethodBadgeColor(payment.paymentMethod || payment.module || '')}`}>
+                            {payment.paymentMethod || payment.module || '-'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -320,7 +328,7 @@ const OrderPayments: React.FC = () => {
                                 <i className="fas fa-lock"></i>
                               </button>
                             )}
-                            {payment.status === 'verified' && payment.otpVerified && (
+                            {payment.status === 'verify' && payment.otpVerified && (
                               <button
                                 onClick={() => openModal(payment, 'approve')}
                                 className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
@@ -597,4 +605,5 @@ const OrderPayments: React.FC = () => {
 };
 
 export default OrderPayments;
+
 

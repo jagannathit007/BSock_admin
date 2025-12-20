@@ -913,10 +913,6 @@ const OrdersTable: React.FC = () => {
                   formData.append('status', 'waiting_for_payment');
                   // Don't include paymentMethod - this will make backend return available methods without updating status
                   
-                  // Temporarily suppress toast notifications
-                  const originalShowTost = toastHelper.showTost;
-                  let toastSuppressed = false;
-                  
                   try {
                     const response = await api.post(url, formData);
                     

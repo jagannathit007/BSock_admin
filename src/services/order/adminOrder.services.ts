@@ -29,6 +29,8 @@ export interface PaymentDetails {
 
 export interface Order {
   _id: string;
+  orderNo?: string; // Human-friendly order number (e.g., #ord1699999999999)
+  orderId?: string; // Legacy display id (deprecated)
   customerId: { _id: string; name?: string; email?: string };
   cartItems: OrderItem[];
   billingAddress?: Address;
