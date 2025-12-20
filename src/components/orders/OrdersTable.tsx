@@ -9,6 +9,8 @@ import OrderDetailsModal from "./OrderDetailsModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermissions } from "../../context/PermissionsContext";
 import api from "../../services/api/api";
+import { handleNumericInput } from "../../utils/numericInput";
+import { roundToTwoDecimals } from "../../utils/numberPrecision";
 
 const OrdersTable: React.FC = () => {
   const { hasPermission } = usePermissions();
@@ -91,9 +93,10 @@ const OrdersTable: React.FC = () => {
         debouncedSearchTerm || undefined,
         statusFilter || undefined
       );
-      setOrdersData(response.data.docs);
-      setTotalPages(response.data.totalPages);
-      setTotalDocs(response.data.totalDocs || 0);
+      // Ensure ordersData is always an array
+      setOrdersData(Array.isArray(response.data?.docs) ? response.data.docs : []);
+      setTotalPages(response.data?.totalPages || 1);
+      setTotalDocs(response.data?.totalDocs || 0);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
       setOrdersData([]);
@@ -416,7 +419,7 @@ const OrdersTable: React.FC = () => {
                       <span style="font-size: 14px; font-weight: 600; color: #1F2937;">Price: $${itemPrice.toFixed(2)}</span>
                     </div>
                     <input
-                      type="number"
+                      type="text"
                       min="${moq}"
                       value="${item.quantity}"
                       class="quantity-input"
@@ -495,7 +498,7 @@ const OrdersTable: React.FC = () => {
               <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Other charges already applied to this order.</p>
             ` : `
               <input
-                type="number"
+                type="text"
                 id="otherChargesInput"
                 min="0"
                 step="0.01"
@@ -522,7 +525,7 @@ const OrdersTable: React.FC = () => {
               <p style="font-size: 12px; color: #6B7280; margin-top: 4px;">Discount already applied to this order.</p>
             ` : `
               <input
-                type="number"
+                type="text"
                 id="discountInput"
                 min="0"
                 step="0.01"
@@ -805,35 +808,35 @@ const OrdersTable: React.FC = () => {
               let originalTotal = 0;
               
               quantityInputs.forEach((input) => {
-                const price = parseFloat(input.getAttribute('data-price') || '0');
+                const price = roundToTwoDecimals(parseFloat(input.getAttribute('data-price') || '0'));
                 const newQuantity = parseInt(input.value || '0', 10);
                 const originalQuantity = parseInt(input.getAttribute('data-original-quantity') || input.value || '0', 10);
                 
-                newTotal += price * newQuantity;
-                originalTotal += price * originalQuantity;
+                newTotal += roundToTwoDecimals(price * newQuantity);
+                originalTotal += roundToTwoDecimals(price * originalQuantity);
               });
               
               // Add otherCharges if present
               const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
-              const otherCharges = otherChargesInput ? (parseFloat(otherChargesInput.value) || 0) : (order.otherCharges || 0);
-              newTotal += otherCharges;
-              originalTotal += (order.otherCharges || 0);
+              const otherCharges = otherChargesInput ? roundToTwoDecimals(parseFloat(otherChargesInput.value) || 0) : roundToTwoDecimals(order.otherCharges || 0);
+              newTotal = roundToTwoDecimals(newTotal + otherCharges);
+              originalTotal = roundToTwoDecimals(originalTotal + (order.otherCharges || 0));
               
               // Subtract discount if present
               const discountInput = document.getElementById("discountInput") as HTMLInputElement;
-              const discount = discountInput ? (parseFloat(discountInput.value) || 0) : (order.discount || 0);
-              newTotal = Math.max(0, newTotal - discount);
-              originalTotal = Math.max(0, originalTotal - (order.discount || 0));
+              const discount = discountInput ? roundToTwoDecimals(parseFloat(discountInput.value) || 0) : roundToTwoDecimals(order.discount || 0);
+              newTotal = roundToTwoDecimals(Math.max(0, newTotal - discount));
+              originalTotal = roundToTwoDecimals(Math.max(0, originalTotal - (order.discount || 0)));
               
               if (newOrderPriceContainer) {
                 const newOrderTotal = document.getElementById("newOrderTotal") as HTMLElement;
                 const originalOrderTotal = document.getElementById("originalOrderTotal") as HTMLElement;
                 const orderDifference = document.getElementById("orderDifference") as HTMLElement;
                 
-                if (newOrderTotal) newOrderTotal.textContent = `$${newTotal.toFixed(2)}`;
-                if (originalOrderTotal) originalOrderTotal.textContent = `$${originalTotal.toFixed(2)}`;
+                if (newOrderTotal) newOrderTotal.textContent = `$${roundToTwoDecimals(newTotal).toFixed(2)}`;
+                if (originalOrderTotal) originalOrderTotal.textContent = `$${roundToTwoDecimals(originalTotal).toFixed(2)}`;
                 
-                const difference = newTotal - originalTotal;
+                const difference = roundToTwoDecimals(newTotal - originalTotal);
                 if (orderDifference) {
                   orderDifference.textContent = `${difference >= 0 ? '+' : ''}$${difference.toFixed(2)}`;
                   orderDifference.style.color = difference >= 0 ? '#DC2626' : '#059669';
@@ -1065,7 +1068,10 @@ const OrdersTable: React.FC = () => {
               
               // Add event listeners to quantity inputs for price calculation and confirmation button
               quantityInputs.forEach((input) => {
-                input.addEventListener("input", () => {
+                input.addEventListener("input", (e) => {
+                  const target = e.target as HTMLInputElement;
+                  const filteredValue = handleNumericInput(target.value, false, false);
+                  target.value = filteredValue;
                   calculateNewOrderPrice();
                   checkAndShowConfirmationButton();
                 });
@@ -1078,13 +1084,23 @@ const OrdersTable: React.FC = () => {
               // Add event listener to otherCharges input
               const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
               if (otherChargesInput) {
-                otherChargesInput.addEventListener("input", calculateNewOrderPrice);
+                otherChargesInput.addEventListener("input", (e) => {
+                  const target = e.target as HTMLInputElement;
+                  const filteredValue = handleNumericInput(target.value, true, false);
+                  target.value = filteredValue;
+                  calculateNewOrderPrice();
+                });
                 otherChargesInput.addEventListener("change", calculateNewOrderPrice);
               }
               // Add event listener to discount input
               const discountInput = document.getElementById("discountInput") as HTMLInputElement;
               if (discountInput) {
-                discountInput.addEventListener("input", calculateNewOrderPrice);
+                discountInput.addEventListener("input", (e) => {
+                  const target = e.target as HTMLInputElement;
+                  const filteredValue = handleNumericInput(target.value, true, false);
+                  target.value = filteredValue;
+                  calculateNewOrderPrice();
+                });
                 discountInput.addEventListener("change", calculateNewOrderPrice);
               }
               
@@ -1595,14 +1611,14 @@ const OrdersTable: React.FC = () => {
   // Check if an order is fully paid
   const checkIfOrderFullyPaid = async (order: Order) => {
     try {
-      // Check paymentDetails (array of ObjectIds) or paymentIds
-      const paymentIds = Array.isArray(order.paymentDetails) 
-        ? order.paymentDetails 
-        : order.paymentDetails 
-          ? [order.paymentDetails] 
-          : order.paymentIds || [];
+      // Check paymentIds (array of ObjectIds)
+      const paymentIds = Array.isArray(order.paymentIds) 
+        ? order.paymentIds 
+        : order.paymentIds 
+          ? [order.paymentIds] 
+          : [];
 
-      console.log(`Checking payments for order ${order._id}, paymentDetails:`, order.paymentDetails, 'paymentIds:', order.paymentIds, 'resolved paymentIds:', paymentIds);
+      console.log(`Checking payments for order ${order._id}, paymentIds:`, order.paymentIds, 'resolved paymentIds:', paymentIds);
 
       // If no payment IDs, check by orderId
       if (paymentIds.length === 0) {
@@ -1681,10 +1697,13 @@ const OrdersTable: React.FC = () => {
     const checkFullyPaidOrders = async () => {
       const paidOrderIds = new Set<string>();
       
-      console.log('Checking fully paid orders, total orders:', ordersData.length);
+      console.log('Checking fully paid orders, total orders:', ordersData?.length || 0);
       
       // Check all orders, not just those with paymentIds
       // This ensures we check orders even if paymentIds field is not populated
+      if (!ordersData || !Array.isArray(ordersData)) {
+        return;
+      }
       for (const order of ordersData) {
         console.log(`Checking order ${order._id}, paymentIds:`, order.paymentIds);
         const isFullyPaid = await checkIfOrderFullyPaid(order);
@@ -1698,7 +1717,7 @@ const OrdersTable: React.FC = () => {
       setFullyPaidOrders(paidOrderIds);
     };
 
-    if (ordersData.length > 0) {
+    if (ordersData && ordersData.length > 0) {
       checkFullyPaidOrders();
     } else {
       setFullyPaidOrders(new Set());
@@ -1875,6 +1894,9 @@ const OrdersTable: React.FC = () => {
                   Total
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
+                  Pending Amount
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
                   Shipping Country
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
@@ -1891,16 +1913,16 @@ const OrdersTable: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center">
+                  <td colSpan={8} className="p-12 text-center">
                     <div className="text-gray-500 dark:text-gray-400 text-lg">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-600 mx-auto mb-4"></div>
                       Loading Orders...
                     </div>
                   </td>
                 </tr>
-              ) : ordersData.length === 0 ? (
+              ) : !ordersData || ordersData.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center">
+                  <td colSpan={8} className="p-12 text-center">
                     <div className="text-gray-500 dark:text-gray-400 text-lg">
                       No orders found
                     </div>
@@ -1909,12 +1931,13 @@ const OrdersTable: React.FC = () => {
               ) : (
                 ordersData.map((order: Order) => {
                   const isFullyPaid = fullyPaidOrders.has(order._id);
-                  console.log(`Rendering order ${order._id}, isFullyPaid:`, isFullyPaid);
+                  const isPaymentComplete = order.pendingAmount !== undefined && order.pendingAmount === 0;
+                  console.log(`Rendering order ${order._id}, isFullyPaid:`, isFullyPaid, 'pendingAmount:', order.pendingAmount);
                   return (
                   <tr
                     key={order._id}
                     className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                      isFullyPaid
+                      isPaymentComplete || isFullyPaid
                         ? "bg-green-100 dark:bg-green-900/30 border-l-4 border-l-green-600 shadow-sm"
                         : order.isConfirmedByCustomer && order.quantitiesModified
                         ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500"
@@ -1952,6 +1975,27 @@ const OrdersTable: React.FC = () => {
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {order.pendingAmount !== undefined && order.pendingAmount !== null ? (
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${
+                            order.pendingAmount === 0 
+                              ? 'text-green-600 dark:text-green-400' 
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}>
+                            ${formatPrice(order.pendingAmount)}
+                          </span>
+                          {order.pendingAmount === 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
+                              <i className="fas fa-check-circle mr-1"></i>
+                              Paid
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {order.shippingAddress?.country ? (
@@ -2055,7 +2099,7 @@ const OrdersTable: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 sm:mb-0">
-            Showing {ordersData.length} of {totalDocs} orders
+            Showing {ordersData?.length || 0} of {totalDocs} orders
           </div>
           <div className="flex items-center space-x-3">
             <button

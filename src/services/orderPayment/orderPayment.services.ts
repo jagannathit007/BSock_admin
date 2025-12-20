@@ -264,6 +264,8 @@ export class OrderPaymentService {
       remarks?: string;
       amount?: number;
       currency?: string;
+      conversionRate?: number;
+      calculatedAmount?: number;
     }
   ): Promise<{ status: number; data: OrderPayment; message: string }> {
     try {
@@ -289,4 +291,5 @@ export class OrderPaymentService {
 }
 
 export default OrderPaymentService;
+
 

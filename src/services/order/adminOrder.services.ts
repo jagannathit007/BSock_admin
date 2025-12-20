@@ -64,8 +64,8 @@ export interface Order {
   deliveryOTPExpiry?: string | Date | null;
   deliveryOTPVerified?: boolean;
   deliveryOTPVerifiedAt?: string | Date | null;
-  paymentIds?: string[]; // Array of payment IDs
-  paymentDetails?: string | string[]; // Can be single ObjectId or array of ObjectIds
+  paymentIds?: string | string[]; // Can be single ObjectId or array of ObjectIds
+  pendingAmount?: number; // Remaining amount to be paid
 }
 
 export interface TrackingItem {

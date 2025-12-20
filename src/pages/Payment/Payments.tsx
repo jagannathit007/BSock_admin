@@ -3,6 +3,8 @@ import { format } from 'date-fns';
 import toastHelper from '../../utils/toastHelper';
 import { OrderPaymentService, OrderPayment } from '../../services/orderPayment/orderPayment.services';
 import { AdminOrderService, Order } from '../../services/order/adminOrder.services';
+import { handleNumericInput } from '../../utils/numericInput';
+import { roundToTwoDecimals } from '../../utils/numberPrecision';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const Payments: React.FC = () => {
@@ -201,12 +203,7 @@ const Payments: React.FC = () => {
     }
   };
 
-  const handleCalculateAmount = () => {
-    const isApproved = selectedPayment?.status === 'approved' || editFormData.status === 'approved';
-    if (isApproved) return; // Don't allow calculation for approved payments
-    const calculated = editFormData.amount * editFormData.conversionRate;
-    setEditFormData({ ...editFormData, calculatedAmount: calculated });
-  };
+  // Auto-calculation is now handled in onChange handlers, this function is no longer needed
 
   // Helper function to check if payment is approved
   const isPaymentApproved = () => {
@@ -253,7 +250,7 @@ const Payments: React.FC = () => {
         });
       } else {
         // Use calculated amount if available and greater than 0, otherwise use regular amount
-        const finalAmount = editFormData.calculatedAmount > 0 ? editFormData.calculatedAmount : editFormData.amount;
+        const finalAmount = roundToTwoDecimals(editFormData.calculatedAmount > 0 ? editFormData.calculatedAmount : editFormData.amount);
         
         await OrderPaymentService.updatePayment(selectedPayment._id!, {
           status: editFormData.status as any,
@@ -261,8 +258,8 @@ const Payments: React.FC = () => {
           remarks: editFormData.remarks,
           amount: finalAmount,
           currency: editFormData.currency,
-          conversionRate: editFormData.conversionRate,
-          calculatedAmount: editFormData.calculatedAmount,
+          conversionRate: roundToTwoDecimals(editFormData.conversionRate),
+          calculatedAmount: roundToTwoDecimals(editFormData.calculatedAmount),
         });
       }
       
@@ -644,7 +641,7 @@ const Payments: React.FC = () => {
 
       {/* Modal */}
       {isModalOpen && selectedPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -959,21 +956,21 @@ const Payments: React.FC = () => {
                               Amount <span className="text-red-500">*</span>
                             </label>
                             <input
-                              type="number"
+                              type="text"
                               value={editFormData.amount}
                               onChange={(e) => {
                                 if (!isPaymentApproved()) {
-                                  const amount = parseFloat(e.target.value) || 0;
-                                  const rate = editFormData.conversionRate || 1;
-                                  setEditFormData({ 
-                                    ...editFormData, 
-                                    amount: amount,
-                                    calculatedAmount: amount * rate
-                                  });
+                                  const filteredValue = handleNumericInput(e.target.value, true, false);
+                                  const amount = roundToTwoDecimals(parseFloat(filteredValue) || 0);
+                                  const rate = roundToTwoDecimals(editFormData.conversionRate || 1);
+                                  const calculated = roundToTwoDecimals(amount * rate);
+                                  setEditFormData(prev => ({ 
+                                    ...prev, 
+                                    amount: filteredValue === '' ? 0 : amount,
+                                    calculatedAmount: calculated
+                                  }));
                                 }
                               }}
-                              step="0.01"
-                              min="0"
                               disabled={isPaymentApproved()}
                               readOnly={isPaymentApproved()}
                               className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
@@ -989,14 +986,13 @@ const Payments: React.FC = () => {
                             <select
                               value={editFormData.currency}
                               onChange={(e) => {
-                                const isApproved = selectedPayment.status === 'approved' || editFormData.status === 'approved';
-                                if (!isApproved) {
+                                if (!isPaymentApproved()) {
                                   setEditFormData({ ...editFormData, currency: e.target.value });
                                 }
                               }}
-                              disabled={selectedPayment.status === 'approved' || editFormData.status === 'approved'}
+                              disabled={isPaymentApproved()}
                               className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
-                                (selectedPayment.status === 'approved' || editFormData.status === 'approved') ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
+                                isPaymentApproved() ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
                               }`}
                             >
                               <option value="">Select Currency</option>
@@ -1010,19 +1006,21 @@ const Payments: React.FC = () => {
                               Conversion Rate
                             </label>
                             <input
-                              type="number"
+                              type="text"
                               value={editFormData.conversionRate}
                               onChange={(e) => {
                                 if (!isPaymentApproved()) {
-                                  setEditFormData({ ...editFormData, conversionRate: parseFloat(e.target.value) || 1 });
-                                  // Auto-calculate when conversion rate changes
-                                  const amount = editFormData.amount || 0;
-                                  const rate = parseFloat(e.target.value) || 1;
-                                  setEditFormData(prev => ({ ...prev, calculatedAmount: amount * rate }));
+                                  const filteredValue = handleNumericInput(e.target.value, true, false);
+                                  const rate = roundToTwoDecimals(parseFloat(filteredValue) || 1);
+                                  const amount = roundToTwoDecimals(typeof editFormData.amount === 'number' ? editFormData.amount : parseFloat(editFormData.amount) || 0);
+                                  const calculated = roundToTwoDecimals(amount * rate);
+                                  setEditFormData(prev => ({ 
+                                    ...prev, 
+                                    conversionRate: filteredValue === '' ? 1 : rate,
+                                    calculatedAmount: calculated
+                                  }));
                                 }
                               }}
-                              step="0.0001"
-                              min="0"
                               disabled={isPaymentApproved()}
                               readOnly={isPaymentApproved()}
                               className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
@@ -1032,22 +1030,16 @@ const Payments: React.FC = () => {
                             />
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Calculated Amount
-                            </label>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                              {editFormData.currency || 'USD'} {editFormData.calculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                          <button
-                            onClick={handleCalculateAmount}
-                            disabled={isPaymentApproved() || !editFormData.amount || !editFormData.currency}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Calculate
-                          </button>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Calculated Amount (in Order Currency)
+                          </label>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {selectedOrder?.currency || 'HKD'} {editFormData.calculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {editFormData.amount || 0} {editFormData.currency || 'USD'} × {editFormData.conversionRate || 1} = {editFormData.calculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedOrder?.currency || 'HKD'}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -1132,15 +1124,18 @@ const Payments: React.FC = () => {
                             Amount
                           </label>
                           <input
-                            type="number"
+                            type="text"
                             value={editFormData.amount}
                             onChange={(e) => {
                               if (!isPaymentApproved()) {
-                                setEditFormData({ ...editFormData, amount: parseFloat(e.target.value) || 0 });
+                                const filteredValue = handleNumericInput(e.target.value, true, false);
+                                const amount = roundToTwoDecimals(parseFloat(filteredValue) || 0);
+                                setEditFormData(prev => ({ 
+                                  ...prev, 
+                                  amount: filteredValue === '' ? 0 : amount
+                                }));
                               }
                             }}
-                            step="0.01"
-                            min="0"
                             disabled={isPaymentApproved()}
                             readOnly={isPaymentApproved()}
                             className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
@@ -1311,4 +1306,5 @@ const Payments: React.FC = () => {
 };
 
 export default Payments;
+
 

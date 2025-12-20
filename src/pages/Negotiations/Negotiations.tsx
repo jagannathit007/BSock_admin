@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import toastHelper from '../../utils/toastHelper';
 import Swal from 'sweetalert2';
+import { handleNumericInput } from '../../utils/numericInput';
 
 interface CustomerGroup {
   customerId: string;
@@ -844,11 +845,12 @@ const getCustomerDetails = (customer: any) => {
                     Your Counter Offer Price *
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={counterOfferPrice}
-                    onChange={(e) => setCounterOfferPrice(e.target.value)}
+                    onChange={(e) => {
+                      const filteredValue = handleNumericInput(e.target.value, true, false);
+                      setCounterOfferPrice(filteredValue);
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter counter offer price"
                   />
