@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSidebar } from "../context/SidebarContext";
 import Logo from "../components/common/Logo";
-import { RoleManagementService, MyPermissions } from "../services/roleManagement/roleManagement.services";
+import { usePermissions } from "../context/PermissionsContext";
+import type { MyPermissions } from "../services/roleManagement/roleManagement.services";
 
 type NavItem = {
   name: string;
@@ -100,7 +101,7 @@ const navItems: NavItem[] = [
     path: "/configuration", // Add path for matching
     subItems: [
       { name: "Payment Config", path: "/payments" },
-      { name: "Order Payments", path: "/order-payments" },
+      // { name: "Order Payments", path: "/order-payments" },
       { name: "Cost Config", path: "/cost-module" },
     ],
   },
@@ -124,6 +125,7 @@ const navItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
+  const { permissions, loading } = usePermissions();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main";
@@ -133,7 +135,6 @@ const AppSidebar: React.FC = () => {
     {}
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [_permissions, setPermissions] = useState<MyPermissions | null>(null);
   const [filteredNavItems, setFilteredNavItems] = useState<NavItem[]>(navItems);
 
   const isActive = useCallback(
@@ -220,91 +221,19 @@ const AppSidebar: React.FC = () => {
     });
   };
 
-  // Fetch permissions and filter nav items
+  // Filter nav items whenever permissions change
   useEffect(() => {
-    const loadPermissions = async () => {
-      try {
-        // First, try to get permissions from localStorage (from login)
-        const storedPermissions = localStorage.getItem('adminPermissions');
-        const storedRole = localStorage.getItem('adminRole');
-        
-        if (storedPermissions && storedRole) {
-          try {
-            const parsedPermissions = JSON.parse(storedPermissions);
-            console.log('✓ Using permissions from localStorage:', {
-              role: parsedPermissions.role,
-              modulesCount: parsedPermissions.modules?.length || 0,
-              modules: parsedPermissions.modules?.map((m: any) => ({ name: m.name, hasAccess: m.hasAccess })) || []
-            });
-            setPermissions(parsedPermissions);
-            filterNavItemsByPermissions(parsedPermissions);
-            return; // Use stored permissions, no need to fetch
-          } catch (e) {
-            console.error('Error parsing stored permissions:', e);
-            // Clear invalid stored data
-            localStorage.removeItem('adminPermissions');
-            localStorage.removeItem('adminRole');
-          }
-        }
-        
-        // If no stored permissions, fetch from API
-        console.log('Fetching permissions from API...');
-        const myPermissions = await RoleManagementService.getMyPermissions();
-        console.log('Fetched permissions from API:', myPermissions);
-        setPermissions(myPermissions);
-        
-        // Store in localStorage for future use
-        localStorage.setItem('adminPermissions', JSON.stringify(myPermissions));
-        localStorage.setItem('adminRole', myPermissions.role);
-
-        // Filter nav items based on permissions
-        filterNavItemsByPermissions(myPermissions);
-      } catch (error) {
-        console.error('Error loading permissions:', error);
-        // On error, show all items (fallback)
-        setFilteredNavItems(navItems);
-      }
-    };
-
-    loadPermissions();
-
-    // Listen for permission updates (when permissions are changed in admin panel)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'adminPermissions' && e.newValue) {
-        try {
-          const newPermissions = JSON.parse(e.newValue);
-          console.log('Permissions updated from storage:', newPermissions);
-          setPermissions(newPermissions);
-          filterNavItemsByPermissions(newPermissions);
-        } catch (error) {
-          console.error('Error parsing updated permissions:', error);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Also listen for custom event (for same-tab updates)
-    const handlePermissionUpdate = () => {
-      const storedPermissions = localStorage.getItem('adminPermissions');
-      if (storedPermissions) {
-        try {
-          const parsedPermissions = JSON.parse(storedPermissions);
-          setPermissions(parsedPermissions);
-          filterNavItemsByPermissions(parsedPermissions);
-        } catch (error) {
-          console.error('Error parsing updated permissions:', error);
-        }
-      }
-    };
-
-    window.addEventListener('permissionsUpdated', handlePermissionUpdate);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('permissionsUpdated', handlePermissionUpdate);
-    };
-  }, []);
+    // PermissionsContext loads from localStorage immediately, so permissions
+    // may be available even while loading (fetching from API)
+    if (permissions) {
+      filterNavItemsByPermissions(permissions);
+    } else if (!loading) {
+      // Only show all items if we're not loading and have no permissions
+      // (This handles the case where permissions failed to load)
+      setFilteredNavItems(navItems);
+    }
+    // If loading and no permissions yet, keep current state (don't change)
+  }, [permissions, loading]);
 
   useEffect(() => {
     let submenuMatched = false;
