@@ -6,8 +6,15 @@ import { AdminOrderService, Order } from '../../services/order/adminOrder.servic
 import { handleNumericInput } from '../../utils/numericInput';
 import { roundToTwoDecimals } from '../../utils/numberPrecision';
 import { useDebounce } from '../../hooks/useDebounce';
+import { usePermissions } from '../../context/PermissionsContext';
 
 const Payments: React.FC = () => {
+  // ✅ Get permissions for payment module
+  const { hasPermission } = usePermissions();
+  const canRead = hasPermission('/payments-management', 'read');
+  const canWrite = hasPermission('/payments-management', 'write');
+  const canVerifyApprove = hasPermission('/payments-management', 'verifyApprove');
+  
   const [payments, setPayments] = useState<OrderPayment[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const debouncedSearchTerm = useDebounce(searchTerm, 1000);
@@ -47,6 +54,28 @@ const Payments: React.FC = () => {
   const [verifyingOtp, setVerifyingOtp] = useState<boolean>(false);
   const [otpCountdown, setOtpCountdown] = useState<number>(0);
   const itemsPerPage = 10;
+  
+  // ✅ Check if user has read permission, redirect if not
+  useEffect(() => {
+    if (!canRead) {
+      toastHelper.showTost('You do not have permission to view payments', 'error');
+      // Optionally redirect to home
+      // window.location.href = '/home';
+    }
+  }, [canRead]);
+
+  // ✅ Auto-calculate when amount or conversionRate changes (including on mount)
+  useEffect(() => {
+    if (editFormData.amount > 0 && editFormData.conversionRate > 0) {
+      const calculated = roundToTwoDecimals(editFormData.amount * editFormData.conversionRate);
+      if (calculated !== editFormData.calculatedAmount) {
+        setEditFormData(prev => ({
+          ...prev,
+          calculatedAmount: calculated
+        }));
+      }
+    }
+  }, [editFormData.amount, editFormData.conversionRate]);
 
   const paymentStatuses = ['requested', 'rejected', 'verify', 'approved', 'paid'];
   const paymentMethods = ['Cash', 'TT', 'ThirdParty'];
@@ -242,6 +271,12 @@ const Payments: React.FC = () => {
   const handleUpdatePayment = async () => {
     if (!selectedPayment) return;
 
+    // ✅ Check permission for verify/approve status changes
+    if ((editFormData.status === 'verify' || editFormData.status === 'approve') && !canVerifyApprove) {
+      toastHelper.showTost('You do not have permission to set status to verify or approve', 'error');
+      return;
+    }
+
     try {
       // If payment is approved (either original status or selected status), only allow status change
       if (isPaymentApproved()) {
@@ -292,14 +327,19 @@ const Payments: React.FC = () => {
     
     // Initialize edit form data if editing
     if (action === 'edit') {
+      // ✅ Use existing conversionRate and calculatedAmount from payment, or calculate if missing
+      const existingConversionRate = payment.conversionRate || 1;
+      const existingAmount = payment.amount || 0;
+      const existingCalculatedAmount = payment.calculatedAmount || roundToTwoDecimals(existingAmount * existingConversionRate);
+      
       setEditFormData({
         status: payment.status || '',
         transactionRef: payment.transactionRef || '',
         remarks: payment.remarks || '',
-        amount: payment.amount || 0,
+        amount: existingAmount,
         currency: payment.currency || '',
-        conversionRate: 1,
-        calculatedAmount: 0,
+        conversionRate: existingConversionRate,
+        calculatedAmount: existingCalculatedAmount,
       });
       // Check if OTP is already sent/verified
       setOtpSent(!!payment.otp);
@@ -549,20 +589,26 @@ const Payments: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => openModal(payment, 'view')}
-                              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                              title="View Details"
-                            >
-                              <i className="fas fa-eye"></i>
-                            </button>
-                            <button
-                              onClick={() => openModal(payment, 'edit')}
-                              className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                              title="Edit Payment"
-                            >
-                              <i className="fas fa-edit"></i>
-                            </button>
+                            {/* ✅ View button - always visible if can read */}
+                            {canRead && (
+                              <button
+                                onClick={() => openModal(payment, 'view')}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                title="View Details"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                            )}
+                            {/* ✅ Edit button - only visible if can write */}
+                            {canWrite && (
+                              <button
+                                onClick={() => openModal(payment, 'edit')}
+                                className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                title="Edit Payment"
+                              >
+                                <i className="fas fa-edit"></i>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -770,7 +816,8 @@ const Payments: React.FC = () => {
               )}
 
               {/* Action Forms */}
-              {actionType === 'verify' && (
+              {/* ✅ Verify Payment - only visible if canVerifyApprove */}
+              {actionType === 'verify' && canVerifyApprove && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -812,7 +859,8 @@ const Payments: React.FC = () => {
                 </div>
               )}
 
-              {actionType === 'approve' && (
+              {/* ✅ Approve Payment - only visible if canVerifyApprove */}
+              {actionType === 'approve' && canVerifyApprove && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -843,7 +891,8 @@ const Payments: React.FC = () => {
                 </div>
               )}
 
-              {actionType === 'markPaid' && (
+              {/* ✅ Mark as Paid - only visible if canVerifyApprove */}
+              {actionType === 'markPaid' && canVerifyApprove && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -874,7 +923,8 @@ const Payments: React.FC = () => {
                 </div>
               )}
 
-              {actionType === 'edit' && (
+              {/* ✅ Edit Payment - only visible if canWrite */}
+              {actionType === 'edit' && canWrite && (
                 <div className="space-y-6">
                   {/* Payment Info Section */}
                   <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
@@ -957,22 +1007,22 @@ const Payments: React.FC = () => {
                             </label>
                             <input
                               type="text"
-                              value={editFormData.amount}
+                              value={editFormData.amount === 0 ? '' : editFormData.amount}
                               onChange={(e) => {
-                                if (!isPaymentApproved()) {
+                                if (!isPaymentApproved() && canWrite) {
                                   const filteredValue = handleNumericInput(e.target.value, true, false);
-                                  const amount = roundToTwoDecimals(parseFloat(filteredValue) || 0);
+                                  const amount = filteredValue === '' ? 0 : roundToTwoDecimals(parseFloat(filteredValue) || 0);
                                   const rate = roundToTwoDecimals(editFormData.conversionRate || 1);
                                   const calculated = roundToTwoDecimals(amount * rate);
                                   setEditFormData(prev => ({ 
                                     ...prev, 
-                                    amount: filteredValue === '' ? 0 : amount,
+                                    amount: amount,
                                     calculatedAmount: calculated
                                   }));
                                 }
                               }}
-                              disabled={isPaymentApproved()}
-                              readOnly={isPaymentApproved()}
+                              disabled={isPaymentApproved() || !canWrite}
+                              readOnly={isPaymentApproved() || !canWrite}
                               className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
                                 isPaymentApproved() ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
                               }`}
@@ -986,11 +1036,19 @@ const Payments: React.FC = () => {
                             <select
                               value={editFormData.currency}
                               onChange={(e) => {
-                                if (!isPaymentApproved()) {
-                                  setEditFormData({ ...editFormData, currency: e.target.value });
+                                if (!isPaymentApproved() && canWrite) {
+                                  // ✅ Recalculate when currency changes
+                                  const amount = roundToTwoDecimals(typeof editFormData.amount === 'number' ? editFormData.amount : parseFloat(editFormData.amount) || 0);
+                                  const rate = roundToTwoDecimals(editFormData.conversionRate || 1);
+                                  const calculated = roundToTwoDecimals(amount * rate);
+                                  setEditFormData({ 
+                                    ...editFormData, 
+                                    currency: e.target.value,
+                                    calculatedAmount: calculated
+                                  });
                                 }
                               }}
-                              disabled={isPaymentApproved()}
+                              disabled={isPaymentApproved() || !canWrite}
                               className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
                                 isPaymentApproved() ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
                               }`}
@@ -1009,7 +1067,7 @@ const Payments: React.FC = () => {
                               type="text"
                               value={editFormData.conversionRate}
                               onChange={(e) => {
-                                if (!isPaymentApproved()) {
+                                if (!isPaymentApproved() && canWrite) {
                                   const filteredValue = handleNumericInput(e.target.value, true, false);
                                   const rate = roundToTwoDecimals(parseFloat(filteredValue) || 1);
                                   const amount = roundToTwoDecimals(typeof editFormData.amount === 'number' ? editFormData.amount : parseFloat(editFormData.amount) || 0);
@@ -1021,8 +1079,8 @@ const Payments: React.FC = () => {
                                   }));
                                 }
                               }}
-                              disabled={isPaymentApproved()}
-                              readOnly={isPaymentApproved()}
+                              disabled={isPaymentApproved() || !canWrite}
+                              readOnly={isPaymentApproved() || !canWrite}
                               className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
                                 isPaymentApproved() ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
                               }`}
@@ -1049,7 +1107,8 @@ const Payments: React.FC = () => {
                       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4 space-y-4">
                         <h4 className="text-md font-semibold text-gray-900 dark:text-white">OTP Verification</h4>
                         
-                        {!otpSent && (
+                        {/* ✅ Send OTP - only visible if canWrite */}
+                        {!otpSent && canWrite && (
                           <button
                             onClick={handleSendOTP}
                             disabled={sendingOtp || !editFormData.amount || !editFormData.currency}
@@ -1074,13 +1133,16 @@ const Payments: React.FC = () => {
                                   maxLength={6}
                                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 />
-                                <button
-                                  onClick={handleVerifyOTP}
-                                  disabled={verifyingOtp || !otpValue || otpValue.length !== 6}
-                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {verifyingOtp ? 'Verifying...' : 'Verify OTP'}
-                                </button>
+                                {/* ✅ Verify OTP - only visible if canWrite */}
+                                {canWrite && (
+                                  <button
+                                    onClick={handleVerifyOTP}
+                                    disabled={verifyingOtp || !otpValue || otpValue.length !== 6}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {verifyingOtp ? 'Verifying...' : 'Verify OTP'}
+                                  </button>
+                                )}
                               </div>
                             </div>
                             
@@ -1092,13 +1154,16 @@ const Payments: React.FC = () => {
                                   Resend OTP in {otpCountdown}s
                                 </div>
                               ) : (
-                                <button
-                                  onClick={handleSendOTP}
-                                  disabled={sendingOtp}
-                                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {sendingOtp ? 'Sending...' : 'Resend OTP'}
-                                </button>
+                                // ✅ Resend OTP - only visible if canWrite
+                                canWrite && (
+                                  <button
+                                    onClick={handleSendOTP}
+                                    disabled={sendingOtp}
+                                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {sendingOtp ? 'Sending...' : 'Resend OTP'}
+                                  </button>
+                                )
                               )}
                             </div>
                           </div>
@@ -1179,6 +1244,13 @@ const Payments: React.FC = () => {
                           const newStatus = e.target.value;
                           const currentStatus = selectedPayment.status;
                           
+                          // ✅ Check permission for verify/approve status changes
+                          if ((newStatus === 'verify' || newStatus === 'approve') && !canVerifyApprove) {
+                            toastHelper.showTost('You do not have permission to set status to verify or approve', 'error');
+                            setEditFormData({ ...editFormData, status: currentStatus });
+                            return;
+                          }
+                          
                           // Validate status transition
                           if (newStatus) {
                             const isValidTransition = validateStatusTransition(currentStatus, newStatus);
@@ -1192,7 +1264,10 @@ const Payments: React.FC = () => {
                           
                           setEditFormData({ ...editFormData, status: newStatus });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        disabled={!canWrite}
+                        className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
+                          !canWrite ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
+                        }`}
                       >
                         <option value="">Select Status</option>
                         {paymentStatuses
@@ -1201,21 +1276,37 @@ const Payments: React.FC = () => {
                             if (status === selectedPayment.status) {
                               return true;
                             }
+                            
+                            // ✅ Hide verify/approve status if user doesn't have verifyApprove permission
+                            if ((status === 'verify' || status === 'approve') && !canVerifyApprove) {
+                              return false;
+                            }
+                            
                             // Only show valid transitions
                             const isValid = validateStatusTransition(selectedPayment.status, status);
                             return isValid.valid;
                           })
                           .map((status) => {
+                            const isVerifyApproveStatus = status === 'verify' || status === 'approve';
                             return (
                               <option 
                                 key={status} 
                                 value={status}
+                                disabled={isVerifyApproveStatus && !canVerifyApprove}
                               >
                                 {status === 'verify' ? 'Verify' : status.charAt(0).toUpperCase() + status.slice(1)}
+                                {isVerifyApproveStatus && !canVerifyApprove ? ' (No Permission)' : ''}
                               </option>
                             );
                           })}
                       </select>
+                      {/* ✅ Show permission hint */}
+                      {!canVerifyApprove && (
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          <i className="fas fa-info-circle mr-1"></i>
+                          You need "Verify/Approve" permission to set status to "Verify" or "Approve"
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1267,11 +1358,24 @@ const Payments: React.FC = () => {
                       </button>
                       <button
                         onClick={handleUpdatePayment}
-                        disabled={!editFormData.status || (selectedPayment.status === 'requested' && (!otpVerified || !editFormData.amount || !editFormData.currency))}
+                        disabled={
+                          !canWrite || 
+                          !editFormData.status || 
+                          (selectedPayment.status === 'requested' && (!otpVerified || !editFormData.amount || !editFormData.currency)) ||
+                          // ✅ Disable if trying to set verify/approve without permission
+                          ((editFormData.status === 'verify' || editFormData.status === 'approve') && !canVerifyApprove)
+                        }
                         className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Update Payment
                       </button>
+                      {/* ✅ Show permission warning if trying to set verify/approve without permission */}
+                      {(editFormData.status === 'verify' || editFormData.status === 'approve') && !canVerifyApprove && (
+                        <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                          <i className="fas fa-exclamation-triangle mr-1"></i>
+                          You need "Verify/Approve" permission to set status to "{editFormData.status === 'verify' ? 'Verify' : 'Approve'}"
+                        </p>
+                      )}
                       {selectedPayment.status === 'requested' && !otpVerified && (
                         <p className="text-xs text-red-500 mt-1">
                           Please verify OTP before updating payment
