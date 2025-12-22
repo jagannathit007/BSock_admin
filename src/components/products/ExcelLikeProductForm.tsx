@@ -168,13 +168,22 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         const grade = (product as any).gradeId ? (typeof (product as any).gradeId === 'object' ? (product as any).gradeId._id : (product as any).gradeId) : '';
         const seller = (product as any).sellerId ? (typeof (product as any).sellerId === 'object' ? (product as any).sellerId._id : (product as any).sellerId) : '';
         
-        // Get country deliverables
+        // Get country deliverables - find USD entries for base prices
         const hkDeliverable = Array.isArray(product.countryDeliverables) 
-          ? product.countryDeliverables.find((cd: any) => cd.country === 'Hongkong')
+          ? product.countryDeliverables.find((cd: any) => cd.country === 'Hongkong' && cd.currency === 'USD')
           : null;
         const dubaiDeliverable = Array.isArray(product.countryDeliverables)
-          ? product.countryDeliverables.find((cd: any) => cd.country === 'Dubai')
+          ? product.countryDeliverables.find((cd: any) => cd.country === 'Dubai' && cd.currency === 'USD')
           : null;
+        
+        // Calculate local currency base prices from USD basePrice and exchange rate
+        const hkBasePrice = hkDeliverable?.basePrice || hkDeliverable?.usd || 0;
+        const hkExchangeRate = hkDeliverable?.exchangeRate || hkDeliverable?.xe || 0;
+        const hkHkdBasePrice = hkBasePrice && hkExchangeRate ? hkBasePrice * hkExchangeRate : 0;
+        
+        const dubaiBasePrice = dubaiDeliverable?.basePrice || dubaiDeliverable?.usd || 0;
+        const dubaiExchangeRate = dubaiDeliverable?.exchangeRate || dubaiDeliverable?.xe || 0;
+        const dubaiAedBasePrice = dubaiBasePrice && dubaiExchangeRate ? dubaiBasePrice * dubaiExchangeRate : 0;
         
         // Get custom fields
         const customFields = (product as any).customFields || {};
@@ -223,12 +232,12 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           batteryHealth: (product as any).batteryHealth || '',
           packing: (product as any).packing || '',
           currentLocation: (product as any).currentLocation || '',
-          hkUsd: hkDeliverable?.usd || 0,
-          hkXe: hkDeliverable?.xe || 0,
-          hkHkd: hkDeliverable?.local || hkDeliverable?.hkd || 0,
-          dubaiUsd: dubaiDeliverable?.usd || 0,
-          dubaiXe: dubaiDeliverable?.xe || 0,
-          dubaiAed: dubaiDeliverable?.local || dubaiDeliverable?.aed || 0,
+          hkUsd: hkBasePrice,
+          hkXe: hkExchangeRate,
+          hkHkd: hkHkdBasePrice,
+          dubaiUsd: dubaiBasePrice,
+          dubaiXe: dubaiExchangeRate,
+          dubaiAed: dubaiAedBasePrice,
           deliveryLocation: Array.isArray((product as any).deliveryLocation) 
             ? (product as any).deliveryLocation 
             : [],
