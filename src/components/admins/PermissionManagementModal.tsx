@@ -315,7 +315,7 @@ const PermissionManagementModal: React.FC<PermissionManagementModalProps> = ({
 
   // Check if module supports Verify/Approve permission
   // Removed: customer, seller, wallet amounts, customer cart, admin, skufamily from verify/approve
-  // Only show Verify/Approve for specific modules: orders, products, business request
+  // Only show Verify/Approve for specific modules: orders, products, business request, payments
   const moduleSupportsVerifyApprove = (moduleKey: string, moduleName: string): boolean => {
     // List of modules that support Verify/Approve (removed customer, seller, wallet, cart, admin, skufamily)
     const modulesWithVerifyApprove = [
@@ -327,6 +327,8 @@ const PermissionManagementModal: React.FC<PermissionManagementModalProps> = ({
       'businessrequest',
       'business-request',
       'business requests',
+      'payment',
+      'payments', // ✅ Added payments module
     ];
     
     const keyLower = moduleKey.toLowerCase();

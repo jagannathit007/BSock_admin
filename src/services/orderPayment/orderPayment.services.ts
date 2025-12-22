@@ -31,6 +31,8 @@ export interface OrderPayment {
   module?: 'Cash' | 'TT' | 'ThirdParty';
   amount: number;
   currency: string;
+  conversionRate?: number;
+  calculatedAmount?: number;
   status: 'requested' | 'rejected' | 'verify' | 'approved' | 'paid';
   paymentDetails?: Record<string, any> | string;
   transactionRef?: string;
