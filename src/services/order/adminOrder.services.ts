@@ -68,6 +68,7 @@ export interface Order {
   deliveryOTPVerifiedAt?: string | Date | null;
   paymentIds?: string | string[]; // Can be single ObjectId or array of ObjectIds
   pendingAmount?: number; // Remaining amount to be paid
+  isGroupedOrder?: boolean; // Flag to indicate if order contains groupCode products (for totalMoq validation)
 }
 
 export interface TrackingItem {
