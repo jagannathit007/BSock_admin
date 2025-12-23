@@ -32,9 +32,16 @@ export class VersionProductService {
 		const url = `${baseUrl}/api/${adminRoute}/version/product/history`;
 		try {
 			const res = await api.post(url, body);
-			return res.data;
+			// Check if response is successful
+			if (res.data?.status === 200) {
+				return res.data;
+			} else {
+				const message = res.data?.message || 'Failed to fetch product history';
+				toastHelper.showTost(message, 'error');
+				throw new Error(message);
+			}
 		} catch (err: any) {
-			const message = err.response?.data?.message || 'Failed to fetch product history';
+			const message = err.response?.data?.message || err.message || 'Failed to fetch product history';
 			toastHelper.showTost(message, 'error');
 			throw new Error(message);
 		}

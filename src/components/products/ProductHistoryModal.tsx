@@ -56,13 +56,28 @@ const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
         limit: itemsPerPage,
       });
 
-      if (response?.data) {
+      // Check if response is successful and has data
+      if (response?.status === 200 && response?.data) {
         setVersions(response.data.docs || []);
         setTotalPages(response.data.totalPages || 1);
         setTotalDocs(response.data.totalDocs || 0);
+      } else if (response?.status !== 200) {
+        // Handle error response
+        console.error("Failed to fetch product history:", response?.message || 'Unknown error');
+        setVersions([]);
+        setTotalPages(1);
+        setTotalDocs(0);
+      } else {
+        // No data but successful
+        setVersions([]);
+        setTotalPages(1);
+        setTotalDocs(0);
       }
     } catch (error) {
       console.error("Failed to fetch product history:", error);
+      setVersions([]);
+      setTotalPages(1);
+      setTotalDocs(0);
     } finally {
       setLoading(false);
     }
