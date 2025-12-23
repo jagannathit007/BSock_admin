@@ -18,63 +18,16 @@ const ProductPreviewModal: React.FC<ProductPreviewModalProps> = ({
 }) => {
   const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
 
-  // ✅ FIX #7: MEMOIZE - Build per-currency deliverables function (doesn't change)
+  // ✅ FIX: API now returns all country/currency combinations directly
+  // No need to expand - just use API response as-is
   const expandDeliverables = useMemo(() => {
     return (deliverables: any[]) => {
-      const expanded: any[] = [];
-      deliverables.forEach((cd) => {
-        const rate =
-          cd.exchangeRate ??
-          cd.xe ??
-          (cd.hkd && cd.basePrice ? cd.hkd / cd.basePrice : undefined) ??
-          (cd.aed && cd.basePrice ? cd.aed / cd.basePrice : undefined) ??
-          1;
-
-        // Base currency (as-is from API)
-        expanded.push({
-          ...cd,
-          currency: cd.currency || 'USD',
-        });
-
-        // HKD view when available
-        if (cd.hkd !== undefined && cd.hkd !== null) {
-          const localRate = rate || 1;
-          expanded.push({
-            ...cd,
-            currency: 'HKD',
-            basePrice: (cd.basePrice || 0) * localRate,
-            calculatedPrice: (cd.calculatedPrice || 0) * localRate,
-            margins: (cd.margins || []).map((m: any) => ({
-              ...m,
-              calculatedAmount: (m.calculatedAmount || 0) * localRate,
-            })),
-            costs: (cd.costs || []).map((c: any) => ({
-              ...c,
-              calculatedAmount: (c.calculatedAmount || 0) * localRate,
-            })),
-          });
-        }
-
-        // AED view when available
-        if (cd.aed !== undefined && cd.aed !== null) {
-          const localRate = rate || 1;
-          expanded.push({
-            ...cd,
-            currency: 'AED',
-            basePrice: (cd.basePrice || 0) * localRate,
-            calculatedPrice: (cd.calculatedPrice || 0) * localRate,
-            margins: (cd.margins || []).map((m: any) => ({
-              ...m,
-              calculatedAmount: (m.calculatedAmount || 0) * localRate,
-            })),
-            costs: (cd.costs || []).map((c: any) => ({
-              ...c,
-              calculatedAmount: (c.calculatedAmount || 0) * localRate,
-            })),
-          });
-        }
-      });
-      return expanded;
+      // API already returns all combinations (USD, HKD, AED) for each country
+      // Just return as-is, ensuring currency field is set
+      return deliverables.map((cd) => ({
+        ...cd,
+        currency: cd.currency || 'USD',
+      }));
     };
   }, []); // ✅ MEMOIZED: Function doesn't change
 

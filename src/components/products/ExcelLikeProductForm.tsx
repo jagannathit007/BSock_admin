@@ -1629,93 +1629,9 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           return val;
         };
         
-        const countryDeliverables: any[] = [];
-        
-        // Track which countries we've processed to avoid duplicates
-        const processedCountries = new Set<string>();
-        
-        result.countryDeliverables.forEach(cd => {
-          const countryKey = `${cd.country}_USD`;
-          
-          // Only process each country once
-          if (processedCountries.has(countryKey)) {
-            return;
-          }
-          processedCountries.add(countryKey);
-          
-          // Add USD entry (always required)
-          const usdBasePrice = cd.basePrice || 0;
-          const usdCalculatedPrice = cd.calculatedPrice || 0;
-          
-          countryDeliverables.push({
-            country: cd.country,
-            currency: 'USD',
-            basePrice: usdBasePrice,
-            calculatedPrice: usdCalculatedPrice,
-            exchangeRate: null,
-            margins: cd.margins || [],
-            costs: cd.costs || [],
-            charges: [],
-            // Legacy fields
-            usd: usdCalculatedPrice,
-            xe: cd.exchangeRate || null,
-            price: usdBasePrice,
-          });
-          
-          // Add local currency entry if exchange rate exists
-          if (cd.exchangeRate && cd.country === 'Hongkong') {
-            const exchangeRate = cd.exchangeRate;
-            const hkdBasePrice = (cd.basePrice || 0) * exchangeRate;
-            const hkdCalculatedPrice = (cd.calculatedPrice || 0) * exchangeRate;
-            countryDeliverables.push({
-              country: 'Hongkong',
-              currency: 'HKD',
-              basePrice: hkdBasePrice,
-              calculatedPrice: hkdCalculatedPrice,
-              exchangeRate: exchangeRate, // XE rate from product
-              margins: (cd.margins || []).map(m => ({
-                ...m,
-                calculatedAmount: (m.calculatedAmount || 0) * exchangeRate,
-              })),
-              costs: (cd.costs || []).map(c => ({
-                ...c,
-                calculatedAmount: (c.calculatedAmount || 0) * exchangeRate,
-              })),
-              charges: [],
-              // Legacy fields
-              hkd: hkdCalculatedPrice,
-              local: hkdCalculatedPrice,
-            });
-          } else if (cd.exchangeRate && cd.country === 'Dubai') {
-            const exchangeRate = cd.exchangeRate;
-            const aedBasePrice = (cd.basePrice || 0) * exchangeRate;
-            const aedCalculatedPrice = (cd.calculatedPrice || 0) * exchangeRate;
-            countryDeliverables.push({
-              country: 'Dubai',
-              currency: 'AED',
-              basePrice: aedBasePrice,
-              calculatedPrice: aedCalculatedPrice,
-              exchangeRate: exchangeRate, // System currency conversion rate
-              margins: (cd.margins || []).map(m => ({
-                ...m,
-                calculatedAmount: (m.calculatedAmount || 0) * exchangeRate,
-              })),
-              costs: (cd.costs || []).map(c => ({
-                ...c,
-                calculatedAmount: (c.calculatedAmount || 0) * exchangeRate,
-              })),
-              charges: [],
-              // Legacy fields
-              aed: aedCalculatedPrice,
-              local: aedCalculatedPrice,
-            });
-          }
-        });
-        
-        // Remove duplicates based on country + currency combination
-        const uniqueCountryDeliverables = countryDeliverables.filter((cd, index, self) =>
-          index === self.findIndex((t) => t.country === cd.country && t.currency === cd.currency)
-        );
+        // ✅ FIX: API now returns all country/currency combinations directly
+        // No need to generate combinations in frontend - use API response as-is
+        const uniqueCountryDeliverables = result.countryDeliverables || [];
 
         return {
           skuFamilyId: row.skuFamilyId,
