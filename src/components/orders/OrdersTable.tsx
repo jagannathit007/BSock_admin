@@ -812,7 +812,8 @@ const OrdersTable: React.FC = () => {
                     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
                     const productPromises = allProductIds.map(async (productId: string) => {
                       try {
-                        const response = await api.post(`${baseUrl}/api/${adminRoute}/product/get`, { productId });
+                        // Backend expects 'id' not 'productId'
+                        const response = await api.post(`${baseUrl}/api/${adminRoute}/product/get`, { id: productId });
                         if (response.data?.status === 200 && response.data?.data) {
                           const product = response.data.data;
                           return {
@@ -1082,7 +1083,8 @@ const OrdersTable: React.FC = () => {
                     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
                     const productPromises = allProductIds.map(async (productId: string) => {
                       try {
-                        const response = await api.post(`${baseUrl}/api/${adminRoute}/product/get`, { productId });
+                        // Backend expects 'id' not 'productId'
+                        const response = await api.post(`${baseUrl}/api/${adminRoute}/product/get`, { id: productId });
                         if (response.data?.status === 200 && response.data?.data) {
                           const product = response.data.data;
                           return {
@@ -1169,7 +1171,7 @@ const OrdersTable: React.FC = () => {
                 const shouldValidateTotalMoq = order.isGroupedOrder || hasGroupCodeInProducts;
                 
                 if (shouldValidateTotalMoq && (productDataMap.size > 0 || order.cartItems.length > 0)) {
-                  const itemsByGroup = new Map<string, Array<{ productId: string; quantity: number; productName: string; inputIndex?: number }>>();
+                  const itemsByGroup = new Map<string, Array<{ productId: string; quantity: number; productName: string; inputIndex?: number; totalMoq?: number | null }>>();
                   
                   // Create a map of edited quantities for quick lookup
                   const editedQuantitiesMap = new Map<string, number>();
@@ -1179,74 +1181,72 @@ const OrdersTable: React.FC = () => {
                     editedQuantitiesMap.set(productId, newQuantity);
                   });
                   
-                  // Group ALL order items by groupCode, using new quantities for edited items and old quantities for others
-                  order.cartItems.forEach((orderItem) => {
-                    const productId = orderItem.productId?._id?.toString() || 
-                      (orderItem.productId && typeof orderItem.productId === 'object' ? orderItem.productId._id?.toString() : '') || 
-                      '';
-                    const productData = productDataMap.get(productId);
+                  // If isGroupedOrder is true, treat ALL products as one group (even without groupCode)
+                  if (order.isGroupedOrder) {
+                    // Get totalMoq from any product that has it - check all products
+                    let totalMoq: number | null = null;
+                    const allGroupItems: Array<{ productId: string; quantity: number; productName: string; inputIndex?: number }> = [];
                     
-                    // Try to get groupCode from productData or from orderItem's populated productId
-                    let groupCode: string | null = null;
+                    // First pass: Collect all products and find totalMoq from any product
+                    // Check both populated productId (from order) and fetched productData
+                    order.cartItems.forEach((orderItem) => {
+                      const productId = orderItem.productId?._id?.toString() || 
+                        (orderItem.productId && typeof orderItem.productId === 'object' ? orderItem.productId._id?.toString() : '') || 
+                        '';
+                      const productData = productDataMap.get(productId);
+                      
+                      // Get totalMoq from any product that has it (check all products, not just first)
+                      // Priority: 1) Fetched productData, 2) Populated productId from order
+                      if (!totalMoq) {
+                        // First check fetched product data (most up-to-date)
+                        if (productData?.totalMoq && productData.totalMoq > 0) {
+                          totalMoq = productData.totalMoq;
+                        } 
+                        // Fallback to populated productId from order
+                        else if (orderItem.productId && typeof orderItem.productId === 'object' && 'totalMoq' in orderItem.productId) {
+                          const itemTotalMoq = (orderItem.productId as any).totalMoq;
+                          if (itemTotalMoq && itemTotalMoq > 0) {
+                            totalMoq = itemTotalMoq;
+                          }
+                        }
+                      }
+                    });
                     
-                    if (productData?.groupCode) {
-                      groupCode = productData.groupCode;
-                    } else if (orderItem.productId && typeof orderItem.productId === 'object' && 'groupCode' in orderItem.productId) {
-                      groupCode = (orderItem.productId as any).groupCode;
-                    }
-                    
-                    if (groupCode) {
+                    // Second pass: Collect all items with quantities for validation
+                    order.cartItems.forEach((orderItem) => {
+                      const productId = orderItem.productId?._id?.toString() || 
+                        (orderItem.productId && typeof orderItem.productId === 'object' ? orderItem.productId._id?.toString() : '') || 
+                        '';
+                      
                       // Use new quantity if item is being edited, otherwise use old quantity
                       const quantity = editedQuantitiesMap.has(productId) 
                         ? editedQuantitiesMap.get(productId)!
                         : orderItem.quantity;
                       
-                      if (!itemsByGroup.has(groupCode)) {
-                        itemsByGroup.set(groupCode, []);
-                      }
                       const productName = orderItem.skuFamilyId?.name || 
                         (orderItem.productId && typeof orderItem.productId === 'object' ? orderItem.productId.name : 'Product');
                       
                       // Find the input index if this product is being edited
                       const inputIndex = Array.from(quantityInputs).findIndex(inp => inp.getAttribute('data-product-id') === productId);
                       
-                      itemsByGroup.get(groupCode)!.push({
+                      allGroupItems.push({
                         productId,
                         quantity: quantity,
                         productName,
                         inputIndex: inputIndex >= 0 ? inputIndex : undefined
                       });
-                    }
-                  });
-                  
-                  // Validate total MOQ for each group
-                  itemsByGroup.forEach((items, groupCode) => {
-                    // Get totalMoq from first product in the group
-                    const firstItem = items[0];
-                    const firstProductData = productDataMap.get(firstItem.productId);
-                    let totalMoq = firstProductData?.totalMoq || null;
+                    });
                     
-                    // If not in productDataMap, try to get from order item
-                    if (!totalMoq && order.cartItems.length > 0) {
-                      const firstOrderItem = order.cartItems.find(item => {
-                        const itemProductId = item.productId?._id?.toString() || 
-                          (item.productId && typeof item.productId === 'object' ? item.productId._id?.toString() : '');
-                        return itemProductId === firstItem.productId;
-                      });
-                      if (firstOrderItem?.productId && typeof firstOrderItem.productId === 'object' && 'totalMoq' in firstOrderItem.productId) {
-                        totalMoq = (firstOrderItem.productId as any).totalMoq;
-                      }
-                    }
-                    
+                    // Validate total MOQ for the entire grouped order
                     if (totalMoq && totalMoq > 0) {
-                      const totalGroupQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+                      const totalGroupQuantity = allGroupItems.reduce((sum, item) => sum + item.quantity, 0);
                       if (totalGroupQuantity < totalMoq) {
                         const remainingQty = totalMoq - totalGroupQuantity;
-                        const productNames = items.map(item => item.productName).join(', ');
-                        errors.push(`Products in group "${groupCode}" (${productNames}) require a minimum total order quantity (MOQ) of ${totalMoq}. Current total: ${totalGroupQuantity}. You need to add ${remainingQty} more item(s).`);
+                        const productNames = allGroupItems.map(item => item.productName).join(', ');
+                        errors.push(`This is a grouped order. All products (${productNames}) require a minimum total order quantity (MOQ) of ${totalMoq}. Current total: ${totalGroupQuantity}. You need to add ${remainingQty} more item(s).`);
                         
-                        // Highlight all inputs in this group that are being edited
-                        items.forEach((item) => {
+                        // Highlight all inputs that are being edited
+                        allGroupItems.forEach((item) => {
                           if (item.inputIndex !== undefined) {
                             const input = quantityInputs[item.inputIndex];
                             if (input) {
@@ -1254,15 +1254,116 @@ const OrdersTable: React.FC = () => {
                               const validationMsg = input.parentElement?.querySelector('.validation-message') as HTMLElement;
                               if (validationMsg) {
                                 const existingMsg = validationMsg.textContent || '';
-                                validationMsg.textContent = existingMsg ? `${existingMsg} | ❌ Group MOQ: ${totalMoq}` : `❌ Group total MOQ: ${totalMoq} (Current: ${totalGroupQuantity})`;
+                                validationMsg.textContent = existingMsg ? `${existingMsg} | ❌ Group Total MOQ: ${totalMoq}` : `❌ Group Total MOQ: ${totalMoq} (Current: ${totalGroupQuantity})`;
+                                validationMsg.style.color = '#DC2626';
+                              }
+                            }
+                          } else {
+                            // Also highlight inputs that might not be in the edited list but are part of the group
+                            const input = Array.from(quantityInputs).find(inp => inp.getAttribute('data-product-id') === item.productId);
+                            if (input) {
+                              input.style.borderColor = '#EF4444';
+                              const validationMsg = input.parentElement?.querySelector('.validation-message') as HTMLElement;
+                              if (validationMsg) {
+                                const existingMsg = validationMsg.textContent || '';
+                                validationMsg.textContent = existingMsg ? `${existingMsg} | ❌ Group Total MOQ: ${totalMoq}` : `❌ Group Total MOQ: ${totalMoq} (Current: ${totalGroupQuantity})`;
                                 validationMsg.style.color = '#DC2626';
                               }
                             }
                           }
                         });
                       }
+                    } else if (order.isGroupedOrder) {
+                      // If isGroupedOrder is true but no totalMoq found, log a warning
+                      console.warn('Grouped order detected but totalMoq not found in any product. Order ID:', order._id);
                     }
-                  });
+                  } else {
+                    // Original logic: Group by groupCode when products have groupCode
+                    // Group ALL order items by groupCode, using new quantities for edited items and old quantities for others
+                    order.cartItems.forEach((orderItem) => {
+                      const productId = orderItem.productId?._id?.toString() || 
+                        (orderItem.productId && typeof orderItem.productId === 'object' ? orderItem.productId._id?.toString() : '') || 
+                        '';
+                      const productData = productDataMap.get(productId);
+                      
+                      // Try to get groupCode from productData or from orderItem's populated productId
+                      let groupCode: string | null = null;
+                      
+                      if (productData?.groupCode) {
+                        groupCode = productData.groupCode;
+                      } else if (orderItem.productId && typeof orderItem.productId === 'object' && 'groupCode' in orderItem.productId) {
+                        groupCode = (orderItem.productId as any).groupCode;
+                      }
+                      
+                      if (groupCode) {
+                        // Use new quantity if item is being edited, otherwise use old quantity
+                        const quantity = editedQuantitiesMap.has(productId) 
+                          ? editedQuantitiesMap.get(productId)!
+                          : orderItem.quantity;
+                        
+                        if (!itemsByGroup.has(groupCode)) {
+                          itemsByGroup.set(groupCode, []);
+                        }
+                        const productName = orderItem.skuFamilyId?.name || 
+                          (orderItem.productId && typeof orderItem.productId === 'object' ? orderItem.productId.name : 'Product');
+                        
+                        // Find the input index if this product is being edited
+                        const inputIndex = Array.from(quantityInputs).findIndex(inp => inp.getAttribute('data-product-id') === productId);
+                        
+                        itemsByGroup.get(groupCode)!.push({
+                          productId,
+                          quantity: quantity,
+                          productName,
+                          inputIndex: inputIndex >= 0 ? inputIndex : undefined
+                        });
+                      }
+                    });
+                    
+                    // Validate total MOQ for each group
+                    itemsByGroup.forEach((items, groupCode) => {
+                      // Get totalMoq from first product in the group
+                      const firstItem = items[0];
+                      const firstProductData = productDataMap.get(firstItem.productId);
+                      let totalMoq = firstProductData?.totalMoq || null;
+                      
+                      // If not in productDataMap, try to get from order item
+                      if (!totalMoq && order.cartItems.length > 0) {
+                        const firstOrderItem = order.cartItems.find(item => {
+                          const itemProductId = item.productId?._id?.toString() || 
+                            (item.productId && typeof item.productId === 'object' ? item.productId._id?.toString() : '');
+                          return itemProductId === firstItem.productId;
+                        });
+                        if (firstOrderItem?.productId && typeof firstOrderItem.productId === 'object' && 'totalMoq' in firstOrderItem.productId) {
+                          totalMoq = (firstOrderItem.productId as any).totalMoq;
+                        }
+                      }
+                      
+                      if (totalMoq && totalMoq > 0) {
+                        const totalGroupQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+                        if (totalGroupQuantity < totalMoq) {
+                          const remainingQty = totalMoq - totalGroupQuantity;
+                          const productNames = items.map(item => item.productName).join(', ');
+                          errors.push(`Products in group "${groupCode}" (${productNames}) require a minimum total order quantity (MOQ) of ${totalMoq}. Current total: ${totalGroupQuantity}. You need to add ${remainingQty} more item(s).`);
+                          
+                          // Highlight all inputs in this group that are being edited
+                          items.forEach((item) => {
+                            if (item.inputIndex !== undefined) {
+                              const input = quantityInputs[item.inputIndex];
+                              if (input) {
+                                input.style.borderColor = '#EF4444';
+                                const validationMsg = input.parentElement?.querySelector('.validation-message') as HTMLElement;
+                                if (validationMsg) {
+                                  const existingMsg = validationMsg.textContent || '';
+                                  validationMsg.textContent = existingMsg ? `${existingMsg} | ❌ Group MOQ: ${totalMoq}` : `❌ Group total MOQ: ${totalMoq} (Current: ${totalGroupQuantity})`;
+                                  validationMsg.style.color = '#DC2626';
+                                }
+                              }
+                            }
+                          });
+                        }
+                      }
+                    });
+                  }
                 }
                 
                 return { isValid: errors.length === 0, errors };
@@ -1429,6 +1530,22 @@ const OrdersTable: React.FC = () => {
               if (sendConfirmationBtn) {
                 sendConfirmationBtn.addEventListener("click", async () => {
                   try {
+                    // First, validate quantities (MOQ, stock, and totalMOQ) before proceeding
+                    const validation = await validateQuantities();
+                    if (!validation.isValid) {
+                      const errorMessage = validation.errors.join('\n');
+                      toastHelper.showTost(errorMessage, 'error');
+                      // Show validation errors in a more detailed way
+                      await Swal.fire({
+                        icon: 'error',
+                        title: 'Validation Failed',
+                        html: `<div style="text-align: left;"><strong>Please fix the following issues before sending the confirmation email:</strong><br/><br/>${validation.errors.map(err => `• ${err}`).join('<br/>')}</div>`,
+                        confirmButtonText: 'OK',
+                        width: '600px'
+                      });
+                      return;
+                    }
+                    
                     // First, save the order with modified quantities if any changes were made
                     const quantityInputs = document.querySelectorAll(".quantity-input") as NodeListOf<HTMLInputElement>;
                     const otherChargesInput = document.getElementById("otherChargesInput") as HTMLInputElement;
@@ -1457,6 +1574,7 @@ const OrdersTable: React.FC = () => {
                       });
                       
                       // Save the order with updated quantities and other charges
+                      // The backend will also validate MOQ, stock, and totalMOQ
                       await AdminOrderService.updateOrderStatus(
                         order._id,
                         order.status, // Keep current status

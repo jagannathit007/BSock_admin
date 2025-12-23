@@ -177,12 +177,15 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           : null;
         
         // Calculate local currency base prices from USD basePrice and exchange rate
-        const hkBasePrice = hkDeliverable?.basePrice || hkDeliverable?.usd || 0;
-        const hkExchangeRate = hkDeliverable?.exchangeRate || hkDeliverable?.xe || 0;
+        // Use type assertion to access basePrice and exchangeRate (which may exist in the actual data)
+        const hkDeliverableAny = hkDeliverable as any;
+        const hkBasePrice = hkDeliverableAny?.basePrice || hkDeliverableAny?.usd || 0;
+        const hkExchangeRate = hkDeliverableAny?.exchangeRate || hkDeliverableAny?.xe || 0;
         const hkHkdBasePrice = hkBasePrice && hkExchangeRate ? hkBasePrice * hkExchangeRate : 0;
         
-        const dubaiBasePrice = dubaiDeliverable?.basePrice || dubaiDeliverable?.usd || 0;
-        const dubaiExchangeRate = dubaiDeliverable?.exchangeRate || dubaiDeliverable?.xe || 0;
+        const dubaiDeliverableAny = dubaiDeliverable as any;
+        const dubaiBasePrice = dubaiDeliverableAny?.basePrice || dubaiDeliverableAny?.usd || 0;
+        const dubaiExchangeRate = dubaiDeliverableAny?.exchangeRate || dubaiDeliverableAny?.xe || 0;
         const dubaiAedBasePrice = dubaiBasePrice && dubaiExchangeRate ? dubaiBasePrice * dubaiExchangeRate : 0;
         
         // Get custom fields
