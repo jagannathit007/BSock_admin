@@ -134,7 +134,7 @@ const ProductListingModal: React.FC<ProductListingModalProps> = ({
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
           expiryTime: cleanString(row.endTime) ? new Date(row.endTime).toISOString() : '',
           groupCode: variantType === 'multi' ? `GROUP-${Date.now()}` : undefined,
-          sequence: row.sequence || null,
+          sequence: null,
           countryDeliverables,
           // Additional fields that need to be stored - convert empty strings to null
           supplierListingNumber: cleanString(row.supplierListingNumber) || '',
