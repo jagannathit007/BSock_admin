@@ -65,7 +65,7 @@ const AppHeader: React.FC = () => {
     fetchNegotiationStats();
   }, []);
 
-  // Listen for negotiation-related socket events to highlight new negotiations
+  // Listen for negotiation-related socket events to highlight new negotiations and redirect
   useEffect(() => {
     if (!socketService) return;
 
@@ -82,6 +82,13 @@ const AppHeader: React.FC = () => {
           type === "negotiation_created"
         ) {
           setHasNewNegotiation(true);
+        }
+
+        // Redirect to negotiations page if redirectTo is provided
+        if (data?.redirectTo) {
+          const redirectPath = data.redirectTo;
+          // Use HashRouter navigation (window.location.hash)
+          window.location.hash = `#${redirectPath}`;
         }
       } catch {
         // Ignore malformed payloads
