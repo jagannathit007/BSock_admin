@@ -54,6 +54,12 @@ class SocketServiceClass {
       console.log('Received forceLogout event:', payload);
       this.handleForceLogout(payload);
     });
+
+    // Listen for new order event (when customer places an order)
+    this.socket.on('newOrder', (payload: any) => {
+      console.log('Received newOrder event:', payload);
+      this.handleNewOrder(payload);
+    });
   }
 
   // Handle force logout event
@@ -79,6 +85,38 @@ class SocketServiceClass {
       // This ensures all state is cleared
       window.location.href = '/signin';
     }, 1500); // 1.5 second delay to show toast
+  }
+
+  // Store callback for new order handling
+  private newOrderCallback: ((data: any) => void) | null = null;
+
+  // Register callback for new order event
+  onNewOrder(callback: (data: any) => void) {
+    this.newOrderCallback = callback;
+  }
+
+  // Remove new order callback
+  removeNewOrderCallback() {
+    this.newOrderCallback = null;
+  }
+
+  // Handle new order event
+  private handleNewOrder(payload: any) {
+    const orderData = payload.order || {};
+    const message = payload.message || `New order placed: ${orderData.orderNo || orderData.orderId}`;
+    
+    // Show toast notification
+    toastHelper.showTost(message, 'info');
+    
+    // Call registered callback if available
+    if (this.newOrderCallback) {
+      this.newOrderCallback(payload);
+    } else {
+      // Default behavior: redirect to orders page
+      const redirectPath = payload.redirectTo || '/orders';
+      // Use HashRouter navigation (window.location.hash)
+      window.location.hash = `#${redirectPath}`;
+    }
   }
 
   disconnect() {

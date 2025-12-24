@@ -37,7 +37,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
     };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      // Cleanup new order callback on unmount
+      SocketService.removeNewOrderCallback();
+    };
   }, []);
 
   const value = useMemo(() => ({ socket, socketService }), [socket, socketService]);
