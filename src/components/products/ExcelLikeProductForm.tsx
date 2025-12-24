@@ -2618,6 +2618,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
             onChange={(date) => updateRow(rowIndex, column.key as keyof ProductRowData, date ? date.toISOString() : '')}
             showTimeSelect
             timeFormat="HH:mm"
+            timeIntervals={30}
             dateFormat="yyyy-MM-dd HH:mm"
             className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 placeholder:text-gray-400"
             placeholderText={column.key === 'startTime' ? "Select date & time (auto: current time)" : "Select date & time *"}
@@ -2627,6 +2628,16 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
               setSelectedRowIndex(rowIndex);
             }}
             wrapperClassName="w-full"
+            popperClassName="inline-datetime-picker"
+            popperModifiers={[
+              {
+                name: 'offset',
+                options: {
+                  offset: [0, 8],
+                },
+              },
+            ]}
+            calendarClassName="inline-datetime-calendar"
           />
         );
 

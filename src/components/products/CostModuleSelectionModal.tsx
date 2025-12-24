@@ -331,11 +331,23 @@ const CostModuleSelectionModal: React.FC<CostModuleSelectionModalProps> = ({
                       .filter(cost => isCostApplicable(cost))
                       .map(cost => {
                         const isSelected = selectedCosts.has(cost._id);
-                        const isDisabled = cost.isExpressDelivery && 
-                          Array.from(selectedCosts).some(id => {
-                            const selectedCost = costs.find(c => c._id === id);
-                            return selectedCost?.isExpressDelivery && selectedCost._id !== cost._id;
-                          });
+                        
+                        // Check if any standalone (non-group) express delivery is selected
+                        const hasStandaloneExpressDelivery = Array.from(selectedCosts).some(id => {
+                          const selectedCost = costs.find(c => c._id === id);
+                          return selectedCost?.isExpressDelivery && !selectedCost?.groupId;
+                        });
+                        
+                        // Disable if:
+                        // 1. This is an express delivery and another express delivery is selected
+                        // 2. OR if this cost is in a group AND a standalone express delivery is selected
+                        const isDisabled = 
+                          (cost.isExpressDelivery && 
+                            Array.from(selectedCosts).some(id => {
+                              const selectedCost = costs.find(c => c._id === id);
+                              return selectedCost?.isExpressDelivery && selectedCost._id !== cost._id;
+                            })) ||
+                          (hasStandaloneExpressDelivery && cost.groupId && groupId !== '_standalone');
 
                         return (
                           <div

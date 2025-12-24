@@ -925,9 +925,20 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
                       onChange={(date) => updateRow(rowIndex, 'startTime', date ? date.toISOString() : '')}
                       showTimeSelect
                       timeFormat="HH:mm"
+                      timeIntervals={30}
                       dateFormat="yyyy-MM-dd HH:mm"
                       className="w-full px-2 py-1 text-sm border rounded bg-gray-50 dark:bg-gray-800"
                       placeholderText="Select start time (auto: current time)"
+                      popperClassName="inline-datetime-picker"
+                      calendarClassName="inline-datetime-calendar"
+                      popperModifiers={[
+                        {
+                          name: 'offset',
+                          options: {
+                            offset: [0, 8],
+                          },
+                        },
+                      ]}
                     />
                   </td>
                   <td className="px-3 py-2 border">
@@ -936,10 +947,21 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
                       onChange={(date) => updateRow(rowIndex, 'endTime', date ? date.toISOString() : '')}
                       showTimeSelect
                       timeFormat="HH:mm"
+                      timeIntervals={30}
                       dateFormat="yyyy-MM-dd HH:mm"
                       className="w-full px-2 py-1 text-sm border rounded bg-gray-50 dark:bg-gray-800"
                       placeholderText="Select end time *"
                       required
+                      popperClassName="inline-datetime-picker"
+                      calendarClassName="inline-datetime-calendar"
+                      popperModifiers={[
+                        {
+                          name: 'offset',
+                          options: {
+                            offset: [0, 8],
+                          },
+                        },
+                      ]}
                     />
                   </td>
                   <td className="px-3 py-2 border">
