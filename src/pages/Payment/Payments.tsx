@@ -10,7 +10,7 @@ import { usePermissions } from '../../context/PermissionsContext';
 
 const Payments: React.FC = () => {
   // ✅ Get permissions for payment module
-  const { hasPermission } = usePermissions();
+  const { hasPermission, loading: permissionsLoading, permissions } = usePermissions();
   const canRead = hasPermission('/payments-management', 'read');
   const canWrite = hasPermission('/payments-management', 'write');
   const canVerifyApprove = hasPermission('/payments-management', 'verifyApprove');
@@ -56,13 +56,20 @@ const Payments: React.FC = () => {
   const itemsPerPage = 10;
   
   // ✅ Check if user has read permission, redirect if not
+  // Only check after permissions are loaded to avoid false negatives
   useEffect(() => {
-    if (!canRead) {
+    // Wait for permissions to load before checking
+    if (permissionsLoading) {
+      return;
+    }
+    
+    // If permissions are loaded and user doesn't have read permission, show error
+    if (permissions && !canRead) {
       toastHelper.showTost('You do not have permission to view payments', 'error');
       // Optionally redirect to home
       // window.location.href = '/home';
     }
-  }, [canRead]);
+  }, [canRead, permissionsLoading, permissions]);
 
   // ✅ Auto-calculate when amount or conversionRate changes (including on mount)
   useEffect(() => {

@@ -135,10 +135,12 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
   };
 
   const hasPermission = (modulePath: string, permission: 'read' | 'write' | 'verifyApprove' | 'marginUpdate'): boolean => {
+    // If permissions are still loading, return false (will be re-checked when loaded)
     if (!permissions) {
       return false;
     }
     
+    // Superadmin always has all permissions - check this FIRST
     if (permissions.role === 'superadmin') {
       return true;
     }
@@ -152,6 +154,7 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
       // Debug only in development
       if (import.meta.env.DEV) {
         console.warn(`⚠️ hasPermission: Module not found for path: ${modulePath}`);
+        console.warn('Available modules:', permissions.modules.map(m => ({ path: m.path, key: m.key })));
       }
       return false;
     }
