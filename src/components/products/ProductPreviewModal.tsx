@@ -72,53 +72,115 @@ const ProductPreviewModal: React.FC<ProductPreviewModalProps> = ({
                 className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
               >
                 <div
-                  className="p-4 bg-gray-50 dark:bg-gray-900 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="p-5 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 cursor-pointer hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all duration-200 border-b border-gray-200 dark:border-gray-700"
                   onClick={() => toggleProduct(index)}
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Top Section - Product Details */}
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800 dark:text-white">
-                        Product {index + 1}
-                      </h3>
-                      <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        <div>SKU: {result.product.skuFamilyId || 'N/A'}</div>
-                        <div>Storage: {result.product.storage || 'N/A'}</div>
-                        <div>Color: {result.product.colour || 'N/A'}</div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                          <i className="fas fa-cube text-white text-sm"></i>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                            Product {index + 1}
+                          </h3>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      {result.countryDeliverables.map((deliverable, idx) => {
-                        // Calculate preview price (excluding express delivery and same location costs)
-                        const previewCosts = deliverable.costs.filter((c: any) => 
-                          !c.isExpressDelivery && !c.isSameLocationCharge
-                        );
-                        const previewPrice = deliverable.basePrice + 
-                          deliverable.margins.reduce((sum: number, m: any) => sum + (m.calculatedAmount || 0), 0) +
-                          previewCosts.reduce((sum: number, c: any) => sum + (c.calculatedAmount || 0), 0);
-                        
-                        return (
-                          <div key={idx} className="mb-2">
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {deliverable.country} ({deliverable.currency || 'USD'})
-                            </div>
-                            <div className="font-bold text-lg text-blue-600 dark:text-blue-400">
-                              ${previewPrice.toFixed(2)}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              Base: ${deliverable.basePrice.toFixed(2)}
-                              {deliverable.costs.filter((c: any) => c.isExpressDelivery || c.isSameLocationCharge).length > 0 && (
-                                <span className="block text-gray-400">+ delivery costs</span>
-                              )}
+                      <div className="grid grid-cols-3 gap-4 ml-12">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                            <i className="fas fa-barcode text-blue-600 dark:text-blue-400 text-xs"></i>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">SKU</div>
+                            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                              {result.product.skuFamilyId || 'N/A'}
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                            <i className="fas fa-hdd text-green-600 dark:text-green-400 text-xs"></i>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Storage</div>
+                            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                              {result.product.storage || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-md bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                            <i className="fas fa-palette text-purple-600 dark:text-purple-400 text-xs"></i>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Color</div>
+                            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                              {result.product.colour || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <div className="ml-4">
-                      <i
-                        className={`fas fa-chevron-${expandedProduct === index ? 'up' : 'down'} text-gray-400`}
-                      ></i>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                        expandedProduct === index 
+                          ? 'bg-blue-600 text-white rotate-180 shadow-md' 
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        <i className="fas fa-chevron-down text-sm"></i>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Bottom Section - Amounts in Row */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {result.countryDeliverables.map((deliverable, idx) => {
+                      // Calculate preview price (excluding express delivery and same location costs)
+                      const previewCosts = deliverable.costs.filter((c: any) => 
+                        !c.isExpressDelivery && !c.isSameLocationCharge
+                      );
+                      const previewPrice = deliverable.basePrice + 
+                        deliverable.margins.reduce((sum: number, m: any) => sum + (m.calculatedAmount || 0), 0) +
+                        previewCosts.reduce((sum: number, c: any) => sum + (c.calculatedAmount || 0), 0);
+                      
+                      return (
+                        <div 
+                          key={idx} 
+                          className="flex-1 min-w-[180px] bg-white dark:bg-gray-800 px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <i className="fas fa-map-marker-alt text-gray-400 text-xs"></i>
+                              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                                {deliverable.country}
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded font-medium">
+                              {deliverable.currency || 'USD'}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-2 mb-1">
+                            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                              ${previewPrice.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              Base: <span className="font-medium">${deliverable.basePrice.toFixed(2)}</span>
+                            </span>
+                            {deliverable.costs.filter((c: any) => c.isExpressDelivery || c.isSameLocationCharge).length > 0 && (
+                              <span className="text-xs text-orange-600 dark:text-orange-400 font-medium flex items-center gap-1">
+                                <i className="fas fa-info-circle text-xs"></i>
+                                + delivery
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

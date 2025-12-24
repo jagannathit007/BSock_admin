@@ -184,26 +184,6 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
             </>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Max Bid Percentage (%)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.maxBidPercentage ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData({ ...formData, maxBidPercentage: value === '' ? null : parseFloat(value) || 0 });
-              }}
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              placeholder="Enter max bid percentage (optional)"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Maximum bid percentage allowed for this category
-            </p>
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -223,6 +203,28 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Minimum bid increment percentage for this category
+            </p>
+          </div>
+
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Max Bid Percentage (%)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.maxBidPercentage ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData({ ...formData, maxBidPercentage: value === '' ? null : parseFloat(value) || 0 });
+              }}
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              placeholder="Enter max bid percentage (optional)"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Maximum bid percentage allowed for this category
             </p>
           </div>
 
