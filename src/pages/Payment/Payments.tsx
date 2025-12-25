@@ -1388,11 +1388,11 @@ const Payments: React.FC = () => {
                           Please verify OTP before updating payment
                         </p>
                       )}
-                      {(selectedPayment.status === 'approved' || editFormData.status === 'approved') && (
+                      {/* {(selectedPayment.status === 'approved' || editFormData.status === 'approved') && (
                         <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
                           Only status can be changed for approved payments
                         </p>
-                      )}
+                      )} */}
                     </div>
                   </div>
                 </div>

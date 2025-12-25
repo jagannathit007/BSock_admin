@@ -130,7 +130,7 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
         skuFamilyId: variant.skuFamilyId,
         subSkuFamilyId: variant.subSkuFamilyId,
         ram: variant.ram,
-        sequence: index + 1,
+        sequence: null,
       }));
       setRows(newRows);
     } else if (variantType === 'single') {
@@ -177,7 +177,7 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
         supplierId: '',
         supplierListingNumber: '',
         skuFamilyId: '',
-        sequence: 1,
+        sequence: null,
       }]);
     }
   }, [variantType, variants]);

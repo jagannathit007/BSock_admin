@@ -175,7 +175,7 @@ const SellerProductForm: React.FC = () => {
     supplierListingNumber: '',
     customerListingNumber: '',
     skuFamilyId: '',
-    sequence: 1,
+    sequence: null,
   });
 
   const createRowFromVariant = (variant: VariantOption, index: number): ProductRowData => ({
@@ -186,7 +186,7 @@ const SellerProductForm: React.FC = () => {
     skuFamilyId: variant.skuFamilyId,
     subSkuFamilyId: variant.subSkuFamilyId,
     ram: variant.ram,
-    sequence: index + 1,
+    sequence: null,
   });
 
   const updateRow = (index: number, field: keyof ProductRowData, value: any) => {

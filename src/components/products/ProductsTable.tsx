@@ -848,15 +848,18 @@ const navigate = useNavigate();
     }
   };
 
-  const handleMoveToTop = async (product: Product) => {
+  const handleSingleProductToggleSequence = async (product: Product) => {
     if (!product._id) return;
 
+    const currentSequence = product.sequence === null || product.sequence === undefined ? 'null' : product.sequence;
+    const newSequence = currentSequence === 'null' ? '0' : 'null';
+
     const confirmed = await Swal.fire({
-      title: 'Move to Top',
-      text: 'Are you sure you want to move this product to the top?',
+      title: 'Toggle Sequence',
+      text: `Are you sure you want to toggle sequence for this product? Sequence will change from ${currentSequence} to ${newSequence}.`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Yes, move it!',
+      confirmButtonText: 'Yes, toggle it!',
       cancelButtonText: 'No, cancel!',
     });
 
@@ -865,7 +868,7 @@ const navigate = useNavigate();
         await ProductService.moveToTop(product._id);
         fetchProducts();
       } catch (error) {
-        console.error('Failed to move product to top:', error);
+        console.error('Failed to toggle sequence:', error);
       }
     }
     setOpenDropdownId(null);
@@ -1573,13 +1576,13 @@ const navigate = useNavigate();
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleMoveToTop(item);
+                                    handleSingleProductToggleSequence(item);
                                   }}
                                   className="flex items-center justify-between w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-orange-600 group"
                                 >
                                   <div className="flex items-center gap-2">
                                     <i className="fas fa-arrow-up"></i>
-                                    Move to Top
+                                    Toggle Sequence
                                   </div>
                                   <ActionTooltip text="Move this product to the top of the listing. This gives it priority in search results and product listings." />
                                 </button>
