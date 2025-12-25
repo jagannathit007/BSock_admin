@@ -201,7 +201,7 @@ const Negotiations = () => {
 
     const result = await Swal.fire({
       title: 'Accept Offer?',
-      text: `Are you sure you want to accept this offer of ${formatPrice(negotiation.offerPrice)}?`,
+      text: `Are you sure you want to accept this offer of ${formatPrice(negotiation.offerPrice, negotiation.currency)}?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -232,7 +232,7 @@ const Negotiations = () => {
     try {
       const result = await Swal.fire({
         title: 'Reject Offer?',
-        text: `Are you sure you want to reject this offer of ${formatPrice(negotiation.offerPrice)}?`,
+        text: `Are you sure you want to reject this offer of ${formatPrice(negotiation.offerPrice, negotiation.currency)}?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -349,10 +349,10 @@ const getCustomerDetails = (customer: any) => {
   return parts.join(' • ');
 };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: currency || 'USD'
     }).format(price);
   };
 
@@ -490,12 +490,12 @@ const getCustomerDetails = (customer: any) => {
                                             {negotiation.previousOfferPrice && (
                                               <div className="flex items-center space-x-1 text-gray-400 text-xs line-through">
                                                 <DollarSign className="w-3 h-3" />
-                                                <span>{formatPrice(negotiation.previousOfferPrice)}</span>
+                                                <span>{formatPrice(negotiation.previousOfferPrice, negotiation.currency)}</span>
                                               </div>
                                             )}
                                             <div className="flex items-center space-x-1 text-green-600 font-semibold">
                                               <DollarSign className="w-4 h-4" />
-                                              {formatPrice(negotiation.offerPrice)}
+                                              {formatPrice(negotiation.offerPrice, negotiation.currency)}
                                             </div>
                                           </div>
                                           {negotiation.quantity && (
@@ -570,7 +570,7 @@ const getCustomerDetails = (customer: any) => {
                                                 <div className="flex items-center justify-between text-xs">
                                                   <span className="text-gray-600">Previous Price:</span>
                                                   <span className="text-gray-700 line-through font-medium">
-                                                    {formatPrice(negotiation.previousOfferPrice)}
+                                                    {formatPrice(negotiation.previousOfferPrice, negotiation.currency)}
                                                   </span>
                                                 </div>
                                               )}
@@ -670,7 +670,7 @@ const getCustomerDetails = (customer: any) => {
                 <div className="flex items-center space-x-2 text-sm">
                   <DollarSign className="w-4 h-4 text-green-600" />
                   <span className="font-semibold text-green-600">
-                    {formatPrice(negotiation.offerPrice)}
+                    {formatPrice(negotiation.offerPrice, negotiation.currency)}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
@@ -794,7 +794,7 @@ const getCustomerDetails = (customer: any) => {
                 <div className="flex items-center space-x-2 text-sm">
                   <DollarSign className="w-4 h-4 text-gray-600" />
                   <span className="font-semibold text-gray-600">
-                    {formatPrice(negotiation.offerPrice)}
+                    {formatPrice(negotiation.offerPrice, negotiation.currency)}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
@@ -875,7 +875,7 @@ const getCustomerDetails = (customer: any) => {
                     Current Offer
                   </label>
                   <div className="text-lg font-semibold text-gray-900">
-                    {formatPrice(counterOfferModal.negotiation.offerPrice)}
+                    {formatPrice(counterOfferModal.negotiation.offerPrice, counterOfferModal.negotiation.currency)}
                   </div>
                 </div>
 
