@@ -998,7 +998,7 @@ const Payments: React.FC = () => {
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-4">
                         <p className="text-sm text-yellow-800 dark:text-yellow-300">
                           <i className="fas fa-info-circle mr-2"></i>
-                          This payment is approved. You can only change the status. All other fields are locked.
+                          This payment is approved. You can only change the status and remarks. All other fields are locked.
                         </p>
                       </div>
                     )}
@@ -1342,16 +1342,13 @@ const Payments: React.FC = () => {
                       <textarea
                         value={editFormData.remarks}
                         onChange={(e) => {
-                          const isApproved = selectedPayment.status === 'approved' || editFormData.status === 'approved';
-                          if (!isApproved) {
-                            setEditFormData({ ...editFormData, remarks: e.target.value });
-                          }
+                          setEditFormData({ ...editFormData, remarks: e.target.value });
                         }}
                         rows={3}
-                        disabled={selectedPayment.status === 'approved' || editFormData.status === 'approved'}
-                        readOnly={selectedPayment.status === 'approved' || editFormData.status === 'approved'}
+                        disabled={!canWrite}
+                        readOnly={!canWrite}
                         className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
-                          (selectedPayment.status === 'approved' || editFormData.status === 'approved') ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
+                          !canWrite ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
                         }`}
                         placeholder="Enter remarks..."
                       />
