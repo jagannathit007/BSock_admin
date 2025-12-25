@@ -551,7 +551,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     customerListingNumber: '',
     skuFamilyId: variant?.skuFamilyId || '',
     ram: variant?.ram,
-    sequence: index + 1,
+    sequence: null,
     // Initialize custom fields
     ...customColumns.reduce((acc, col) => {
       acc[col.key] = '';
@@ -943,7 +943,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
   const duplicateRow = (index: number) => {
     setRows(prevRows => {
-      const newRow = { ...prevRows[index], sequence: prevRows.length + 1 };
+      const newRow = { ...prevRows[index], sequence: null };
       // Clear unique fields
       newRow.uniqueListingNo = '';
       newRow.supplierListingNumber = '';

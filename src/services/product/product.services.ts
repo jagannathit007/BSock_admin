@@ -689,7 +689,7 @@ export class ProductService {
     }
   };
 
-  // Move product to top
+  // Move product to top (Toggle Sequence)
   static moveToTop = async (id: string): Promise<any> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;
     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
@@ -697,10 +697,10 @@ export class ProductService {
 
     try {
       const res = await api.post(url, { id });
-      toastHelper.showTost(res.data.message || 'Product moved to top successfully!', 'success');
+      toastHelper.showTost(res.data.message || 'Product sequence toggled successfully!', 'success');
       return res.data;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to move product to top';
+      const errorMessage = err.response?.data?.message || 'Failed to toggle product sequence';
       toastHelper.showTost(errorMessage, 'error');
       throw new Error(errorMessage);
     }
