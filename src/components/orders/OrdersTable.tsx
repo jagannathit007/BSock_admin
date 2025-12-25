@@ -1793,33 +1793,22 @@ const OrdersTable: React.FC = () => {
                     verifyOTPBtn.style.cursor = 'not-allowed';
                     
                     const verifyResponse = await AdminOrderService.verifyDeliveryOTP(order._id, otp);
-                    toastHelper.showTost('OTP verified successfully!', 'success');
                     
-                    // Refresh orders to get updated OTP status
+                    // Check if status was automatically changed to delivered
+                    const statusChanged = verifyResponse?.data?.statusChanged;
+                    const newStatus = verifyResponse?.data?.newStatus;
+                    
+                    // Close the OTP modal
+                    Swal.close();
+                    
+                    // Refresh orders to get updated status
                     await fetchOrders();
                     
-                    // Get updated order from the refreshed list using search by order ID
-                    const updatedOrdersResponse = await AdminOrderService.getOrderList(1, 100, order._id);
-                    const updatedOrder = updatedOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
-                    
-                    if (updatedOrder) {
-                      // Check if order status is already "delivered" - if so, don't reopen modal
-                      if (updatedOrder.status === 'delivered') {
-                        // Order status was automatically changed to delivered, just close modal and refresh
-                        Swal.close();
-                        toastHelper.showTost('Order status has been automatically changed to delivered!', 'success');
-                        fetchOrders();
-                      } else {
-                        // Close current modal and reopen with updated order (status not yet delivered)
-                        Swal.close();
-                        setTimeout(() => {
-                          handleUpdateStatus(updatedOrder);
-                        }, 300);
-                      }
+                    // Show appropriate success message
+                    if (statusChanged && newStatus === 'delivered') {
+                      toastHelper.showTost('OTP verified successfully! Order status has been automatically changed to delivered.', 'success');
                     } else {
-                      // If order not found, just refresh
-                      Swal.close();
-                      fetchOrders();
+                      toastHelper.showTost('OTP verified successfully!', 'success');
                     }
                   } catch (error: any) {
                     console.error('Error verifying OTP:', error);

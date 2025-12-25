@@ -32,6 +32,7 @@ export interface Negotiation {
   toUserType?: 'Admin' | 'Customer';
   offerPrice: number;
   previousOfferPrice?: number | null;
+  currency?: string;
   quantity?: number;
   previousQuantity?: number | null;
   isPlacedOrder?: boolean;

@@ -714,7 +714,7 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
 
         title: 'Reject Offer?',
 
-        text: `Are you sure you want to reject this offer of ${formatPrice(negotiation.offerPrice)}?`,
+        text: `Are you sure you want to reject this offer of ${formatPrice(negotiation.offerPrice, negotiation.currency)}?`,
 
         icon: 'warning',
 
@@ -882,13 +882,13 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
 
 
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number, currency: string = 'USD') => {
 
     return new Intl.NumberFormat('en-US', {
 
       style: 'currency',
 
-      currency: 'USD'
+      currency: currency || 'USD'
 
     }).format(price);
 
@@ -1398,10 +1398,10 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
 
                                         {negotiation.previousOfferPrice && (
                                           <span className="text-gray-400 text-sm line-through mr-2">
-                                            {formatPrice(negotiation.previousOfferPrice)}
+                                            {formatPrice(negotiation.previousOfferPrice, negotiation.currency)}
                                           </span>
                                         )}
-                                        {formatPrice(negotiation.offerPrice)}
+                                        {formatPrice(negotiation.offerPrice, negotiation.currency)}
                                         {negotiation.previousQuantity && negotiation.quantity && (
                                           <span className="text-xs text-gray-400 line-through ml-2">
                                             Qty: {negotiation.previousQuantity}
