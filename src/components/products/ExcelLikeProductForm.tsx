@@ -505,7 +505,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     }
   }, [rows, variantType, totalMoq, customColumns]);
 
-  const createEmptyRow = (index: number, variant?: VariantOption): ProductRowData => ({
+  const createEmptyRow = (_index: number, variant?: VariantOption): ProductRowData => ({
     subModelName: variant?.subModelName || '',
     storage: variant?.storage || '',
     colour: variant?.color || '',
@@ -551,7 +551,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     customerListingNumber: '',
     skuFamilyId: variant?.skuFamilyId || '',
     ram: variant?.ram,
-    sequence: null,
+    sequence: undefined,
     // Initialize custom fields
     ...customColumns.reduce((acc, col) => {
       acc[col.key] = '';
@@ -943,7 +943,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
   const duplicateRow = (index: number) => {
     setRows(prevRows => {
-      const newRow = { ...prevRows[index], sequence: null };
+      const newRow = { ...prevRows[index], sequence: undefined };
       // Clear unique fields
       newRow.uniqueListingNo = '';
       newRow.supplierListingNumber = '';
@@ -2629,14 +2629,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
             }}
             wrapperClassName="w-full"
             popperClassName="inline-datetime-picker"
-            popperModifiers={[
-              {
-                name: 'offset',
-                options: {
-                  offset: [0, 8],
-                },
-              },
-            ]}
+            popperModifiers={[]}
             calendarClassName="inline-datetime-calendar"
           />
         );

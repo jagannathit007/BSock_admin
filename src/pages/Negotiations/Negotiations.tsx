@@ -461,7 +461,7 @@ const getCustomerDetails = (customer: any) => {
                           <div className="bg-gray-50 pl-16 pr-4 py-3">
                             <div className="space-y-3">
                               {productGroup.negotiations.map((negotiation, index) => {
-                                const isNegotiationExpanded = expandedNegotiations.has(negotiation._id || '');
+                                // const _isNegotiationExpanded = expandedNegotiations.has(negotiation._id || '');
                                 const isActive = negotiation.status === 'negotiation';
                                 const isLatest = index === productGroup.negotiations.length - 1;
                                 const canRespond = isActive && negotiation.FromUserType === 'Customer';

@@ -85,7 +85,7 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
   // Initialize rows based on variant type
   useEffect(() => {
     if (variantType === 'multi' && variants.length > 0) {
-      const newRows: ProductRowData[] = variants.map((variant, index) => ({
+      const newRows: ProductRowData[] = variants.map((variant) => ({
         subModelName: variant.subModelName,
         storage: variant.storage,
         colour: variant.color,
@@ -130,7 +130,7 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
         skuFamilyId: variant.skuFamilyId,
         subSkuFamilyId: variant.subSkuFamilyId,
         ram: variant.ram,
-        sequence: null,
+        sequence: undefined,
       }));
       setRows(newRows);
     } else if (variantType === 'single') {
@@ -177,7 +177,7 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
         supplierId: '',
         supplierListingNumber: '',
         skuFamilyId: '',
-        sequence: null,
+        sequence: undefined,
       }]);
     }
   }, [variantType, variants]);
@@ -931,14 +931,7 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
                       placeholderText="Select start time (auto: current time)"
                       popperClassName="inline-datetime-picker"
                       calendarClassName="inline-datetime-calendar"
-                      popperModifiers={[
-                        {
-                          name: 'offset',
-                          options: {
-                            offset: [0, 8],
-                          },
-                        },
-                      ]}
+                      popperModifiers={[]}
                     />
                   </td>
                   <td className="px-3 py-2 border">
@@ -954,14 +947,7 @@ const ComprehensiveProductForm: React.FC<ComprehensiveProductFormProps> = ({
                       required
                       popperClassName="inline-datetime-picker"
                       calendarClassName="inline-datetime-calendar"
-                      popperModifiers={[
-                        {
-                          name: 'offset',
-                          options: {
-                            offset: [0, 8],
-                          },
-                        },
-                      ]}
+                      popperModifiers={[]}
                     />
                   </td>
                   <td className="px-3 py-2 border">
