@@ -1683,30 +1683,41 @@ const OrdersTable: React.FC = () => {
                   discountContainer.style.display = canShowDiscount ? "block" : "none";
                 }
                 // Show/hide delivered warning and OTP container
+                // Only show warning if status is "delivered" but OTP is not yet verified
                 const deliveredWarningContainer = document.getElementById("deliveredWarningContainer") as HTMLElement;
                 if (deliveredWarningContainer) {
-                  deliveredWarningContainer.style.display = newStatus === "delivered" ? "block" : "none";
+                  const shouldShowWarning = newStatus === "delivered" && !order.deliveryOTPVerified;
+                  deliveredWarningContainer.style.display = shouldShowWarning ? "block" : "none";
                 }
                 
                 // Update OTP container visibility when status changes
+                // Only show OTP container if status is "delivered" but OTP is not yet verified
                 const otpContainer = document.getElementById("otpContainer") as HTMLElement;
-                if (otpContainer && newStatus === "delivered" && order.receiverDetails?.mobile) {
-                  otpContainer.style.display = "block";
-                } else if (otpContainer) {
-                  otpContainer.style.display = "none";
+                if (otpContainer) {
+                  const shouldShowOTP = newStatus === "delivered" && 
+                                        order.receiverDetails?.mobile && 
+                                        !order.deliveryOTPVerified;
+                  otpContainer.style.display = shouldShowOTP ? "block" : "none";
                 }
               });
               
               // Set initial visibility for delivered warning and OTP container
+              // Only show warning if status is "delivered" but OTP is not yet verified
               const deliveredWarningContainer = document.getElementById("deliveredWarningContainer") as HTMLElement;
               if (deliveredWarningContainer) {
-                deliveredWarningContainer.style.display = currentStatus === "delivered" ? "block" : "none";
+                const shouldShowWarning = currentStatus === "delivered" && !order.deliveryOTPVerified;
+                deliveredWarningContainer.style.display = shouldShowWarning ? "block" : "none";
               }
               
               // Set initial visibility for OTP container
+              // Only show OTP container if status is "delivered" but OTP is not yet verified
+              // If status is already "delivered" and OTP is verified, don't show the container
               const otpContainer = document.getElementById("otpContainer") as HTMLElement;
               if (otpContainer) {
-                otpContainer.style.display = (currentStatus === "delivered" && order.receiverDetails?.mobile) ? "block" : "none";
+                const shouldShowOTP = currentStatus === "delivered" && 
+                                      order.receiverDetails?.mobile && 
+                                      !order.deliveryOTPVerified;
+                otpContainer.style.display = shouldShowOTP ? "block" : "none";
               }
 
               // Handle OTP send button click
@@ -1729,11 +1740,18 @@ const OrdersTable: React.FC = () => {
                     const updatedOrder = updatedOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
                     
                     if (updatedOrder) {
-                      // Close current modal and reopen with updated order
-                      Swal.close();
-                      setTimeout(() => {
-                        handleUpdateStatus(updatedOrder);
-                      }, 300);
+                      // Check if order status is already "delivered" - if so, don't reopen modal
+                      if (updatedOrder.status === 'delivered' && updatedOrder.deliveryOTPVerified) {
+                        // Order is already delivered and OTP verified, just close modal and refresh
+                        Swal.close();
+                        fetchOrders();
+                      } else {
+                        // Close current modal and reopen with updated order
+                        Swal.close();
+                        setTimeout(() => {
+                          handleUpdateStatus(updatedOrder);
+                        }, 300);
+                      }
                     } else {
                       // If order not found, just refresh
                       Swal.close();
@@ -1774,7 +1792,7 @@ const OrdersTable: React.FC = () => {
                     verifyOTPBtn.style.opacity = '0.6';
                     verifyOTPBtn.style.cursor = 'not-allowed';
                     
-                    await AdminOrderService.verifyDeliveryOTP(order._id, otp);
+                    const verifyResponse = await AdminOrderService.verifyDeliveryOTP(order._id, otp);
                     toastHelper.showTost('OTP verified successfully!', 'success');
                     
                     // Refresh orders to get updated OTP status
@@ -1785,11 +1803,19 @@ const OrdersTable: React.FC = () => {
                     const updatedOrder = updatedOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
                     
                     if (updatedOrder) {
-                      // Close current modal and reopen with updated order
-                      Swal.close();
-                      setTimeout(() => {
-                        handleUpdateStatus(updatedOrder);
-                      }, 300);
+                      // Check if order status is already "delivered" - if so, don't reopen modal
+                      if (updatedOrder.status === 'delivered') {
+                        // Order status was automatically changed to delivered, just close modal and refresh
+                        Swal.close();
+                        toastHelper.showTost('Order status has been automatically changed to delivered!', 'success');
+                        fetchOrders();
+                      } else {
+                        // Close current modal and reopen with updated order (status not yet delivered)
+                        Swal.close();
+                        setTimeout(() => {
+                          handleUpdateStatus(updatedOrder);
+                        }, 300);
+                      }
                     } else {
                       // If order not found, just refresh
                       Swal.close();
@@ -1828,11 +1854,18 @@ const OrdersTable: React.FC = () => {
                     const updatedOrder = updatedOrdersResponse?.data?.docs?.find((o: Order) => o._id === order._id);
                     
                     if (updatedOrder) {
-                      // Close current modal and reopen with updated order
-                      Swal.close();
-                      setTimeout(() => {
-                        handleUpdateStatus(updatedOrder);
-                      }, 300);
+                      // Check if order status is already "delivered" - if so, don't reopen modal
+                      if (updatedOrder.status === 'delivered' && updatedOrder.deliveryOTPVerified) {
+                        // Order is already delivered and OTP verified, just close modal and refresh
+                        Swal.close();
+                        fetchOrders();
+                      } else {
+                        // Close current modal and reopen with updated order
+                        Swal.close();
+                        setTimeout(() => {
+                          handleUpdateStatus(updatedOrder);
+                        }, 300);
+                      }
                     } else {
                       // If order not found, just refresh
                       Swal.close();
