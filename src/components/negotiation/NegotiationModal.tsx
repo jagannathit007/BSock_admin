@@ -1396,7 +1396,22 @@ const NegotiationModal = ({ isOpen, onClose }: NegotiationModalProps) => {
 
                                         <DollarSign className="w-4 h-4 mr-1" />
 
+                                        {negotiation.previousOfferPrice && (
+                                          <span className="text-gray-400 text-sm line-through mr-2">
+                                            {formatPrice(negotiation.previousOfferPrice)}
+                                          </span>
+                                        )}
                                         {formatPrice(negotiation.offerPrice)}
+                                        {negotiation.previousQuantity && negotiation.quantity && (
+                                          <span className="text-xs text-gray-400 line-through ml-2">
+                                            Qty: {negotiation.previousQuantity}
+                                          </span>
+                                        )}
+                                        {negotiation.quantity && (
+                                          <span className="text-xs text-gray-600 ml-2">
+                                            Qty: {negotiation.quantity}
+                                          </span>
+                                        )}
 
                                       </span>
 

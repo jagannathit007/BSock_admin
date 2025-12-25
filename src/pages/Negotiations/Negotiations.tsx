@@ -486,14 +486,29 @@ const getCustomerDetails = (customer: any) => {
                                           {negotiation.FromUserType}
                                         </div>
                                         <div className="flex items-center space-x-3">
-                                          <div className="flex items-center space-x-1 text-green-600 font-semibold">
-                                            <DollarSign className="w-4 h-4" />
-                                            {formatPrice(negotiation.offerPrice)}
+                                          <div className="flex items-center space-x-2">
+                                            {negotiation.previousOfferPrice && (
+                                              <div className="flex items-center space-x-1 text-gray-400 text-xs line-through">
+                                                <DollarSign className="w-3 h-3" />
+                                                <span>{formatPrice(negotiation.previousOfferPrice)}</span>
+                                              </div>
+                                            )}
+                                            <div className="flex items-center space-x-1 text-green-600 font-semibold">
+                                              <DollarSign className="w-4 h-4" />
+                                              {formatPrice(negotiation.offerPrice)}
+                                            </div>
                                           </div>
                                           {negotiation.quantity && (
-                                            <span className="text-xs text-gray-600 px-2 py-1 bg-gray-100 rounded">
-                                              Qty: {negotiation.quantity}
-                                            </span>
+                                            <div className="flex items-center space-x-2">
+                                              {negotiation.previousQuantity && (
+                                                <span className="text-xs text-gray-400 line-through px-2 py-1 bg-gray-50 rounded">
+                                                  Qty: {negotiation.previousQuantity}
+                                                </span>
+                                              )}
+                                              <span className="text-xs text-gray-600 px-2 py-1 bg-gray-100 rounded">
+                                                Qty: {negotiation.quantity}
+                                              </span>
+                                            </div>
                                           )}
                                         </div>
                                         <div className="flex items-center space-x-1 text-gray-500 text-xs">
@@ -545,8 +560,31 @@ const getCustomerDetails = (customer: any) => {
                                     </div>
                                     
                                     {/* Expanded Details */}
-                                    {isNegotiationExpanded && (
+                                    {/* {isNegotiationExpanded && (
                                       <div className="mt-3 pt-3 border-t border-gray-200">
+                                        {(negotiation.previousOfferPrice || negotiation.previousQuantity) && (
+                                          <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                                            <p className="text-xs font-medium text-blue-800 mb-2">Previous Values:</p>
+                                            <div className="space-y-1">
+                                              {negotiation.previousOfferPrice && (
+                                                <div className="flex items-center justify-between text-xs">
+                                                  <span className="text-gray-600">Previous Price:</span>
+                                                  <span className="text-gray-700 line-through font-medium">
+                                                    {formatPrice(negotiation.previousOfferPrice)}
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {negotiation.previousQuantity && (
+                                                <div className="flex items-center justify-between text-xs">
+                                                  <span className="text-gray-600">Previous Quantity:</span>
+                                                  <span className="text-gray-700 line-through font-medium">
+                                                    {negotiation.previousQuantity}
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
                                         {negotiation.message && (
                                           <div className="mb-2">
                                             <p className="text-xs text-gray-500 mb-1">Message:</p>
@@ -558,7 +596,7 @@ const getCustomerDetails = (customer: any) => {
                                           <p>Bid ID: {negotiation.bidId}</p>
                                         </div>
                                       </div>
-                                    )}
+                                    )} */}
                                   </div>
                                 );
                               })}

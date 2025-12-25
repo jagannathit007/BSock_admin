@@ -8,7 +8,7 @@ import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import UserDropdown from "../components/header/UserDropdown";
 import Logo from "../components/common/Logo";
 import { useSocket } from "../context/SocketContext";
-import NegotiationService from "../services/negotiation/negotiation.services";
+import { NegotiationService } from "../services/negotiation/negotiation.services";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);

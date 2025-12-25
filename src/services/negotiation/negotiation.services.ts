@@ -31,7 +31,9 @@ export interface Negotiation {
   };
   toUserType?: 'Admin' | 'Customer';
   offerPrice: number;
+  previousOfferPrice?: number | null;
   quantity?: number;
+  previousQuantity?: number | null;
   isPlacedOrder?: boolean;
   message?: string;
   status: 'negotiation' | 'accepted' | 'rejected';
@@ -234,4 +236,5 @@ export class NegotiationService {
   }
 }
 
+// Export as default
 export default NegotiationService;
