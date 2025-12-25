@@ -69,6 +69,14 @@ export interface Order {
   paymentIds?: string | string[]; // Can be single ObjectId or array of ObjectIds
   pendingAmount?: number; // Remaining amount to be paid
   isGroupedOrder?: boolean; // Flag to indicate if order contains groupCode products (for totalMoq validation)
+  negotiationId?: string | {
+    _id: string;
+    bidId: string;
+    offerPrice: number;
+    quantity: number;
+    status: string;
+    FromUserType: string;
+  } | null; // Link to negotiation if order was created from a negotiation
 }
 
 export interface TrackingItem {
