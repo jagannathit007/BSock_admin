@@ -89,7 +89,9 @@ const ProductVariantForm: React.FC = () => {
 
         // Prefer explicit groupCode param for multi-variant edit
         if (groupCodeParam) {
+          console.log('Loading products for groupCode:', groupCodeParam);
           const groupedProducts = await ProductService.getProductsByGroupCode(groupCodeParam);
+          console.log('Loaded products for groupCode:', groupedProducts?.length || 0, groupedProducts);
 
           if (!groupedProducts || groupedProducts.length === 0) {
             toastHelper.showTost('No products found for this group code', 'warning');
@@ -97,9 +99,19 @@ const ProductVariantForm: React.FC = () => {
             return;
           }
 
-          setEditProducts(groupedProducts);
+          // Ensure products are properly sorted and have all required fields
+          const sortedProducts = groupedProducts.sort((a, b) => {
+            // Sort by sequence if available, otherwise by creation date
+            const seqA = (a as any).sequence ?? 999999;
+            const seqB = (b as any).sequence ?? 999999;
+            if (seqA !== seqB) return seqA - seqB;
+            return new Date((a as any).createdAt || 0).getTime() - new Date((b as any).createdAt || 0).getTime();
+          });
+
+          console.log('Setting editProducts:', sortedProducts.length, 'products');
+          setEditProducts(sortedProducts);
           setVariantType('multi');
-          setSelectedVariants(groupedProducts.map(mapProductToVariant));
+          setSelectedVariants(sortedProducts.map(mapProductToVariant));
           setStep('form');
           try {
             localStorage.removeItem('variant-product-form-data');
@@ -264,7 +276,8 @@ const ProductVariantForm: React.FC = () => {
   const handleFormSave = async (rows: ProductRowData[], totalMoq?: number | string) => {
     try {
       setLoading(true);
-      const isEditMode = Boolean(editId || editIds.length > 0);
+      // Check if we're in edit mode - include groupCodeParam for multi-variant products
+      const isEditMode = Boolean(editId || editIds.length > 0 || groupCodeParam);
       
       // Validate all required IDs before processing
       const validationErrors: string[] = [];
@@ -483,7 +496,7 @@ const ProductVariantForm: React.FC = () => {
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
           expiryTime: cleanString(row.endTime) ? new Date(row.endTime).toISOString() : '',
           groupCode: variantType === 'multi' 
-            ? ((editId || editIds.length > 0) && editProducts.length > 0 ? (editProducts[0] as any).groupCode : (row.groupCode || `GROUP-${Date.now()}`))
+            ? ((editId || editIds.length > 0 || groupCodeParam) && editProducts.length > 0 ? (editProducts[0] as any).groupCode : (row.groupCode || `GROUP-${Date.now()}`))
             : undefined,
           sequence: row.sequence || null,
           // ✅ NEW countryDeliverables with updated margins and costs
@@ -580,21 +593,50 @@ const ProductVariantForm: React.FC = () => {
 
       // Update or create products
       if (isEditMode) {
+        console.log('Edit mode detected. editId:', editId, 'editIds:', editIds.length, 'groupCodeParam:', groupCodeParam);
+        console.log('Variant type:', variantType, 'editProducts count:', editProducts.length, 'rows count:', rows.length);
+        
         // Update existing products
         if (variantType === 'single' && editProduct?._id) {
           // Single variant update
+          console.log('Updating single product:', editProduct._id);
           await ProductService.updateProduct(editProduct._id, productsToCreate[0]);
           toastHelper.showTost('Product updated successfully!', 'success');
         } else if (variantType === 'multi' && editProducts.length > 0) {
           // Multi variant update - update all products in the group
+          console.log('Updating multi-variant products. editProducts count:', editProducts.length, 'rows count:', rows.length);
+          
+          // Ensure we have matching products and rows
+          if (editProducts.length !== rows.length) {
+            console.warn(`Mismatch: editProducts (${editProducts.length}) vs rows (${rows.length}). This may cause issues.`);
+          }
+          
+          // Update each existing product by matching index
           const updatePromises = editProducts.map((editProd, index) => {
             if (editProd._id && productsToCreate[index]) {
+              console.log(`Updating product ${index + 1}/${editProducts.length}: ${editProd._id}`);
               return ProductService.updateProduct(editProd._id, productsToCreate[index]);
+            } else {
+              console.warn(`Skipping product ${index + 1}: missing _id (${editProd._id}) or productData (${!!productsToCreate[index]})`);
             }
             return Promise.resolve();
           });
-          await Promise.all(updatePromises);
-          toastHelper.showTost('Products updated successfully!', 'success');
+          
+          const results = await Promise.all(updatePromises);
+          const successCount = results.filter(r => r !== undefined).length;
+          console.log(`Successfully updated ${successCount} out of ${editProducts.length} products`);
+          
+          if (successCount > 0) {
+            toastHelper.showTost(`Successfully updated ${successCount} product(s)!`, 'success');
+          } else {
+            toastHelper.showTost('No products were updated', 'warning');
+          }
+        } else {
+          // Fallback: if editProducts is empty but we're in edit mode, show error
+          console.error('Edit mode but no products to update. variantType:', variantType, 'editProducts.length:', editProducts.length);
+          toastHelper.showTost('No products found to update. Please refresh and try again.', 'error');
+          setLoading(false);
+          return;
         }
         
         // Navigate back to products list after successful update
@@ -602,12 +644,19 @@ const ProductVariantForm: React.FC = () => {
           navigate('/products');
         }, 1000);
       } else {
-        // Create new products
-        const createPromises = productsToCreate.map(product => 
-          ProductService.createProduct(product)
-        );
+        // Create new products (only when NOT in edit mode)
+        console.log('Create mode: Creating', productsToCreate.length, 'new products');
+        const createPromises = productsToCreate.map((product, index) => {
+          console.log(`Creating product ${index + 1}/${productsToCreate.length}`);
+          return ProductService.createProduct(product);
+        });
         await Promise.all(createPromises);
-        toastHelper.showTost('Products created successfully!', 'success');
+        toastHelper.showTost(`Successfully created ${productsToCreate.length} product(s)!`, 'success');
+        
+        // Navigate back to products list after successful creation
+        setTimeout(() => {
+          navigate('/products');
+        }, 1000);
       }
       
       // Clear localStorage on successful save
@@ -616,8 +665,6 @@ const ProductVariantForm: React.FC = () => {
       } catch (error) {
         console.error('Error clearing localStorage:', error);
       }
-      
-      navigate('/products');
     } catch (error: any) {
       console.error('Error creating products:', error);
       toastHelper.showTost(error.message || 'Failed to create products', 'error');
@@ -854,7 +901,7 @@ const ProductVariantForm: React.FC = () => {
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600 dark:text-gray-400">{(editId || editIds.length > 0) ? 'Updating products...' : 'Creating products...'}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{(editId || editIds.length > 0 || groupCodeParam) ? 'Updating products...' : 'Creating products...'}</p>
                 </div>
               </div>
             ) : variantType ? (
@@ -863,7 +910,13 @@ const ProductVariantForm: React.FC = () => {
                 variants={selectedVariants}
                 onSave={handleFormSave}
                 onCancel={handleCancel}
-                editProducts={(editId || editIds.length > 0) ? (variantType === 'multi' ? editProducts : (editProduct ? [editProduct] : [])) : []}
+                editProducts={
+                  (editId || editIds.length > 0 || groupCodeParam) 
+                    ? (variantType === 'multi' 
+                        ? editProducts 
+                        : (editProduct ? [editProduct] : [])) 
+                    : []
+                }
               />
             ) : null}
           </div>

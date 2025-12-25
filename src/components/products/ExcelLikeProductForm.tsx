@@ -235,12 +235,12 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           batteryHealth: (product as any).batteryHealth || '',
           packing: (product as any).packing || '',
           currentLocation: (product as any).currentLocation || '',
-          hkUsd: hkBasePrice,
-          hkXe: hkExchangeRate,
-          hkHkd: hkHkdBasePrice,
-          dubaiUsd: dubaiBasePrice,
-          dubaiXe: dubaiExchangeRate,
-          dubaiAed: dubaiAedBasePrice,
+          hkUsd: hkBasePrice || 0,
+          hkXe: hkExchangeRate || 0,
+          hkHkd: hkHkdBasePrice || 0,
+          dubaiUsd: dubaiBasePrice || 0,
+          dubaiXe: dubaiExchangeRate || 0,
+          dubaiAed: dubaiAedBasePrice || 0,
           deliveryLocation: Array.isArray((product as any).deliveryLocation) 
             ? (product as any).deliveryLocation 
             : [],
@@ -273,8 +273,9 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           customerListingNumber: (product as any).customerListingNumber || '',
           skuFamilyId: typeof product.skuFamilyId === 'object' ? product.skuFamilyId._id : product.skuFamilyId,
           ram: product.ram || '',
-          sequence: (product as any).sequence || undefined,
+          sequence: (product as any).sequence !== undefined && (product as any).sequence !== null ? (product as any).sequence : undefined,
           images: (skuFamily as any)?.images || [],
+          condition: product.condition || '', // Add condition field
           ...customFieldsObj,
         };
       });
@@ -2480,10 +2481,24 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         return (
           <select
             value={groupDisplayValue as string}
-            onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
+            onChange={(e) => {
+              // When currentLocation changes, update all rows in multi-variant mode
+              const newValue = e.target.value;
+              if (rows.length > 1) {
+                // Update all rows with the same value
+                setRows(prevRows => {
+                  return prevRows.map(row => ({
+                    ...row,
+                    currentLocation: newValue
+                  }));
+                });
+              } else {
+                // Single variant or only one row - update just this row
+                updateRow(rowIndex, column.key as keyof ProductRowData, newValue);
+              }
+            }}
             className="w-full px-2 py-1 text-xs border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
             required
-            disabled={isGroupLevelField && !isMasterRow}
             onFocus={() => {
               setFocusedCell({ row: rowIndex, col: column.key });
               setSelectedRowIndex(rowIndex);
