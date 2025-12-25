@@ -2309,99 +2309,150 @@ const OrdersTable: React.FC = () => {
     // Handle cancellation flow
     if (orderTrackingStatus === "cancel" && status === "cancel") {
       return {
-        message: "cancel",
-        style: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border border-red-200 dark:border-red-700",
+        message: "Cancelled",
+        bgColor: "bg-red-50",
+        textColor: "text-red-700",
+        borderColor: "border-red-200",
+        dotColor: "bg-red-500",
       };
     }
     if (orderTrackingStatus === "verified" && status === "cancel") {
       return {
-        message: "Request is cancelled",
-        style: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border border-red-200 dark:border-red-700",
+        message: "Cancelled",
+        bgColor: "bg-red-50",
+        textColor: "text-red-700",
+        borderColor: "border-red-200",
+        dotColor: "bg-red-500",
       };
     }
 
     // Handle different status combinations
     let statusMessage = "";
-    let statusStyle = "";
+    let bgColor = "";
+    let textColor = "";
+    let borderColor = "";
+    let dotColor = "";
 
-    // Status flow: requested → approved → accepted → ready_to_pickup → out_for_delivery → delivered
-    
     switch (status) {
       case "requested":
         statusMessage = "Requested";
-        statusStyle = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700";
+        bgColor = "bg-yellow-50";
+        textColor = "text-yellow-700";
+        borderColor = "border-yellow-200";
+        dotColor = "bg-yellow-500";
         break;
 
       case "rejected":
         statusMessage = "Rejected";
-        statusStyle = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border border-red-200 dark:border-red-700";
+        bgColor = "bg-red-50";
+        textColor = "text-red-700";
+        borderColor = "border-red-200";
+        dotColor = "bg-red-500";
         break;
 
       case "verify":
         statusMessage = "Verify";
-        statusStyle = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-700";
+        bgColor = "bg-blue-50";
+        textColor = "text-blue-700";
+        borderColor = "border-blue-200";
+        dotColor = "bg-blue-500";
         break;
 
       case "approved":
         statusMessage = "Approved";
-        statusStyle = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700";
+        bgColor = "bg-indigo-50";
+        textColor = "text-indigo-700";
+        borderColor = "border-indigo-200";
+        dotColor = "bg-indigo-500";
         break;
 
       case "confirm":
         statusMessage = "Confirm";
-        statusStyle = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700";
+        bgColor = "bg-green-50";
+        textColor = "text-green-700";
+        borderColor = "border-green-200";
+        dotColor = "bg-green-500";
         break;
 
       case "waiting_for_payment":
         statusMessage = "Waiting for Payment";
-        statusStyle = "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-700";
+        bgColor = "bg-orange-50";
+        textColor = "text-orange-700";
+        borderColor = "border-orange-200";
+        dotColor = "bg-orange-500";
         break;
 
       case "payment_received":
         statusMessage = "Payment Received";
-        statusStyle = "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700";
+        bgColor = "bg-emerald-50";
+        textColor = "text-emerald-700";
+        borderColor = "border-emerald-200";
+        dotColor = "bg-emerald-500";
         break;
 
       case "packing":
         statusMessage = "Packing";
-        statusStyle = "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-700";
+        bgColor = "bg-cyan-50";
+        textColor = "text-cyan-700";
+        borderColor = "border-cyan-200";
+        dotColor = "bg-cyan-500";
         break;
 
       case "ready_to_ship":
         statusMessage = "Ready to Ship";
-        statusStyle = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-700";
+        bgColor = "bg-blue-50";
+        textColor = "text-blue-700";
+        borderColor = "border-blue-200";
+        dotColor = "bg-blue-500";
         break;
 
       case "on_the_way":
         statusMessage = "On the Way";
-        statusStyle = "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-700";
+        bgColor = "bg-purple-50";
+        textColor = "text-purple-700";
+        borderColor = "border-purple-200";
+        dotColor = "bg-purple-500";
         break;
 
       case "ready_to_pick":
         statusMessage = "Ready to Pick";
-        statusStyle = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700";
+        bgColor = "bg-purple-50";
+        textColor = "text-purple-700";
+        borderColor = "border-purple-200";
+        dotColor = "bg-purple-500";
         break;
 
       case "delivered":
         statusMessage = "Delivered";
-        statusStyle = "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400 border border-teal-200 dark:border-teal-700";
+        bgColor = "bg-teal-50";
+        textColor = "text-teal-700";
+        borderColor = "border-teal-200";
+        dotColor = "bg-teal-500";
         break;
 
       case "cancelled":
         statusMessage = "Cancelled";
-        statusStyle = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border border-red-200 dark:border-red-700";
+        bgColor = "bg-red-50";
+        textColor = "text-red-700";
+        borderColor = "border-red-200";
+        dotColor = "bg-red-500";
         break;
 
       default:
-        // Fallback for any other status
         const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
-        statusMessage = `Request is ${capitalizedStatus}`;
-        statusStyle = "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 border border-gray-200 dark:border-gray-700";
+        statusMessage = capitalizedStatus;
+        bgColor = "bg-gray-50";
+        textColor = "text-gray-700";
+        borderColor = "border-gray-200";
+        dotColor = "bg-gray-500";
     }
 
     return {
       message: statusMessage,
-      style: statusStyle,
+      bgColor: bgColor,
+      textColor: textColor,
+      borderColor: borderColor,
+      dotColor: dotColor,
     };
   };
 
@@ -2458,36 +2509,36 @@ const OrdersTable: React.FC = () => {
         </div>
 
         <div className="max-w-full overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead className="bg-gray-100 dark:bg-gray-900">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Customer
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Items
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Total
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
-                  Pending Amount
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Pending
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
-                  Shipping Country
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Country
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-gray-800">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="p-12 text-center">
@@ -2513,101 +2564,89 @@ const OrdersTable: React.FC = () => {
                   return (
                   <tr
                     key={order._id}
-                    className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                    className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
                       isPaymentComplete || isFullyPaid
-                        ? "bg-green-100 dark:bg-green-900/30 border-l-4 border-l-green-600 shadow-sm"
+                        ? "bg-green-50/30 dark:bg-green-900/5"
                         : order.isConfirmedByCustomer && order.quantitiesModified
-                        ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500"
+                        ? "bg-blue-50/30 dark:bg-blue-900/5"
                         : ""
                     }`}
                   >
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {order?.customerId?.name || order?.customerId?.email || order?.customerId?._id}
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                      <div className="font-medium">{order?.customerId?.name || order?.customerId?.email || order?.customerId?._id}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="space-y-1">
-                        {order.cartItems.map((item) => (
-                          <div key={item?.productId?._id}>
-                            {item?.skuFamilyId?.name || item?.productId?.name} (x{item.quantity})
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      <div className="space-y-0.5">
+                        {order.cartItems.map((item, idx) => (
+                          <div key={item?.productId?._id || idx} className="text-sm">
+                            {item?.skuFamilyId?.name || item?.productId?.name} <span className="text-gray-500">×{item.quantity}</span>
                           </div>
                         ))}
-                        {order.isConfirmedByCustomer && order.quantitiesModified && (
-                          <div className="mt-2 text-xs text-green-600 dark:text-green-400 font-medium">
-                            <i className="fas fa-check-circle mr-1"></i>
-                            Quantities confirmed by customer
-                          </div>
-                        )}
                       </div>
+                      {order.isConfirmedByCustomer && order.quantitiesModified && (
+                        <div className="mt-1.5 text-xs text-green-600 dark:text-green-400">
+                          ✓ Confirmed
+                        </div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <span>${formatPrice(order.totalAmount)}</span>
-                        {order.isConfirmedByCustomer && order.quantitiesModified && (
-                          <span 
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700"
-                            title="Order amount updated after customer confirmation"
-                          >
-                            <i className="fas fa-check-circle mr-1"></i>
-                            Updated
-                          </span>
-                        )}
-                      </div>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">${formatPrice(order.totalAmount)}</div>
+                      {order.isConfirmedByCustomer && order.quantitiesModified && (
+                        <div className="mt-0.5 text-xs text-green-600 dark:text-green-400">Updated</div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-4 py-3 text-sm">
                       {order.pendingAmount !== undefined && order.pendingAmount !== null ? (
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${
+                        <div>
+                          <div className={`font-medium ${
                             order.pendingAmount === 0 
                               ? 'text-green-600 dark:text-green-400' 
-                              : 'text-gray-600 dark:text-gray-400'
+                              : 'text-gray-900 dark:text-gray-100'
                           }`}>
                             ${formatPrice(order.pendingAmount)}
-                          </span>
+                          </div>
                           {order.pendingAmount === 0 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
-                              <i className="fas fa-check-circle mr-1"></i>
-                              Paid
-                            </span>
+                            <div className="mt-0.5 text-xs text-green-600 dark:text-green-400">Paid</div>
                           )}
                         </div>
                       ) : (
                         <span className="text-gray-400 dark:text-gray-500">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                       {order.shippingAddress?.country ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                          {order.shippingAddress.country.charAt(0).toUpperCase() + order.shippingAddress.country.slice(1)}
-                        </span>
+                        <span>{order.shippingAddress.country.charAt(0).toUpperCase() + order.shippingAddress.country.slice(1)}</span>
                       ) : (
                         <span className="text-gray-400 dark:text-gray-500">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       {formatDate(order.createdAt)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-center">
+                    <td className="px-4 py-3">
                       {(() => {
                         const statusInfo = getCombinedStatusBadge(order);
                         return (
-                          <div className="flex flex-col items-center gap-1">
-                            <span
-                              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider ${statusInfo.style}`}
-                            >
-                              {statusInfo.message}
-                            </span>
-                            {order.isConfirmedByCustomer && order.quantitiesModified && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
-                                <i className="fas fa-check-circle mr-1"></i>
-                                Confirmed by Customer
-                              </span>
-                            )}
-                            {isFullyPaid && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
-                                <i className="fas fa-money-bill-wave mr-1"></i>
-                                Payment Done
-                              </span>
-                            )}
+                          <div className="space-y-1.5">
+                            {/* Main Status Badge */}
+                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium ${statusInfo.bgColor} ${statusInfo.textColor} ${statusInfo.borderColor} border`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dotColor}`}></span>
+                              <span>{statusInfo.message}</span>
+                            </div>
+                            
+                            {/* Additional Status Info */}
+                            <div className="space-y-0.5">
+                              {order.isConfirmedByCustomer && order.quantitiesModified && (
+                                <div className="text-[10px] text-green-600 dark:text-green-500 font-medium">
+                                  ✓ Customer Confirmed
+                                </div>
+                              )}
+                              {isFullyPaid && (
+                                <div className="text-[10px] text-emerald-600 dark:text-emerald-500 font-medium">
+                                  ✓ Payment Done
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })()}

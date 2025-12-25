@@ -2499,20 +2499,218 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         );
 
       case 'hkUsd':
-      case 'hkXe':
-      case 'hkHkd':
       case 'dubaiUsd':
+        // Price fields (allow decimals like 1000.20)
+        return (
+          <input
+            type="text"
+            value={value as string | number}
+            onChange={(e) => {
+              const inputValue = e.target.value;
+              // Allow only numbers and decimal point
+              const decimalRegex = /^\d*\.?\d*$/;
+              if (inputValue === "" || decimalRegex.test(inputValue)) {
+                updateRow(rowIndex, column.key as keyof ProductRowData, inputValue);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
+              if (
+                [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
+                // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true) ||
+                // Allow: home, end, left, right, down, up
+                (e.keyCode >= 35 && e.keyCode <= 40) ||
+                // Allow numbers and decimal point
+                ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
+              ) {
+                // Check if decimal point already exists
+                if (e.keyCode === 190 || e.keyCode === 110) {
+                  const currentValue = String(value || '');
+                  if (currentValue.indexOf(".") !== -1) {
+                    e.preventDefault();
+                  }
+                }
+                return;
+              }
+              // Prevent all other keys
+              e.preventDefault();
+            }}
+            onPaste={(e) => {
+              const pastedText = e.clipboardData.getData("text");
+              const decimalRegex = /^\d*\.?\d*$/;
+              if (!decimalRegex.test(pastedText)) {
+                e.preventDefault();
+              }
+            }}
+            className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 text-right font-medium placeholder:text-gray-400"
+            placeholder="0.00"
+            onFocus={() => {
+              setFocusedCell({ row: rowIndex, col: column.key });
+              setSelectedRowIndex(rowIndex);
+            }}
+          />
+        );
+
+      case 'hkXe':
       case 'dubaiXe':
-      case 'dubaiAed':
+        // Exchange rate fields (allow decimals like 7.8500)
+        return (
+          <input
+            type="text"
+            value={value as string | number}
+            onChange={(e) => {
+              const inputValue = e.target.value;
+              // Allow only numbers and decimal point
+              const decimalRegex = /^\d*\.?\d*$/;
+              if (inputValue === "" || decimalRegex.test(inputValue)) {
+                updateRow(rowIndex, column.key as keyof ProductRowData, inputValue);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
+              if (
+                [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
+                // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true) ||
+                // Allow: home, end, left, right, down, up
+                (e.keyCode >= 35 && e.keyCode <= 40) ||
+                // Allow numbers and decimal point
+                ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
+              ) {
+                // Check if decimal point already exists
+                if (e.keyCode === 190 || e.keyCode === 110) {
+                  const currentValue = String(value || '');
+                  if (currentValue.indexOf(".") !== -1) {
+                    e.preventDefault();
+                  }
+                }
+                return;
+              }
+              // Prevent all other keys
+              e.preventDefault();
+            }}
+            onPaste={(e) => {
+              const pastedText = e.clipboardData.getData("text");
+              const decimalRegex = /^\d*\.?\d*$/;
+              if (!decimalRegex.test(pastedText)) {
+                e.preventDefault();
+              }
+            }}
+            className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 text-right font-medium placeholder:text-gray-400"
+            placeholder="0.0000"
+            onFocus={() => {
+              setFocusedCell({ row: rowIndex, col: column.key });
+              setSelectedRowIndex(rowIndex);
+            }}
+          />
+        );
+
       case 'totalQty':
       case 'moqPerVariant':
       case 'weight':
+        // Integer number fields (no decimals)
         return (
           <input
-            type="number"
-            step={column.key.includes('Xe') || column.key.includes('XE') ? '0.0001' : '0.01'}
+            type="text"
             value={value as string | number}
-            onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
+            onChange={(e) => {
+              const inputValue = e.target.value;
+              // Allow only integers (no decimals)
+              const integerRegex = /^\d*$/;
+              if (inputValue === "" || integerRegex.test(inputValue)) {
+                updateRow(rowIndex, column.key as keyof ProductRowData, inputValue);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Allow: backspace, delete, tab, escape, enter, and numbers
+              if (
+                [46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+                // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true) ||
+                // Allow: home, end, left, right, down, up
+                (e.keyCode >= 35 && e.keyCode <= 40) ||
+                // Allow numbers
+                ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
+              ) {
+                return;
+              }
+              // Prevent all other keys
+              e.preventDefault();
+            }}
+            onPaste={(e) => {
+              const pastedText = e.clipboardData.getData("text");
+              const integerRegex = /^\d*$/;
+              if (!integerRegex.test(pastedText)) {
+                e.preventDefault();
+              }
+            }}
+            className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 text-right font-medium placeholder:text-gray-400"
+            placeholder="0"
+            onFocus={() => {
+              setFocusedCell({ row: rowIndex, col: column.key });
+              setSelectedRowIndex(rowIndex);
+            }}
+          />
+        );
+
+      case 'hkHkd':
+      case 'dubaiAed':
+        // Decimal number fields (HK DELIVERY PRICE and DUBAI DELIVERY PRICE)
+        return (
+          <input
+            type="text"
+            value={value as string | number}
+            onChange={(e) => {
+              const inputValue = e.target.value;
+              // Allow only numbers and decimal point
+              const decimalRegex = /^\d*\.?\d*$/;
+              if (inputValue === "" || decimalRegex.test(inputValue)) {
+                updateRow(rowIndex, column.key as keyof ProductRowData, inputValue);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
+              if (
+                [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
+                // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true) ||
+                // Allow: home, end, left, right, down, up
+                (e.keyCode >= 35 && e.keyCode <= 40) ||
+                // Allow numbers and decimal point
+                ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
+              ) {
+                // Check if decimal point already exists
+                if (e.keyCode === 190 || e.keyCode === 110) {
+                  const currentValue = String(value || '');
+                  if (currentValue.indexOf(".") !== -1) {
+                    e.preventDefault();
+                  }
+                }
+                return;
+              }
+              // Prevent all other keys
+              e.preventDefault();
+            }}
+            onPaste={(e) => {
+              const pastedText = e.clipboardData.getData("text");
+              const decimalRegex = /^\d*\.?\d*$/;
+              if (!decimalRegex.test(pastedText)) {
+                e.preventDefault();
+              }
+            }}
             className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 text-right font-medium placeholder:text-gray-400"
             placeholder="0.00"
             onFocus={() => {
@@ -2557,16 +2755,48 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
 
         return (
           <input
-            type="number"
-            step="0.01"
+            type="text"
             value={totalMoq}
             onChange={(e) => {
               if (isMasterMoqRow) {
-                setTotalMoq(e.target.value);
+                const inputValue = e.target.value;
+                // Allow only integers (no decimals)
+                const integerRegex = /^\d*$/;
+                if (inputValue === "" || integerRegex.test(inputValue)) {
+                  setTotalMoq(inputValue);
+                }
+              }
+            }}
+            onKeyDown={(e) => {
+              if (!isMasterMoqRow) return;
+              // Allow: backspace, delete, tab, escape, enter, and numbers
+              if (
+                [46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+                // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true) ||
+                // Allow: home, end, left, right, down, up
+                (e.keyCode >= 35 && e.keyCode <= 40) ||
+                // Allow numbers
+                ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
+              ) {
+                return;
+              }
+              // Prevent all other keys
+              e.preventDefault();
+            }}
+            onPaste={(e) => {
+              if (!isMasterMoqRow) return;
+              const pastedText = e.clipboardData.getData("text");
+              const integerRegex = /^\d*$/;
+              if (!integerRegex.test(pastedText)) {
+                e.preventDefault();
               }
             }}
             className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 text-right font-medium placeholder:text-gray-400"
-            placeholder="0.00"
+            placeholder="0"
             disabled={!isMasterMoqRow}
             onFocus={() => {
               setFocusedCell({ row: rowIndex, col: column.key });

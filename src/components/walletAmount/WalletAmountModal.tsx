@@ -117,6 +117,20 @@ const WalletAmountModal: React.FC<WalletAmountModalProps> = ({
     >
   ) => {
     const { name, value } = e.target;
+    
+    // Special handling for amount field - only allow numbers and decimal point
+    if (name === "amount") {
+      // Allow only numbers, single decimal point, and empty string
+      const decimalRegex = /^\d*\.?\d*$/;
+      if (value === "" || decimalRegex.test(value)) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
+      return;
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -138,11 +152,18 @@ const WalletAmountModal: React.FC<WalletAmountModalProps> = ({
       return;
     }
 
+    // Validate amount is a valid decimal number
+    const amountValue = parseFloat(formData.amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      toastHelper.showTost("Please enter a valid amount greater than 0", "error");
+      return;
+    }
+
     try {
       setSubmitting(true);
       const requestData: ManageWalletRequest = {
         customerId: formData.customerId,
-        amount: parseFloat(formData.amount),
+        amount: amountValue,
         type: formData.type as "credit" | "debit",
         remark: formData.remark,
       };
@@ -304,14 +325,46 @@ const WalletAmountModal: React.FC<WalletAmountModalProps> = ({
               Amount
             </label>
             <input
-              type="number"
+              type="text"
               name="amount"
               value={formData.amount}
               onChange={handleInputChange}
+              onKeyDown={(e) => {
+                // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
+                if (
+                  [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
+                  // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                  (e.keyCode === 65 && e.ctrlKey === true) ||
+                  (e.keyCode === 67 && e.ctrlKey === true) ||
+                  (e.keyCode === 86 && e.ctrlKey === true) ||
+                  (e.keyCode === 88 && e.ctrlKey === true) ||
+                  // Allow: home, end, left, right, down, up
+                  (e.keyCode >= 35 && e.keyCode <= 40) ||
+                  // Allow numbers and decimal point
+                  ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
+                ) {
+                  // Check if decimal point already exists
+                  if (e.keyCode === 190 || e.keyCode === 110) {
+                    if (formData.amount.indexOf(".") !== -1) {
+                      e.preventDefault();
+                    }
+                  }
+                  return;
+                }
+                // Prevent all other keys
+                e.preventDefault();
+              }}
+              onPaste={(e) => {
+                // Validate pasted content
+                const pastedText = e.clipboardData.getData("text");
+                const decimalRegex = /^\d*\.?\d*$/;
+                if (!decimalRegex.test(pastedText)) {
+                  e.preventDefault();
+                }
+              }}
               className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              placeholder="Enter Amount"
+              placeholder="Enter Amount (e.g., 100.50)"
               required
-              step="0.01"
             />
           </div>
 

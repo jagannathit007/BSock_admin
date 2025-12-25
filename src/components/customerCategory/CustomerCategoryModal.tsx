@@ -10,6 +10,12 @@ interface FormData {
   minBidPercentage?: number | null;
   bidWalletAllowancePer?: number | null;
   readyStockAllowancePer?: number | null;
+  // Store raw input values for better decimal handling
+  marginInput?: string;
+  maxBidPercentageInput?: string;
+  minBidPercentageInput?: string;
+  bidWalletAllowancePerInput?: string;
+  readyStockAllowancePerInput?: string;
 }
 
 interface CustomerCategoryModalProps {
@@ -36,6 +42,11 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
     minBidPercentage: null,
     bidWalletAllowancePer: null,
     readyStockAllowancePer: null,
+    marginInput: "",
+    maxBidPercentageInput: "",
+    minBidPercentageInput: "",
+    bidWalletAllowancePerInput: "",
+    readyStockAllowancePerInput: "",
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
 
@@ -50,6 +61,11 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
         minBidPercentage: editItem.minBidPercentage ?? null,
         bidWalletAllowancePer: editItem.bidWalletAllowancePer ?? null,
         readyStockAllowancePer: editItem.readyStockAllowancePer ?? null,
+        marginInput: editItem.margin !== null && editItem.margin !== undefined ? editItem.margin.toString() : "",
+        maxBidPercentageInput: editItem.maxBidPercentage !== null && editItem.maxBidPercentage !== undefined ? editItem.maxBidPercentage.toString() : "",
+        minBidPercentageInput: editItem.minBidPercentage !== null && editItem.minBidPercentage !== undefined ? editItem.minBidPercentage.toString() : "",
+        bidWalletAllowancePerInput: editItem.bidWalletAllowancePer !== null && editItem.bidWalletAllowancePer !== undefined ? editItem.bidWalletAllowancePer.toString() : "",
+        readyStockAllowancePerInput: editItem.readyStockAllowancePer !== null && editItem.readyStockAllowancePer !== undefined ? editItem.readyStockAllowancePer.toString() : "",
       });
     } else {
       setFormData({
@@ -61,6 +77,11 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
         minBidPercentage: null,
         bidWalletAllowancePer: null,
         readyStockAllowancePer: null,
+        marginInput: "",
+        maxBidPercentageInput: "",
+        minBidPercentageInput: "",
+        bidWalletAllowancePerInput: "",
+        readyStockAllowancePerInput: "",
       });
     }
     setErrors({});
@@ -73,6 +94,68 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Helper function to handle decimal number input
+  const handleDecimalInput = (
+    fieldName: 'margin' | 'minBidPercentage' | 'maxBidPercentage' | 'bidWalletAllowancePer' | 'readyStockAllowancePer',
+    inputValue: string
+  ) => {
+    const decimalRegex = /^\d*\.?\d*$/;
+    if (inputValue === "" || decimalRegex.test(inputValue)) {
+      const numValue = inputValue === '' 
+        ? null 
+        : (inputValue === '.' || inputValue.endsWith('.') 
+          ? null 
+          : parseFloat(inputValue) || null);
+      
+      const inputFieldName = `${fieldName}Input` as keyof FormData;
+      setFormData(prev => ({
+        ...prev,
+        [fieldName]: numValue,
+        [inputFieldName]: inputValue
+      }));
+    }
+  };
+
+  // Helper function for onKeyDown validation
+  const handleDecimalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentValue: string) => {
+    if (
+      [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
+      (e.keyCode === 65 && e.ctrlKey === true) ||
+      (e.keyCode === 67 && e.ctrlKey === true) ||
+      (e.keyCode === 86 && e.ctrlKey === true) ||
+      (e.keyCode === 88 && e.ctrlKey === true) ||
+      (e.keyCode >= 35 && e.keyCode <= 40) ||
+      ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
+    ) {
+      if (e.keyCode === 190 || e.keyCode === 110) {
+        if (currentValue.indexOf(".") !== -1) {
+          e.preventDefault();
+        }
+      }
+      return;
+    }
+    e.preventDefault();
+  };
+
+  // Helper function for onBlur normalization
+  const handleDecimalBlur = (
+    inputValue: string,
+    fieldName: 'margin' | 'minBidPercentage' | 'maxBidPercentage' | 'bidWalletAllowancePer' | 'readyStockAllowancePer'
+  ) => {
+    const trimmedValue = inputValue.trim();
+    if (trimmedValue && trimmedValue !== '.') {
+      const numValue = parseFloat(trimmedValue);
+      if (!isNaN(numValue)) {
+        const inputFieldName = `${fieldName}Input` as keyof FormData;
+        setFormData(prev => ({
+          ...prev,
+          [fieldName]: numValue,
+          [inputFieldName]: numValue.toString()
+        }));
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -166,19 +249,23 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
                   Margin
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.margin ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData({ ...formData, margin: value === '' ? null : parseFloat(value) || 0 });
+                  type="text"
+                  value={formData.marginInput || ''}
+                  onChange={(e) => handleDecimalInput('margin', e.target.value)}
+                  onKeyDown={(e) => handleDecimalKeyDown(e, formData.marginInput || '')}
+                  onPaste={(e) => {
+                    const pastedText = e.clipboardData.getData("text");
+                    const decimalRegex = /^\d*\.?\d*$/;
+                    if (!decimalRegex.test(pastedText)) {
+                      e.preventDefault();
+                    }
                   }}
+                  onBlur={(e) => handleDecimalBlur(e.target.value, 'margin')}
                   className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  placeholder="Enter margin value (optional)"
+                  placeholder="Enter margin value (e.g., 100.20)"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Enter margin value based on selected margin type
+                  Enter margin value based on selected margin type (e.g., 100.20)
                 </p>
               </div>
             </>
@@ -190,19 +277,23 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
               Min Bid Percentage (%)
             </label>
             <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.minBidPercentage ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData({ ...formData, minBidPercentage: value === '' ? null : parseFloat(value) || 0 });
+              type="text"
+              value={formData.minBidPercentageInput || ''}
+              onChange={(e) => handleDecimalInput('minBidPercentage', e.target.value)}
+              onKeyDown={(e) => handleDecimalKeyDown(e, formData.minBidPercentageInput || '')}
+              onPaste={(e) => {
+                const pastedText = e.clipboardData.getData("text");
+                const decimalRegex = /^\d*\.?\d*$/;
+                if (!decimalRegex.test(pastedText)) {
+                  e.preventDefault();
+                }
               }}
+              onBlur={(e) => handleDecimalBlur(e.target.value, 'minBidPercentage')}
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              placeholder="Enter min bid percentage (optional)"
+              placeholder="Enter min bid percentage (e.g., 5.50)"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Minimum bid increment percentage for this category
+              Minimum bid increment percentage for this category (e.g., 5.50)
             </p>
           </div>
 
@@ -212,19 +303,23 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
               Max Bid Percentage (%)
             </label>
             <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.maxBidPercentage ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData({ ...formData, maxBidPercentage: value === '' ? null : parseFloat(value) || 0 });
+              type="text"
+              value={formData.maxBidPercentageInput || ''}
+              onChange={(e) => handleDecimalInput('maxBidPercentage', e.target.value)}
+              onKeyDown={(e) => handleDecimalKeyDown(e, formData.maxBidPercentageInput || '')}
+              onPaste={(e) => {
+                const pastedText = e.clipboardData.getData("text");
+                const decimalRegex = /^\d*\.?\d*$/;
+                if (!decimalRegex.test(pastedText)) {
+                  e.preventDefault();
+                }
               }}
+              onBlur={(e) => handleDecimalBlur(e.target.value, 'maxBidPercentage')}
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              placeholder="Enter max bid percentage (optional)"
+              placeholder="Enter max bid percentage (e.g., 10.75)"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Maximum bid percentage allowed for this category
+              Maximum bid percentage allowed for this category (e.g., 10.75)
             </p>
           </div>
 
@@ -233,19 +328,23 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
               Bid Wallet Allowance (%)
             </label>
             <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.bidWalletAllowancePer ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData({ ...formData, bidWalletAllowancePer: value === '' ? null : parseFloat(value) || 0 });
+              type="text"
+              value={formData.bidWalletAllowancePerInput || ''}
+              onChange={(e) => handleDecimalInput('bidWalletAllowancePer', e.target.value)}
+              onKeyDown={(e) => handleDecimalKeyDown(e, formData.bidWalletAllowancePerInput || '')}
+              onPaste={(e) => {
+                const pastedText = e.clipboardData.getData("text");
+                const decimalRegex = /^\d*\.?\d*$/;
+                if (!decimalRegex.test(pastedText)) {
+                  e.preventDefault();
+                }
               }}
+              onBlur={(e) => handleDecimalBlur(e.target.value, 'bidWalletAllowancePer')}
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              placeholder="Enter bid wallet allowance percentage (optional)"
+              placeholder="Enter bid wallet allowance percentage (e.g., 25.50)"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Percentage of bid amount required in wallet
+              Percentage of bid amount required in wallet (e.g., 25.50)
             </p>
           </div>
 
@@ -254,19 +353,23 @@ const CustomerCategoryModal: React.FC<CustomerCategoryModalProps> = ({
               Ready Stock Allowance (%)
             </label>
             <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.readyStockAllowancePer ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData({ ...formData, readyStockAllowancePer: value === '' ? null : parseFloat(value) || 0 });
+              type="text"
+              value={formData.readyStockAllowancePerInput || ''}
+              onChange={(e) => handleDecimalInput('readyStockAllowancePer', e.target.value)}
+              onKeyDown={(e) => handleDecimalKeyDown(e, formData.readyStockAllowancePerInput || '')}
+              onPaste={(e) => {
+                const pastedText = e.clipboardData.getData("text");
+                const decimalRegex = /^\d*\.?\d*$/;
+                if (!decimalRegex.test(pastedText)) {
+                  e.preventDefault();
+                }
               }}
+              onBlur={(e) => handleDecimalBlur(e.target.value, 'readyStockAllowancePer')}
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              placeholder="Enter ready stock allowance percentage (optional)"
+              placeholder="Enter ready stock allowance percentage (e.g., 15.25)"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Ready stock allowance percentage for this category
+              Ready stock allowance percentage for this category (e.g., 15.25)
             </p>
           </div>
 
