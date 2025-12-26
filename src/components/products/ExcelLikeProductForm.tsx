@@ -2127,24 +2127,43 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           </div>
         );
 
-      case 'subModelName':
-      case 'storage':
-      case 'colour':
-        return (
-          <input
-            ref={(el) => { cellRefs.current[cellId] = el; }}
-            type="text"
-            value={value as string}
-            onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
-            className="w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 placeholder:text-gray-400"
-            required={column.key === 'subModelName' || column.key === 'storage' || column.key === 'colour'}
-            onFocus={() => {
-              setFocusedCell({ row: rowIndex, col: column.key });
-              setSelectedRowIndex(rowIndex);
-            }}
-            placeholder="Enter value or use search"
-          />
-        );
+case 'subModelName':
+case 'storage':
+case 'colour':
+  const isDisabled = !!row.skuFamilyId; // Disable if SKU Family is selected
+
+  return (
+    <input
+      ref={(el) => { cellRefs.current[cellId] = el; }}
+      type="text"
+      value={value as string}
+      onChange={(e) => {
+        // Only allow change if not disabled (i.e., no skuFamilyId yet)
+        if (!isDisabled) {
+          updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value);
+        }
+      }}
+      className={`w-full px-2 py-1.5 text-xs border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded transition-all duration-150 placeholder:text-gray-400 ${
+        isDisabled 
+          ? 'text-gray-600 dark:text-gray-400 italic cursor-not-allowed bg-gray-100 dark:bg-gray-800' 
+          : ''
+      }`}
+      required={column.key === 'subModelName' || column.key === 'storage' || column.key === 'colour'}
+      disabled={isDisabled}
+      readOnly={isDisabled} // Optional: extra safety
+      onFocus={() => {
+        if (!isDisabled) {
+          setFocusedCell({ row: rowIndex, col: column.key });
+          setSelectedRowIndex(rowIndex);
+        }
+      }}
+      placeholder={
+        isDisabled 
+          ? 'Auto-filled from SKU Family' 
+          : 'Enter value or use SKU Family search'
+      }
+    />
+  );
 
       case 'country':
         return (
@@ -3342,89 +3361,6 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
             </button>
           </div>
           <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
-          {/* SKU Family Search Field */}
-          {/* <div className="relative flex-1 max-w-md">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSearchResults(true);
-                }}
-                onFocus={() => {
-                  if (searchQuery && searchResults.length > 0) {
-                    setShowSearchResults(true);
-                  }
-                }}
-                onBlur={() => {
-                  // Delay hiding to allow click on results
-                  setTimeout(() => setShowSearchResults(false), 200);
-                }}
-                placeholder="Search SKU Family, SubModel, Storage, Colour..."
-                className="w-full px-4 py-2 pl-10 pr-4 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-              <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setShowSearchResults(false);
-                  }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <i className="fas fa-times text-sm"></i>
-                </button>
-              )}
-            </div>
-            {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50">
-                <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700">
-                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                    {selectedRowIndex !== null 
-                      ? `Will fill Row ${selectedRowIndex + 1} (click row number to change)`
-                      : focusedCell?.row !== undefined
-                      ? `Will fill Row ${focusedCell.row + 1} (click row number to select different row)`
-                      : 'Will fill Row 1 (click row number to select different row)'}
-                  </div>
-                </div>
-                {searchResults.map((option, idx) => {
-                  const targetRow = selectedRowIndex !== null ? selectedRowIndex : (focusedCell?.row ?? 0);
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => handleSearchSelect(option, targetRow)}
-                      className="px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-b-0 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="font-semibold text-sm text-gray-800 dark:text-gray-200">
-                            {option.skuFamilyName}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {option.subModelName && <span className="mr-2">Model: {option.subModelName}</span>}
-                            {option.storage && <span className="mr-2">Storage: {option.storage}</span>}
-                            {option.colour && <span className="mr-2">Color: {option.colour}</span>}
-                            {option.ram && <span>RAM: {option.ram}</span>}
-                          </div>
-                        </div>
-                        <i className="fas fa-arrow-right text-blue-500 text-xs mt-1"></i>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {showSearchResults && searchQuery && searchResults.length === 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-xl p-4 z-50">
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                  No results found
-                </div>
-              </div>
-            )}
-          </div> */}
-          {/* <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div> */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
               <i className="fas fa-table text-blue-500 text-sm"></i>
