@@ -112,28 +112,6 @@ const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    
-    // Special handling for rate field - only allow numbers and decimal point
-    if (name === "rate") {
-      // Allow only numbers, single decimal point, and empty string
-      const decimalRegex = /^\d*\.?\d*$/;
-      if (value === "" || decimalRegex.test(value)) {
-        setFormData((prev) => ({
-          ...prev,
-          [name]: value,
-        }));
-
-        if (touched[name as keyof typeof touched]) {
-          const error = validateField(name as keyof typeof formData, value);
-          setErrors((prev) => ({
-            ...prev,
-            [name]: error || "",
-          }));
-        }
-      }
-      return;
-    }
-    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -252,50 +230,18 @@ const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = ({
                   Rate
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="rate"
                   value={formData.rate}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
-                  onKeyDown={(e) => {
-                    // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
-                    if (
-                      [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
-                      // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                      (e.keyCode === 65 && e.ctrlKey === true) ||
-                      (e.keyCode === 67 && e.ctrlKey === true) ||
-                      (e.keyCode === 86 && e.ctrlKey === true) ||
-                      (e.keyCode === 88 && e.ctrlKey === true) ||
-                      // Allow: home, end, left, right, down, up
-                      (e.keyCode >= 35 && e.keyCode <= 40) ||
-                      // Allow numbers and decimal point
-                      ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
-                    ) {
-                      // Check if decimal point already exists
-                      if (e.keyCode === 190 || e.keyCode === 110) {
-                        if (formData.rate.indexOf(".") !== -1) {
-                          e.preventDefault();
-                        }
-                      }
-                      return;
-                    }
-                    // Prevent all other keys
-                    e.preventDefault();
-                  }}
-                  onPaste={(e) => {
-                    // Validate pasted content
-                    const pastedText = e.clipboardData.getData("text");
-                    const decimalRegex = /^\d*\.?\d*$/;
-                    if (!decimalRegex.test(pastedText)) {
-                      e.preventDefault();
-                    }
-                  }}
                   className={`w-full p-2.5 bg-gray-50 dark:bg-gray-800 border rounded-lg text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-sm ${
                     touched.rate && errors.rate
                       ? "border-red-500 focus:ring-red-500"
                       : "border-gray-200 dark:border-gray-700"
                   }`}
-                  placeholder="Enter Rate (e.g., 1.2345)"
+                  placeholder="Enter Rate"
+                  step="0.0001"
                   required
                   disabled={isSubmitting}
                 />

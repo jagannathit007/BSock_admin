@@ -6,7 +6,6 @@ interface FormData {
   description: string;
   marginType?: 'fixed' | 'percentage' | '';
   margin?: number | null;
-  marginInput?: string; // Store raw input value for better decimal handling
 }
 
 interface SellerCategoryModalProps {
@@ -29,19 +28,16 @@ const SellerCategoryModal: React.FC<SellerCategoryModalProps> = ({
     description: "",
     marginType: "",
     margin: null,
-    marginInput: "",
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
 
   useEffect(() => {
     if (editItem) {
-      const marginValue = editItem.margin ?? null;
       setFormData({
         title: editItem.title || "",
         description: editItem.description || "",
         marginType: editItem.marginType || "",
-        margin: marginValue,
-        marginInput: marginValue !== null && marginValue !== undefined ? marginValue.toString() : "",
+        margin: editItem.margin ?? null,
       });
     } else {
       setFormData({
@@ -49,7 +45,6 @@ const SellerCategoryModal: React.FC<SellerCategoryModalProps> = ({
         description: "",
         marginType: "",
         margin: null,
-        marginInput: "",
       });
     }
     setErrors({});
@@ -155,80 +150,19 @@ const SellerCategoryModal: React.FC<SellerCategoryModalProps> = ({
                   Margin
                 </label>
                 <input
-                  type="text"
-                  value={formData.marginInput || ''}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.margin ?? ''}
                   onChange={(e) => {
-                    const inputValue = e.target.value;
-                    // Allow only numbers and decimal point
-                    const decimalRegex = /^\d*\.?\d*$/;
-                    if (inputValue === "" || decimalRegex.test(inputValue)) {
-                      // Store raw input for display
-                      const marginValue = inputValue === '' 
-                        ? null 
-                        : (inputValue === '.' || inputValue.endsWith('.') 
-                          ? null 
-                          : parseFloat(inputValue) || null);
-                      
-                      setFormData({ 
-                        ...formData, 
-                        margin: marginValue,
-                        marginInput: inputValue
-                      });
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
-                    if (
-                      [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
-                      // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                      (e.keyCode === 65 && e.ctrlKey === true) ||
-                      (e.keyCode === 67 && e.ctrlKey === true) ||
-                      (e.keyCode === 86 && e.ctrlKey === true) ||
-                      (e.keyCode === 88 && e.ctrlKey === true) ||
-                      // Allow: home, end, left, right, down, up
-                      (e.keyCode >= 35 && e.keyCode <= 40) ||
-                      // Allow numbers and decimal point
-                      ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
-                    ) {
-                      // Check if decimal point already exists
-                      if (e.keyCode === 190 || e.keyCode === 110) {
-                        const currentValue = formData.marginInput || '';
-                        if (currentValue.indexOf(".") !== -1) {
-                          e.preventDefault();
-                        }
-                      }
-                      return;
-                    }
-                    // Prevent all other keys
-                    e.preventDefault();
-                  }}
-                  onPaste={(e) => {
-                    // Validate pasted content
-                    const pastedText = e.clipboardData.getData("text");
-                    const decimalRegex = /^\d*\.?\d*$/;
-                    if (!decimalRegex.test(pastedText)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onBlur={(e) => {
-                    // On blur, ensure we have a valid number if there's input
-                    const inputValue = e.target.value.trim();
-                    if (inputValue && inputValue !== '.') {
-                      const numValue = parseFloat(inputValue);
-                      if (!isNaN(numValue)) {
-                        setFormData({
-                          ...formData,
-                          margin: numValue,
-                          marginInput: numValue.toString()
-                        });
-                      }
-                    }
+                    const value = e.target.value;
+                    setFormData({ ...formData, margin: value === '' ? null : parseFloat(value) || 0 });
                   }}
                   className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  placeholder="Enter margin value (e.g., 100.20)"
+                  placeholder="Enter margin value (optional)"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Enter margin value based on selected margin type (e.g., 100.20)
+                  Enter margin value based on selected margin type
                 </p>
               </div>
             </>

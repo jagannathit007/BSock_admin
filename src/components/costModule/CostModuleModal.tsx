@@ -233,26 +233,6 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
     >
   ) => {
     const { name, value } = e.target;
-    
-    // Special handling for decimal number fields (value, minValue, maxValue)
-    if (name === 'value' || name === 'minValue' || name === 'maxValue') {
-      // Allow only numbers and decimal point
-      const decimalRegex = /^\d*\.?\d*$/;
-      if (value === "" || decimalRegex.test(value)) {
-        setFormData((prev) => ({
-          ...prev,
-          [name]: value,
-        }));
-
-        // Validate the field if it's been touched
-        if (touched[name as keyof TouchedFields]) {
-          const error = validateField(name as keyof FormData, value);
-          setValidationErrors((prev) => ({ ...prev, [name]: error }));
-        }
-      }
-      return;
-    }
-    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -973,67 +953,22 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-950 dark:text-gray-200 mb-2">
-                  Value <span className="text-red-500">*</span>
+                  Value
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="value"
                   value={formData.value}
                   onChange={handleInputChange}
-                  onKeyDown={(e) => {
-                    // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
-                    if (
-                      [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
-                      // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                      (e.keyCode === 65 && e.ctrlKey === true) ||
-                      (e.keyCode === 67 && e.ctrlKey === true) ||
-                      (e.keyCode === 86 && e.ctrlKey === true) ||
-                      (e.keyCode === 88 && e.ctrlKey === true) ||
-                      // Allow: home, end, left, right, down, up
-                      (e.keyCode >= 35 && e.keyCode <= 40) ||
-                      // Allow numbers and decimal point
-                      ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
-                    ) {
-                      // Check if decimal point already exists
-                      if (e.keyCode === 190 || e.keyCode === 110) {
-                        if (formData.value.indexOf(".") !== -1) {
-                          e.preventDefault();
-                        }
-                      }
-                      return;
-                    }
-                    // Prevent all other keys
-                    e.preventDefault();
-                  }}
-                  onPaste={(e) => {
-                    // Validate pasted content
-                    const pastedText = e.clipboardData.getData("text");
-                    const decimalRegex = /^\d*\.?\d*$/;
-                    if (!decimalRegex.test(pastedText)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onBlur={(e) => {
-                    handleBlur(e);
-                    // Normalize value on blur
-                    const inputValue = e.target.value.trim();
-                    if (inputValue && inputValue !== '.') {
-                      const numValue = parseFloat(inputValue);
-                      if (!isNaN(numValue)) {
-                        setFormData(prev => ({
-                          ...prev,
-                          value: numValue.toString()
-                        }));
-                      }
-                    }
-                  }}
+                  onBlur={handleBlur}
                   className={`w-full p-2.5 bg-gray-50 dark:bg-gray-800 border rounded-lg text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-sm ${
                     touched.value && validationErrors.value
                       ? "border-red-500 focus:ring-red-500"
                       : "border-gray-200 dark:border-gray-700"
                   }`}
-                  placeholder="Enter Value (e.g., 10.50)"
+                  placeholder="Enter Value"
                   required
+                  step="0.01"
                   disabled={isSubmitting}
                 />
                 {touched.value && validationErrors.value && (
@@ -1047,63 +982,18 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
                   Min Value
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="minValue"
                   value={formData.minValue}
                   onChange={handleInputChange}
-                  onKeyDown={(e) => {
-                    // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
-                    if (
-                      [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
-                      // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                      (e.keyCode === 65 && e.ctrlKey === true) ||
-                      (e.keyCode === 67 && e.ctrlKey === true) ||
-                      (e.keyCode === 86 && e.ctrlKey === true) ||
-                      (e.keyCode === 88 && e.ctrlKey === true) ||
-                      // Allow: home, end, left, right, down, up
-                      (e.keyCode >= 35 && e.keyCode <= 40) ||
-                      // Allow numbers and decimal point
-                      ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
-                    ) {
-                      // Check if decimal point already exists
-                      if (e.keyCode === 190 || e.keyCode === 110) {
-                        if (formData.minValue.indexOf(".") !== -1) {
-                          e.preventDefault();
-                        }
-                      }
-                      return;
-                    }
-                    // Prevent all other keys
-                    e.preventDefault();
-                  }}
-                  onPaste={(e) => {
-                    // Validate pasted content
-                    const pastedText = e.clipboardData.getData("text");
-                    const decimalRegex = /^\d*\.?\d*$/;
-                    if (!decimalRegex.test(pastedText)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onBlur={(e) => {
-                    handleBlur(e);
-                    // Normalize value on blur
-                    const inputValue = e.target.value.trim();
-                    if (inputValue && inputValue !== '.') {
-                      const numValue = parseFloat(inputValue);
-                      if (!isNaN(numValue)) {
-                        setFormData(prev => ({
-                          ...prev,
-                          minValue: numValue.toString()
-                        }));
-                      }
-                    }
-                  }}
+                  onBlur={handleBlur}
                   className={`w-full p-2.5 bg-gray-50 dark:bg-gray-800 border rounded-lg text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-sm ${
                     touched.minValue && validationErrors.minValue
                       ? "border-red-500 focus:ring-red-500"
                       : "border-gray-200 dark:border-gray-700"
                   }`}
-                  placeholder="Enter Min Value (e.g., 5.25)"
+                  placeholder="Enter Min Value"
+                  step="0.01"
                   disabled={isSubmitting}
                 />
                 {touched.minValue && validationErrors.minValue && (
@@ -1117,63 +1007,18 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
                   Max Value
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="maxValue"
                   value={formData.maxValue}
                   onChange={handleInputChange}
-                  onKeyDown={(e) => {
-                    // Allow: backspace, delete, tab, escape, enter, decimal point, and numbers
-                    if (
-                      [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
-                      // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                      (e.keyCode === 65 && e.ctrlKey === true) ||
-                      (e.keyCode === 67 && e.ctrlKey === true) ||
-                      (e.keyCode === 86 && e.ctrlKey === true) ||
-                      (e.keyCode === 88 && e.ctrlKey === true) ||
-                      // Allow: home, end, left, right, down, up
-                      (e.keyCode >= 35 && e.keyCode <= 40) ||
-                      // Allow numbers and decimal point
-                      ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105))
-                    ) {
-                      // Check if decimal point already exists
-                      if (e.keyCode === 190 || e.keyCode === 110) {
-                        if (formData.maxValue.indexOf(".") !== -1) {
-                          e.preventDefault();
-                        }
-                      }
-                      return;
-                    }
-                    // Prevent all other keys
-                    e.preventDefault();
-                  }}
-                  onPaste={(e) => {
-                    // Validate pasted content
-                    const pastedText = e.clipboardData.getData("text");
-                    const decimalRegex = /^\d*\.?\d*$/;
-                    if (!decimalRegex.test(pastedText)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onBlur={(e) => {
-                    handleBlur(e);
-                    // Normalize value on blur
-                    const inputValue = e.target.value.trim();
-                    if (inputValue && inputValue !== '.') {
-                      const numValue = parseFloat(inputValue);
-                      if (!isNaN(numValue)) {
-                        setFormData(prev => ({
-                          ...prev,
-                          maxValue: numValue.toString()
-                        }));
-                      }
-                    }
-                  }}
+                  onBlur={handleBlur}
                   className={`w-full p-2.5 bg-gray-50 dark:bg-gray-800 border rounded-lg text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-sm ${
                     touched.maxValue && validationErrors.maxValue
                       ? "border-red-500 focus:ring-red-500"
                       : "border-gray-200 dark:border-gray-700"
                   }`}
-                  placeholder="Enter Max Value (e.g., 100.75)"
+                  placeholder="Enter Max Value"
+                  step="0.01"
                   disabled={isSubmitting}
                 />
                 {touched.maxValue && validationErrors.maxValue && (

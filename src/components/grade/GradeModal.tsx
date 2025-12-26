@@ -45,7 +45,7 @@ const GradeModal: React.FC<GradeModalProps> = ({
         code: editItem.code || "",
         title: editItem.title || "",
         description: editItem.description || "",
-        brand: typeof editItem.brand === 'object' && editItem.brand !== null ? editItem.brand._id : (editItem.brand || ""),
+        brand: typeof editItem.brand === 'object' ? editItem.brand._id : editItem.brand || "",
       });
     } else {
       setFormData({
