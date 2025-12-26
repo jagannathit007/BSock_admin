@@ -72,6 +72,7 @@ export interface ProductRowData {
   ram?: string;
   sequence?: number;
   images?: string[];
+  groupCode?: string; // Group code for multi-variant products
   // Dynamic custom fields - key-value pairs
   [key: string]: any;
 }
@@ -301,6 +302,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           sequence: (product as any).sequence !== undefined && (product as any).sequence !== null ? (product as any).sequence : undefined,
           images: (skuFamily as any)?.images || [],
           condition: product.condition || '', // Add condition field
+          groupCode: (product as any).groupCode || '', // Preserve groupCode when editing
           ...customFieldsObj,
         };
       });
@@ -1656,6 +1658,21 @@ useEffect(() => {
         return match || null;
       };
 
+      // ✅ FIX: Generate a single groupCode for all products in multi-variant group
+      // Use existing groupCode from first row if editing, otherwise generate new one
+      let sharedGroupCode: string | undefined = undefined;
+      if (variantType === 'multi') {
+        // Check if we're editing and have an existing groupCode
+        const firstRow = calculationResults[0]?.product;
+        if (firstRow?.groupCode && String(firstRow.groupCode).trim()) {
+          // Use existing groupCode when editing
+          sharedGroupCode = String(firstRow.groupCode).trim();
+        } else {
+          // Generate new groupCode for new multi-variant products
+          sharedGroupCode = `GROUP-${Date.now()}`;
+        }
+      }
+
       const productsToCreate = calculationResults.map((result) => {
         const row = result.product;
         
@@ -1691,7 +1708,7 @@ useEffect(() => {
           isFlashDeal: row.flashDeal && (row.flashDeal === '1' || row.flashDeal === 'true' || row.flashDeal.toLowerCase() === 'yes') ? 'true' : 'false',
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
           expiryTime: cleanString(row.endTime) ? new Date(row.endTime).toISOString() : '',
-          groupCode: variantType === 'multi' ? `GROUP-${Date.now()}` : undefined,
+          groupCode: sharedGroupCode, // ✅ Use the same groupCode for all products in the group
           sequence: row.sequence || null,
           countryDeliverables: uniqueCountryDeliverables,
           supplierListingNumber: cleanString(row.supplierListingNumber) || '',

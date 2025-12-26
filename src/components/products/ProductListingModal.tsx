@@ -72,6 +72,18 @@ const ProductListingModal: React.FC<ProductListingModalProps> = ({
         return;
       }
       
+      // ✅ FIX: Generate a single groupCode for all products in multi-variant group
+      let sharedGroupCode: string | undefined = undefined;
+      if (variantType === 'multi') {
+        // Check if we have an existing groupCode from first row
+        if (rows.length > 0 && rows[0].groupCode && String(rows[0].groupCode).trim()) {
+          sharedGroupCode = String(rows[0].groupCode).trim();
+        } else {
+          // Generate new groupCode for new multi-variant products
+          sharedGroupCode = `GROUP-${Date.now()}`;
+        }
+      }
+
       // Transform rows to backend format and create products
       const productsToCreate = rows.map(row => {
         // Build countryDeliverables array
@@ -134,7 +146,7 @@ const ProductListingModal: React.FC<ProductListingModalProps> = ({
           isFlashDeal: row.tags && row.tags.split(',').map(t => parseInt(t.trim())).includes(1) ? 'true' : 'false',
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
           expiryTime: cleanString(row.endTime) ? new Date(row.endTime).toISOString() : '',
-          groupCode: variantType === 'multi' ? `GROUP-${Date.now()}` : undefined,
+          groupCode: sharedGroupCode, // ✅ Use the same groupCode for all products in the group
           sequence: null,
           countryDeliverables,
           // Additional fields that need to be stored - convert empty strings to null

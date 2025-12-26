@@ -303,6 +303,23 @@ const ProductVariantForm: React.FC = () => {
       }
       
       // Transform rows to backend format and create/update products
+      // ✅ FIX: Generate a single groupCode for all products in multi-variant group
+      // Use existing groupCode from first product if editing, otherwise generate new one
+      let sharedGroupCode: string | undefined = undefined;
+      if (variantType === 'multi') {
+        // Check if we're editing and have an existing groupCode
+        if ((editId || editIds.length > 0 || groupCodeParam) && editProducts.length > 0) {
+          // Use existing groupCode when editing
+          sharedGroupCode = (editProducts[0] as any).groupCode || undefined;
+        } else if (rows.length > 0 && rows[0].groupCode && String(rows[0].groupCode).trim()) {
+          // Use groupCode from first row if available
+          sharedGroupCode = String(rows[0].groupCode).trim();
+        } else {
+          // Generate new groupCode for new multi-variant products
+          sharedGroupCode = `GROUP-${Date.now()}`;
+        }
+      }
+
       const productsToCreate = rows.map((row, rowIndex) => {
         // Helper to convert empty strings to null
         const cleanString = (val: string | null | undefined): string | null => {
@@ -495,9 +512,7 @@ const ProductVariantForm: React.FC = () => {
           isFlashDeal: row.flashDeal && (row.flashDeal === '1' || row.flashDeal === 'true' || row.flashDeal.toLowerCase() === 'yes') ? 'true' : 'false',
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
           expiryTime: cleanString(row.endTime) ? new Date(row.endTime).toISOString() : '',
-          groupCode: variantType === 'multi' 
-            ? ((editId || editIds.length > 0 || groupCodeParam) && editProducts.length > 0 ? (editProducts[0] as any).groupCode : (row.groupCode || `GROUP-${Date.now()}`))
-            : undefined,
+          groupCode: sharedGroupCode, // ✅ Use the same groupCode for all products in the group
           sequence: row.sequence || null,
           // ✅ NEW countryDeliverables with updated margins and costs
           countryDeliverables,
