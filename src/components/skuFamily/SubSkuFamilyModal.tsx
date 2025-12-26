@@ -57,6 +57,8 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newVideos, setNewVideos] = useState<File[]>([]);
   const [existingVideos, setExistingVideos] = useState<string[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Map<number, string>>(new Map());
+  const [videoPreviewUrls, setVideoPreviewUrls] = useState<Map<number, string>>(new Map());
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [imageError, setImageError] = useState<string>("");
   const [videoError, setVideoError] = useState<string>("");
@@ -277,8 +279,14 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
       setColorText("");
       setExistingImages([]);
       setExistingVideos([]);
+      // Clean up all object URLs
+      imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+      videoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+      setImagePreviewUrls(new Map());
+      setVideoPreviewUrls(new Map());
       setNewImages([]);
       setNewVideos([]);
+      setSelectedVideo(null);
       resetStates();
       return;
     }
@@ -335,6 +343,15 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
       setExistingVideos([]);
     }
   }, [isOpen, editItem]);
+  
+  // Cleanup object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup all object URLs on unmount
+      imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+      videoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []); // Only run on unmount
 
   // Fetch all dropdown data on mount
   useEffect(() => {
@@ -419,7 +436,18 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
       }
       if (files.length > 0) {
         setImageError("");
-        setNewImages((prev) => [...prev, ...files]);
+        setNewImages((prev) => {
+          const updated = [...prev, ...files];
+          // Create preview URLs for new images
+          const newUrls = new Map(imagePreviewUrls);
+          updated.forEach((img, index) => {
+            if (!newUrls.has(index)) {
+              newUrls.set(index, URL.createObjectURL(img));
+            }
+          });
+          setImagePreviewUrls(newUrls);
+          return updated;
+        });
       }
     } else {
       const totalVideos = existingVideos.length + newVideos.length + files.length;
@@ -429,7 +457,18 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
       }
       if (files.length > 0) {
         setVideoError("");
-        setNewVideos((prev) => [...prev, ...files]);
+        setNewVideos((prev) => {
+          const updated = [...prev, ...files];
+          // Create preview URLs for new videos
+          const newUrls = new Map(videoPreviewUrls);
+          updated.forEach((vid, index) => {
+            if (!newUrls.has(index)) {
+              newUrls.set(index, URL.createObjectURL(vid));
+            }
+          });
+          setVideoPreviewUrls(newUrls);
+          return updated;
+        });
       }
     }
   };
@@ -444,7 +483,18 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
         return;
       }
       setImageError("");
-      setNewImages((prev) => [...prev, ...files]);
+      setNewImages((prev) => {
+        const updated = [...prev, ...files];
+        // Create preview URLs for new images
+        const newUrls = new Map(imagePreviewUrls);
+        updated.forEach((img, index) => {
+          if (!newUrls.has(index)) {
+            newUrls.set(index, URL.createObjectURL(img));
+          }
+        });
+        setImagePreviewUrls(newUrls);
+        return updated;
+      });
     } else {
       const totalVideos = existingVideos.length + newVideos.length + files.length;
       if (totalVideos > MAX_VIDEOS) {
@@ -452,7 +502,22 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
         return;
       }
       setVideoError("");
-      setNewVideos((prev) => [...prev, ...files]);
+      setNewVideos((prev) => {
+        const updated = [...prev, ...files];
+        // Create preview URLs for new videos
+        const newUrls = new Map(videoPreviewUrls);
+        updated.forEach((vid, index) => {
+          if (!newUrls.has(index)) {
+            newUrls.set(index, URL.createObjectURL(vid));
+          }
+        });
+        setVideoPreviewUrls(newUrls);
+        return updated;
+      });
+    }
+    // Reset input
+    if (e.target) {
+      e.target.value = '';
     }
   };
 
@@ -470,7 +535,26 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
   };
 
   const handleRemoveNewImage = (index: number) => {
-    setNewImages((prev) => prev.filter((_, i) => i !== index));
+    // Clean up object URL before removing
+    const url = imagePreviewUrls.get(index);
+    if (url) {
+      URL.revokeObjectURL(url);
+      setImagePreviewUrls(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(index);
+        return newMap;
+      });
+    }
+    setNewImages((prev) => {
+      const newImages = prev.filter((_, i) => i !== index);
+      // Recreate preview URLs for remaining images
+      const newUrls = new Map<string, string>();
+      newImages.forEach((img, i) => {
+        newUrls.set(i, URL.createObjectURL(img));
+      });
+      setImagePreviewUrls(newUrls);
+      return newImages;
+    });
     setImageError("");
   };
 
@@ -480,7 +564,26 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
   };
 
   const handleRemoveNewVideo = (index: number) => {
-    setNewVideos((prev) => prev.filter((_, i) => i !== index));
+    // Clean up object URL before removing
+    const url = videoPreviewUrls.get(index);
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+    setNewVideos((prev) => {
+      const newVideos = prev.filter((_, i) => i !== index);
+      // Update preview URLs map - remove deleted index and reindex remaining
+      setVideoPreviewUrls(prev => {
+        const newMap = new Map();
+        // Revoke all old URLs
+        prev.forEach(url => URL.revokeObjectURL(url));
+        // Create new URLs for remaining videos
+        newVideos.forEach((vid, i) => {
+          newMap.set(i, URL.createObjectURL(vid));
+        });
+        return newMap;
+      });
+      return newVideos;
+    });
     setVideoError("");
   };
 
@@ -906,28 +1009,37 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
                         </button>
                       </div>
                     ))}
-                    {newImages.map((image, index) => (
-                      <div key={`new-${index}`} className="relative group">
-                        <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
-                          <img
-                            src={URL.createObjectURL(image)}
-                            alt={`Uploaded ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
+                    {newImages.map((image, index) => {
+                      const previewUrl = imagePreviewUrls.get(index) || URL.createObjectURL(image);
+                      if (!imagePreviewUrls.has(index)) {
+                        setImagePreviewUrls(prev => new Map(prev).set(index, previewUrl));
+                      }
+                      return (
+                        <div key={`new-${index}`} className="relative group">
+                          <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                            <img
+                              src={previewUrl}
+                              alt={`Uploaded ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src = placeholderImage;
+                              }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveNewImage(index);
+                            }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100"
+                            disabled={isLoading}
+                          >
+                            <i className="fas fa-times text-xs"></i>
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveNewImage(index);
-                          }}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100"
-                          disabled={isLoading}
-                        >
-                          <i className="fas fa-times text-xs"></i>
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {existingImages.length + newImages.length < MAX_IMAGES && (
                       <div
                         className="aspect-square rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer bg-gray-50 dark:bg-gray-700/50"
@@ -1047,7 +1159,11 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
                       );
                     })}
                     {newVideos.map((video, index) => {
-                      const videoUrl = URL.createObjectURL(video);
+                      const videoUrl = videoPreviewUrls.get(index) || (() => {
+                        const url = URL.createObjectURL(video);
+                        setVideoPreviewUrls(prev => new Map(prev).set(index, url));
+                        return url;
+                      })();
                       return (
                         <div key={`new-video-${index}`} className="relative group">
                           <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 relative">
@@ -1056,6 +1172,18 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
                               className="w-full h-full object-cover"
                               preload="metadata"
                               muted
+                              onError={(e) => {
+                                console.error('Video preview error:', e);
+                                const target = e.currentTarget;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent && !parent.querySelector('.video-fallback')) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'video-fallback absolute inset-0 flex items-center justify-center';
+                                  fallback.innerHTML = '<i class="fas fa-video text-3xl text-gray-400"></i>';
+                                  parent.appendChild(fallback);
+                                }
+                              }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
                               <button
