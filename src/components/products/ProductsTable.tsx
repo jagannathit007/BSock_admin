@@ -1354,7 +1354,7 @@ const navigate = useNavigate();
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
-                        <span>{getSkuFamilyText(item.skuFamilyId)}</span>
+                        <span>{getSkuFamilyText(item.skuFamilyId)}  {item?.specification}</span>
                         {isMultiVariant(item) && (
                           <span
                             className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700 border border-purple-200"
