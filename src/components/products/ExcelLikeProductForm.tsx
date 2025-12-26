@@ -68,6 +68,7 @@ export interface ProductRowData {
   supplierListingNumber: string;
   customerListingNumber: string;
   skuFamilyId: string;
+  subSkuFamilyId?: string | null; // Sub SKU Family ID from skuFamily.subSkuFamilies array
   ram?: string;
   sequence?: number;
   images?: string[];
@@ -199,18 +200,34 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           Object.assign(customFieldsObj, customFields);
         }
         
-        // Find matching subSkuFamily to get subModelName
+        // Find matching subSkuFamily to get subModelName and subSkuFamilyId
         // The specification field contains the subModelName value (e.g., "Pro Max")
         let subModelName = '';
+        let subSkuFamilyId: string | null = null;
         if (skuFamily && (skuFamily as any).subSkuFamilies && Array.isArray((skuFamily as any).subSkuFamilies)) {
-          // Try to match by specification (which should match subName)
+          // Try to match by specification (which should match subName) or by subSkuFamilyId from product
           const specification = product.specification || '';
-          if (specification) {
+          const productSubSkuFamilyId = (product as any).subSkuFamilyId;
+          
+          // First, try to find by subSkuFamilyId if it exists in the product
+          if (productSubSkuFamilyId) {
+            const matchingSubSkuById = (skuFamily as any).subSkuFamilies.find((sub: any) => 
+              sub._id && sub._id.toString() === productSubSkuFamilyId.toString()
+            );
+            if (matchingSubSkuById) {
+              subModelName = matchingSubSkuById.subName || specification;
+              subSkuFamilyId = matchingSubSkuById._id ? matchingSubSkuById._id.toString() : null;
+            }
+          }
+          
+          // If not found by ID, try to match by specification
+          if (!subSkuFamilyId && specification) {
             const matchingSubSku = (skuFamily as any).subSkuFamilies.find((sub: any) => 
               sub.subName === specification
             );
-            if (matchingSubSku && matchingSubSku.subName) {
-              subModelName = matchingSubSku.subName;
+            if (matchingSubSku) {
+              subModelName = matchingSubSku.subName || specification;
+              subSkuFamilyId = matchingSubSku._id ? matchingSubSku._id.toString() : null;
             } else {
               // If no exact match, use specification directly as it represents the subModelName
               subModelName = specification;
@@ -219,6 +236,13 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         } else if (product.specification) {
           // Fallback: use specification directly (it contains the subModelName)
           subModelName = product.specification;
+        }
+        
+        // Get subSkuFamilyId from product if available
+        if (!subSkuFamilyId && (product as any).subSkuFamilyId) {
+          subSkuFamilyId = typeof (product as any).subSkuFamilyId === 'object' 
+            ? (product as any).subSkuFamilyId._id?.toString() || (product as any).subSkuFamilyId.toString()
+            : (product as any).subSkuFamilyId.toString();
         }
         
         return {
@@ -272,6 +296,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           supplierListingNumber: (product as any).supplierListingNumber || '',
           customerListingNumber: (product as any).customerListingNumber || '',
           skuFamilyId: typeof product.skuFamilyId === 'object' ? product.skuFamilyId._id : product.skuFamilyId,
+          subSkuFamilyId: subSkuFamilyId,
           ram: product.ram || '',
           sequence: (product as any).sequence !== undefined && (product as any).sequence !== null ? (product as any).sequence : undefined,
           images: (skuFamily as any)?.images || [],
@@ -551,6 +576,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     supplierListingNumber: '',
     customerListingNumber: '',
     skuFamilyId: variant?.skuFamilyId || '',
+    subSkuFamilyId: (variant as any)?.subSkuFamilyId || null,
     ram: variant?.ram,
     sequence: undefined,
     // Initialize custom fields
@@ -634,6 +660,7 @@ try {
             skuFamilyId: skuFamily._id,
             skuFamilyName: skuFamily.name,
             subModelName: subSku.subName || skuFamily.name,
+            subSkuFamilyId:subSku._id || null,
             storage: subSku.storageId?.title || '',
             storageId: subSku.storageId?._id || null,
             colour: subSku.colorId?.title || '',
@@ -680,6 +707,7 @@ try {
   // Handle selection from row-specific SKU Family search
   const handleRowSkuFamilySearchSelect = (option: any, rowIndex: number) => {
     updateRow(rowIndex, 'skuFamilyId', option.skuFamilyId);
+    updateRow(rowIndex, 'subSkuFamilyId', option.subSkuFamilyId || null);
     updateRow(rowIndex, 'subModelName', option.subModelName);
     updateRow(rowIndex, 'storage', option.storage);
     updateRow(rowIndex, 'colour', option.colour);
@@ -1645,6 +1673,7 @@ useEffect(() => {
 
         return {
           skuFamilyId: row.skuFamilyId,
+          subSkuFamilyId: (row.subSkuFamilyId && /^[0-9a-fA-F]{24}$/.test(row.subSkuFamilyId)) ? row.subSkuFamilyId : null,
           gradeId: (row.grade && /^[0-9a-fA-F]{24}$/.test(row.grade)) ? row.grade : null,
           sellerId: (row.supplierId && /^[0-9a-fA-F]{24}$/.test(row.supplierId)) ? row.supplierId : null,
           specification: cleanString(row.subModelName) || cleanString(row.version) || cleanString((row as any).specification) || '',

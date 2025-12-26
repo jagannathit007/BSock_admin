@@ -115,6 +115,7 @@ const ProductListingModal: React.FC<ProductListingModalProps> = ({
 
         return {
           skuFamilyId: row.skuFamilyId, // Already validated above - required field
+          subSkuFamilyId: (row.subSkuFamilyId && isValidObjectId(row.subSkuFamilyId)) ? row.subSkuFamilyId : null,
           gradeId: (row.grade && isValidObjectId(row.grade)) ? row.grade : null,
           sellerId: (row.supplierId && isValidObjectId(row.supplierId)) ? row.supplierId : null,
           specification: cleanString(row.version) || '',
