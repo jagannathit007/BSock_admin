@@ -811,21 +811,21 @@ export class ProductService {
     }
   };
 
-  // Get next customer listing number
-  static getNextCustomerListingNumber = async (): Promise<any> => {
-    const baseUrl = import.meta.env.VITE_BASE_URL;
-    const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
-    const url = `${baseUrl}/api/${adminRoute}/product/get-next-customer-listing-number`;
+// In your ProductService file
+static getNextCustomerListingNumber = async (isMultiVariant: boolean = false): Promise<any> => {
+  const baseUrl = import.meta.env.VITE_BASE_URL;
+  const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
+  const url = `${baseUrl}/api/${adminRoute}/product/get-next-customer-listing-number`;
 
-    try {
-      const res = await api.post(url, {});
-      return res.data.data;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to get next customer listing number';
-      console.error('Get customer listing number error:', errorMessage);
-      throw new Error(errorMessage);
-    }
-  };
+  try {
+    const res = await api.post(url, { isMultiVariant });
+    return res.data.data;
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Failed to get next customer listing number';
+    console.error('Get customer listing number error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
 
   // Get next unique listing number (8-digit)
   static getNextUniqueListingNumber = async (): Promise<any> => {
