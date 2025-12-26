@@ -575,15 +575,16 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
         setConstants(constantsData);
         
         // Fetch next customer listing number
-        try {
-          const customerListingData = await ProductService.getNextCustomerListingNumber();
-          setCurrentCustomerListingNumber(customerListingData.listingNumber);
-        } catch (error) {
-          console.error('Error fetching customer listing number:', error);
-          // Default to 1 if fetch fails
-          setCurrentCustomerListingNumber(1);
-        }
-        
+        // Fetch next customer listing number WITH multi-variant support
+try {
+  const customerListingData = await ProductService.getNextCustomerListingNumber(
+    variantType === 'multi'  // Send true for multi-variant
+  );
+  setCurrentCustomerListingNumber(customerListingData.listingNumber);
+} catch (error) {
+  console.error('Error fetching customer listing number:', error);
+  setCurrentCustomerListingNumber(1); // Fallback
+}
         // Fetch next unique listing number (8-digit)
         try {
           const uniqueListingData = await ProductService.getNextUniqueListingNumber();
@@ -755,19 +756,27 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
   }, [rows.map(r => `${r.currentLocation}-${r.hkUsd}-${r.hkHkd}-${r.dubaiUsd}-${r.dubaiAed}`).join(',')]);
 
   // Auto-generate customer listing numbers when rows change
-  useEffect(() => {
-    if (currentCustomerListingNumber !== null && rows.length > 0) {
-      setRows(prevRows => prevRows.map((row, index) => {
-        const updatedRow = { ...row };
-        const productNumber = index + 1;
-        const customerListingNo = `L${currentCustomerListingNumber}-${productNumber}`;
-        if (!updatedRow.customerListingNumber || updatedRow.customerListingNumber !== customerListingNo) {
-          updatedRow.customerListingNumber = customerListingNo;
-        }
-        return updatedRow;
-      }));
-    }
-  }, [rows.length, currentCustomerListingNumber]);
+// Auto-generate customer listing numbers when rows change
+useEffect(() => {
+  if (currentCustomerListingNumber !== null && rows.length > 0) {
+    setRows(prevRows => prevRows.map((row, index) => {
+      const updatedRow = { ...row };
+      let prefix = `L${currentCustomerListingNumber}`;
+
+      // Add M1 suffix for multi-variant
+      if (variantType === 'multi') {
+        prefix = `L${currentCustomerListingNumber}M1`;
+      }
+
+      const customerListingNo = `${prefix}-${index + 1}`;
+
+      if (!updatedRow.customerListingNumber || updatedRow.customerListingNumber !== customerListingNo) {
+        updatedRow.customerListingNumber = customerListingNo;
+      }
+      return updatedRow;
+    }));
+  }
+}, [rows.length, currentCustomerListingNumber, variantType]);
 
   // Auto-generate unique listing numbers when rows change
   useEffect(() => {
