@@ -11,7 +11,7 @@ export const LOCAL_STORAGE_KEYS = {
   
   // Theme
   THEME: 'bsock_admin_theme',
-  
+  VARIENTPRODUCT:'variant-product-form-data',
   // Business Requests
   BR_STATUS_OVERRIDES: 'bsock_admin_br_status_overrides',
 } as const;
