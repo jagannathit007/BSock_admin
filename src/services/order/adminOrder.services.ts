@@ -377,6 +377,21 @@ export class AdminOrderService {
       throw new Error(errorMessage);
     }
   };
+
+  static getOrderWithPaymentDetails = async (orderId: string): Promise<any> => {
+    const baseUrl = import.meta.env.VITE_BASE_URL;
+    const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
+    const url = `${baseUrl}/api/${adminRoute}/order-payment/list`;
+
+    try {
+      const res = await api.post(url, { orderId, limit: 100 });
+      return res.data;
+    } catch (err: any) {
+      console.error('Error fetching payment details:', err);
+      // Don't show error toast - just return empty array
+      return { data: { docs: [] } };
+    }
+  };
 }
 
 export default AdminOrderService;

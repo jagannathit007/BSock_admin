@@ -1013,7 +1013,7 @@ const Payments: React.FC = () => {
                               Amount <span className="text-red-500">*</span>
                             </label>
                             <input
-                              type="text"
+                              type="number"
                               value={editFormData.amount === 0 ? '' : editFormData.amount}
                               onChange={(e) => {
                                 if (!isPaymentApproved() && canWrite) {
@@ -1071,7 +1071,7 @@ const Payments: React.FC = () => {
                               Conversion Rate
                             </label>
                             <input
-                              type="text"
+                              type="number"
                               value={editFormData.conversionRate}
                               onChange={(e) => {
                                 if (!isPaymentApproved() && canWrite) {
