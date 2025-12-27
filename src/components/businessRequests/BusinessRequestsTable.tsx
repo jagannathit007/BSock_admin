@@ -17,6 +17,7 @@ interface BusinessRequest {
   email?: string;
   mobileNumber?: string;
   whatsappNumber?: string;
+  requestType?: 'customer' | 'seller';
   businessProfile?: {
     status?: string;
     verifiedBy?: {
@@ -44,6 +45,7 @@ const BusinessRequestsTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const debouncedSearchTerm = useDebounce(searchTerm, 1000);
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [requestTypeFilter, setRequestTypeFilter] = useState<'customer' | 'seller'>('customer');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -109,8 +111,10 @@ const BusinessRequestsTable: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      // Pass requestType directly (defaults to 'customer' if not set)
+      const requestType = requestTypeFilter;
       const { docs, totalDocs } =
-        await BusinessRequestsService.getBusinessRequests(currentPage, itemsPerPage, undefined);
+        await BusinessRequestsService.getBusinessRequests(currentPage, itemsPerPage, debouncedSearchTerm || undefined, requestType);
 
       setTotalDocs(totalDocs);
 
@@ -147,6 +151,7 @@ const BusinessRequestsTable: React.FC = () => {
           email: d?.email ?? "-",
           mobileNumber: d?.mobileNumber ?? "-",
           whatsappNumber: d?.whatsappNumber ?? "-",
+          requestType: d?.requestType || 'customer',
           businessProfile: {
             status: bp?.status,
             verifiedBy: bp?.verifiedBy || null,
@@ -182,7 +187,7 @@ const BusinessRequestsTable: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusOverrides]);
+  }, [statusOverrides, currentPage, debouncedSearchTerm, requestTypeFilter]);
 
   useEffect(() => {
     let filtered = businessRequests;
@@ -225,7 +230,7 @@ const BusinessRequestsTable: React.FC = () => {
     setCurrentAdminId(adminId || "");
   }, []);
 
-  const handleVerify = async (id: string) => {
+  const handleVerify = async (id: string, requestType?: 'customer' | 'seller') => {
     const confirmed = await Swal.fire({
       title: "Are you sure?",
       text: "Verify this business request?",
@@ -237,7 +242,11 @@ const BusinessRequestsTable: React.FC = () => {
 
     if (confirmed.isConfirmed) {
       try {
-        await BusinessRequestsService.verifyCustomer(id);
+        if (requestType === 'seller') {
+          await BusinessRequestsService.verifySeller(id);
+        } else {
+          await BusinessRequestsService.verifyCustomer(id);
+        }
         await fetchData();
       } catch (err) {
         console.error("Error verifying business request:", err);
@@ -251,7 +260,8 @@ const BusinessRequestsTable: React.FC = () => {
 
   const handleStatusChange = async (
     id: string,
-    newStatus: "Approved" | "Pending" | "Rejected"
+    newStatus: "Approved" | "Pending" | "Rejected",
+    requestType?: 'customer' | 'seller'
   ) => {
     const confirmed = await Swal.fire({
       title: "Are you sure?",
@@ -277,7 +287,11 @@ const BusinessRequestsTable: React.FC = () => {
             : newStatus === "Rejected"
             ? "rejected"
             : "pending";
-        await BusinessRequestsService.updateCustomerStatus(id, payloadStatus);
+        if (requestType === 'seller') {
+          await BusinessRequestsService.updateSellerStatus(id, payloadStatus);
+        } else {
+          await BusinessRequestsService.updateCustomerStatus(id, payloadStatus);
+        }
         await fetchData();
       } catch (err) {
         console.error("Error updating status:", err);
@@ -377,19 +391,32 @@ const BusinessRequestsTable: React.FC = () => {
                 }
               />
             </div>
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] appearance-none cursor-pointer"
-              >
-                <option value="All">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Verified">Verified</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-              <i className="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+            <div className="flex gap-2">
+              <div className="relative">
+                <select
+                  value={requestTypeFilter}
+                  onChange={(e) => setRequestTypeFilter(e.target.value as 'customer' | 'seller')}
+                  className="pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] appearance-none cursor-pointer"
+                >
+                  <option value="customer">Customer</option>
+                  <option value="seller">Seller</option>
+                </select>
+                <i className="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+              </div>
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] appearance-none cursor-pointer"
+                >
+                  <option value="All">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Verified">Verified</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+                <i className="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+              </div>
             </div>
           </div>
         </div>
@@ -403,6 +430,9 @@ const BusinessRequestsTable: React.FC = () => {
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b">
                   Certificate
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b">
+                  Type
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b">
                   Business Name
@@ -424,7 +454,7 @@ const BusinessRequestsTable: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center">
+                  <td colSpan={8} className="p-12 text-center">
                     <div className="text-gray-500 dark:text-gray-400 text-lg">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-600 mx-auto mb-4"></div>
                       Loading Business Requests...
@@ -433,7 +463,7 @@ const BusinessRequestsTable: React.FC = () => {
                 </tr>
               ) : !paginatedRequests || paginatedRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center">
+                  <td colSpan={8} className="p-12 text-center">
                     <div className="text-gray-500 dark:text-gray-400 text-lg">
                       No business requests found
                     </div>
@@ -475,6 +505,18 @@ const BusinessRequestsTable: React.FC = () => {
                               placeholderImage;
                           }}
                         />
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium">
+                        {item.businessName || "-"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          item.requestType === 'seller' 
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                        }`}>
+                          {item.requestType === 'seller' ? 'Seller' : 'Customer'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
                         {item.businessName || "-"}
@@ -558,7 +600,7 @@ const BusinessRequestsTable: React.FC = () => {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (item._id)
-                                        handleVerify(item._id);
+                                        handleVerify(item._id, item.requestType);
                                     }}
                                     className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-600"
                                   >
@@ -572,7 +614,7 @@ const BusinessRequestsTable: React.FC = () => {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (item._id)
-                                        handleStatusChange(item._id, "Approved");
+                                        handleStatusChange(item._id, "Approved", item.requestType);
                                     }}
                                     className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-600"
                                   >
@@ -585,7 +627,7 @@ const BusinessRequestsTable: React.FC = () => {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (item._id)
-                                      handleStatusChange(item._id, "Rejected");
+                                      handleStatusChange(item._id, "Rejected", item.requestType);
                                   }}
                                   className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
                                 >
