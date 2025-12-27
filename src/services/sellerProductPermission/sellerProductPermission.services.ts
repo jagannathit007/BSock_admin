@@ -37,6 +37,7 @@ export class SellerProductPermissionService {
       { fieldName: 'subModelName', label: 'Sub Model Name', hasPermission: false, isRequired: true, group: 'productDetail' },
       { fieldName: 'storage', label: 'Storage', hasPermission: false, isRequired: true, group: 'productDetail' },
       { fieldName: 'colour', label: 'Colour', hasPermission: false, isRequired: true, group: 'productDetail' },
+      { fieldName: 'ram', label: 'RAM', hasPermission: false, isRequired: false, group: 'productDetail' },
       { fieldName: 'country', label: 'Country (specs)', hasPermission: false, isRequired: true, group: 'productDetail' },
       { fieldName: 'sim', label: 'SIM', hasPermission: false, isRequired: true, group: 'productDetail' },
       { fieldName: 'version', label: 'Version', hasPermission: false, isRequired: false, group: 'productDetail' },
