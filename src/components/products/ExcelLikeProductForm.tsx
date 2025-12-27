@@ -793,9 +793,9 @@ useEffect(() => {
       const updatedRow = { ...row };
       let prefix = `L${currentCustomerListingNumber}`;
 
-      // Add M1 suffix for multi-variant
+      // For multi-variant: L{N}M{N} (e.g., L1M1, L2M2) - M number matches L number
       if (variantType === 'multi') {
-        prefix = `L${currentCustomerListingNumber}M1`;
+        prefix = `L${currentCustomerListingNumber}M${currentCustomerListingNumber}`;
       }
 
       const customerListingNo = `${prefix}-${index + 1}`;
@@ -843,8 +843,10 @@ useEffect(() => {
           return row;
         }
         
+        // For multi-variant: L{N}M{N} (e.g., L1M1, L2M2) - M number matches L number
+        // For single: L{N}
         const listingPrefix = variantType === 'multi' 
-          ? `L${listingInfo.listingNumber}M1` 
+          ? `L${listingInfo.listingNumber}M${listingInfo.listingNumber}` 
           : `L${listingInfo.listingNumber}`;
         
         // Count how many rows with this supplier come before this row
