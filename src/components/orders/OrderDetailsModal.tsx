@@ -8,6 +8,22 @@ interface OrderDetailsModalProps {
   order: Order | null;
 }
 
+interface Payment {
+  _id: string;
+  orderId: string;
+  customerId: string;
+  paymentMethod: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paymentDetails?: any;
+  createdAt: string;
+  verifiedBy?: any;
+  approvedBy?: any;
+  verifiedAt?: string;
+  approvedAt?: string;
+}
+
 const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   isOpen,
   onClose,
@@ -15,10 +31,13 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 }) => {
   const [trackingData, setTrackingData] = useState<TrackingItem[]>([]);
   const [loadingTracking, setLoadingTracking] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   useEffect(() => {
     if (isOpen && order?._id) {
       fetchTrackingData();
+      fetchPaymentDetails();
     }
   }, [isOpen, order?._id]);
 
@@ -35,6 +54,23 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       console.error('Error fetching tracking data:', error);
     } finally {
       setLoadingTracking(false);
+    }
+  };
+
+  const fetchPaymentDetails = async () => {
+    if (!order?._id) return;
+    
+    try {
+      setLoadingPayments(true);
+      const response = await AdminOrderService.getOrderWithPaymentDetails(order._id);
+      if (response?.data?.docs) {
+        setPayments(response.data.docs);
+      }
+    } catch (error) {
+      console.error('Error fetching payment details:', error);
+      setPayments([]);
+    } finally {
+      setLoadingPayments(false);
     }
   };
 
@@ -96,7 +132,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       ></div>
 
       {/* Modal */}
-      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl 2xl:max-w-7xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -505,6 +541,207 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Receiver Details */}
+          {order.receiverDetails && (order.receiverDetails.name || order.receiverDetails.mobile) && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Receiver Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {order.receiverDetails.name && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Receiver Name
+                    </label>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                      {order.receiverDetails.name}
+                    </p>
+                  </div>
+                )}
+                {order.receiverDetails.mobile && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Receiver Mobile
+                    </label>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                      {order.receiverDetails.mobile}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Payments List */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              Payments
+            </h3>
+            {loadingPayments ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Loading payments...</p>
+              </div>
+            ) : payments && payments.length > 0 ? (
+              <div className="space-y-4">
+                {payments.map((payment, index) => (
+                  <div key={payment._id || index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Payment Method
+                        </label>
+                        <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold">
+                          {payment.paymentMethod || '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Status
+                        </label>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                          payment.status === 'approved' || payment.status === 'paid'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                            : payment.status === 'rejected'
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                            : payment.status === 'verify' || payment.status === 'verified'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                        }`}>
+                          {payment.status?.charAt(0).toUpperCase() + payment.status?.slice(1) || '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Amount
+                        </label>
+                        <p className="text-sm text-gray-900 dark:text-gray-100 font-semibold">
+                          {payment.currency || 'USD'} {formatPrice(payment.amount || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Payment Date
+                        </label>
+                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                          {formatDate(payment.createdAt)}
+                        </p>
+                      </div>
+                      {/* {payment.verifiedBy && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Verified By
+                          </label>
+                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                            {typeof payment.verifiedBy === 'object' 
+                              ? payment.verifiedBy.name || payment.verifiedBy.email || '-'
+                              : payment.verifiedBy || '-'}
+                            {payment.verifiedAt && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                ({formatDate(payment.verifiedAt)})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      {payment.approvedBy && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Approved By
+                          </label>
+                          <p className="text-sm text-gray-900 dark:text-gray-100">
+                            {typeof payment.approvedBy === 'object' 
+                              ? payment.approvedBy.name || payment.approvedBy.email || '-'
+                              : payment.approvedBy || '-'}
+                            {payment.approvedAt && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                ({formatDate(payment.approvedAt)})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      )} */}
+                    </div>
+                    {/* Payment Details Fields */}
+                    {/* {payment.paymentDetails && typeof payment.paymentDetails === 'object' && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Payment Information
+                        </label>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 space-y-2">
+                          {Object.entries(payment.paymentDetails).map(([key, value]) => (
+                            <div key={key} className="grid grid-cols-1 md:grid-cols-3 gap-2 border-b border-gray-100 dark:border-gray-700 pb-2 last:border-0 last:pb-0">
+                              <div className="font-medium text-sm text-gray-700 dark:text-gray-300 capitalize">
+                                {key.replace(/([A-Z])/g, ' $1').trim()}:
+                              </div>
+                              <div className="md:col-span-2 text-sm text-gray-900 dark:text-gray-100 break-words">
+                                {typeof value === 'string' && (value.startsWith('http') || value.startsWith('/')) ? (
+                                  <a 
+                                    href={value} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                                  >
+                                    {value}
+                                  </a>
+                                ) : (
+                                  String(value || '-')
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )} */}
+                  </div>
+                ))}
+                {/* Payment Summary */}
+                {payments.length > 0 && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 2xl:gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Total Paid
+                        </label>
+                        <p className="text-lg font-semibold text-blue-800 dark:text-blue-300">
+                          {order.currency || 'USD'} {formatPrice(
+                            payments
+                              .filter(p => ['requested', 'verify', 'verified', 'approved', 'paid'].includes(p.status))
+                              .reduce((sum, p) => sum + (p.amount || 0), 0)
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Remaining Balance
+                        </label>
+                        <p className="text-lg font-semibold text-orange-800 dark:text-orange-300">
+                          {order.currency || 'USD'} {formatPrice(
+                            order.totalAmount - payments
+                              .filter(p => ['requested', 'verify', 'verified', 'approved', 'paid'].includes(p.status))
+                              .reduce((sum, p) => sum + (p.amount || 0), 0)
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Total Amount
+                        </label>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          {order.currency || 'USD'} {formatPrice(order.totalAmount)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+                No payments found
+              </div>
+            )}
+          </div>
 
           {/* Applied Charges */}
           {order.appliedCharges && order.appliedCharges.length > 0 && (

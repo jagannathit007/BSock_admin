@@ -548,7 +548,7 @@ const SubSkuFamilyModal: React.FC<SubSkuFamilyModalProps> = ({
     setNewImages((prev) => {
       const newImages = prev.filter((_, i) => i !== index);
       // Recreate preview URLs for remaining images
-      const newUrls = new Map<string, string>();
+      const newUrls = new Map<number, string>();
       newImages.forEach((img, i) => {
         newUrls.set(i, URL.createObjectURL(img));
       });
