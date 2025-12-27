@@ -1059,15 +1059,15 @@ useEffect(() => {
         if (!row.endTime) errors.push(`Row ${index + 1}: END TIME is required`);
       });
 
-    if (errors.length > 0) {
-      // Use a better error display
-      const errorMessage = `Please fix the following ${errors.length} error(s):\n\n${errors.slice(0, 10).join('\n')}${errors.length > 10 ? `\n\n... and ${errors.length - 10} more errors` : ''}`;
-      if (window.confirm(errorMessage + '\n\nDo you want to continue anyway?')) {
-        // User wants to continue despite errors
-      } else {
-        return;
-      }
-    }
+    // if (errors.length > 0) {
+    //   // Use a better error display
+    //   const errorMessage = `Please fix the following ${errors.length} error(s):\n\n${errors.slice(0, 10).join('\n')}${errors.length > 10 ? `\n\n... and ${errors.length - 10} more errors` : ''}`;
+    //   if (window.confirm(errorMessage + '\n\nDo you want to continue anyway?')) {
+    //     // User wants to continue despite errors
+    //   } else {
+    //     return;
+    //   }
+    // }
 
     const rowsWithListingNos = updatedRows.map((row, index) => {
       // Ensure unique listing number is set (8-digit)
