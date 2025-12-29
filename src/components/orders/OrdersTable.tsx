@@ -429,7 +429,7 @@ const OrdersTable: React.FC = () => {
                         ${item.skuFamilyId?.name || (item.productId && typeof item.productId === 'object' ? item.productId.name : 'Product')}
                         ${moq > 1 ? `<span style="font-size: 12px; color: #6B7280; font-weight: normal;"> (MOQ: ${moq})</span>` : ''}
                       </label>
-                      <span style="font-size: 14px; font-weight: 600; color: #1F2937;">Price: $${itemPrice.toFixed(2)}</span>
+                      <span style="font-size: 14px; font-weight: 600; color: #1F2937;">Price: ${formatPrice(itemPrice, order.currency)}</span>
                     </div>
                     <input
                       type="text"
@@ -454,16 +454,16 @@ const OrdersTable: React.FC = () => {
             <div id="newOrderPriceContainer" style="margin-top: 16px; padding: 12px; background-color: #EFF6FF; border-radius: 6px; border: 1px solid #3B82F6; display: none;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 14px; font-weight: 600; color: #1E40AF;">New Order Total:</span>
-                <span id="newOrderTotal" style="font-size: 18px; font-weight: 700; color: #1E40AF;">$0.00</span>
+                <span id="newOrderTotal" style="font-size: 18px; font-weight: 700; color: #1E40AF;">${getCurrencySymbol(order.currency)}0.00</span>
               </div>
               <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #93C5FD;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                   <span style="font-size: 12px; color: #6B7280;">Original Total:</span>
-                  <span id="originalOrderTotal" style="font-size: 12px; color: #6B7280;">$${order.totalAmount.toFixed(2)}</span>
+                  <span id="originalOrderTotal" style="font-size: 12px; color: #6B7280;">${formatPrice(order.totalAmount, order.currency)}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
                   <span style="font-size: 12px; color: #6B7280;">Difference:</span>
-                  <span id="orderDifference" style="font-size: 12px; font-weight: 600; color: #DC2626;">$0.00</span>
+                  <span id="orderDifference" style="font-size: 12px; font-weight: 600; color: #DC2626;">${getCurrencySymbol(order.currency)}0.00</span>
                 </div>
               </div>
             </div>
@@ -1023,12 +1023,13 @@ const OrdersTable: React.FC = () => {
                 const originalOrderTotal = document.getElementById("originalOrderTotal") as HTMLElement;
                 const orderDifference = document.getElementById("orderDifference") as HTMLElement;
                 
-                if (newOrderTotal) newOrderTotal.textContent = `$${roundToTwoDecimals(newTotal).toFixed(2)}`;
-                if (originalOrderTotal) originalOrderTotal.textContent = `$${roundToTwoDecimals(originalTotal).toFixed(2)}`;
+                const currencySymbol = getCurrencySymbol(order.currency);
+                if (newOrderTotal) newOrderTotal.textContent = `${currencySymbol}${roundToTwoDecimals(newTotal).toFixed(2)}`;
+                if (originalOrderTotal) originalOrderTotal.textContent = `${currencySymbol}${roundToTwoDecimals(originalTotal).toFixed(2)}`;
                 
                 const difference = roundToTwoDecimals(newTotal - originalTotal);
                 if (orderDifference) {
-                  orderDifference.textContent = `${difference >= 0 ? '+' : ''}$${difference.toFixed(2)}`;
+                  orderDifference.textContent = `${difference >= 0 ? '+' : ''}${currencySymbol}${difference.toFixed(2)}`;
                   orderDifference.style.color = difference >= 0 ? '#DC2626' : '#059669';
                 }
                 
@@ -2157,12 +2158,25 @@ const OrdersTable: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number | string): string => {
-    if (typeof price === "string") {
-      const num = parseFloat(price);
-      return isNaN(num) ? "0.00" : num.toFixed(2);
-    }
-    return price.toFixed(2);
+  // Get currency symbol for a given currency code
+  const getCurrencySymbol = (currencyCode: string | undefined): string => {
+    if (!currencyCode) return '$'; // Default to USD
+    const currency = currencyCode.toUpperCase();
+    const symbols: Record<string, string> = {
+      USD: '$',
+      SGD: 'S$',
+      HKD: 'HK$',
+      AED: 'AED ',
+      INR: '₹',
+    };
+    return symbols[currency] || currency;
+  };
+
+  const formatPrice = (price: number | string, currency?: string): string => {
+    const numericPrice = typeof price === "string" ? parseFloat(price) : price;
+    if (isNaN(numericPrice)) return `${getCurrencySymbol(currency)}0.00`;
+    const symbol = getCurrencySymbol(currency);
+    return `${symbol}${numericPrice.toFixed(2)}`;
   };
 
   const formatDate = (date: string): string => {
@@ -2530,7 +2544,7 @@ const OrdersTable: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-2">
-                        <span>${formatPrice(order.totalAmount)}</span>
+                        <span>{formatPrice(order.totalAmount, order.currency)}</span>
                         {order.isConfirmedByCustomer && order.quantitiesModified && (
                           <span 
                             className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700"
@@ -2550,7 +2564,7 @@ const OrdersTable: React.FC = () => {
                               ? 'text-green-600 dark:text-green-400' 
                               : 'text-gray-600 dark:text-gray-400'
                           }`}>
-                            ${formatPrice(order.pendingAmount)}
+                            {formatPrice(order.pendingAmount, order.currency)}
                           </span>
                           {order.pendingAmount === 0 && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700">
