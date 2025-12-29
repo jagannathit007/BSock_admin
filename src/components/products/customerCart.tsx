@@ -341,7 +341,7 @@ const CustomerCart: React.FC = () => {
                     {/* Product Details Column */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <img
+                        {/* <img
                           src={getProductImageSrc(item.product)}
                           alt={getProductTitle(item.product)}
                           className="w-16 h-16 object-contain rounded-full border border-gray-200 dark:border-gray-600 flex-shrink-0"
@@ -349,7 +349,7 @@ const CustomerCart: React.FC = () => {
                             e.currentTarget.src =
                               "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAQhoZ9wi9UzWyWDidI7NIP2qPzL4dGE6k9w&s";
                           }}
-                        />
+                        /> */}
                         <div className="min-w-0 flex-1">
                           <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                             {getProductTitle(item.product)}
@@ -534,7 +534,7 @@ const CustomerCart: React.FC = () => {
 
                     <div className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4">
                       <div className="flex items-start gap-4">
-                        <img
+                        {/* <img
                           src={getProductImageSrc(previewItem.product)}
                           alt={getProductTitle(previewItem.product)}
                           className="w-16 h-16 object-contain rounded-md border border-gray-200 dark:border-gray-600 bg-white"
@@ -542,7 +542,7 @@ const CustomerCart: React.FC = () => {
                             e.currentTarget.src =
                               "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAQhoZ9wi9UzWyWDidI7NIP2qPzL4dGE6k9w&s";
                           }}
-                        />
+                        /> */}
                         <div className="flex-1">
                           <h4 className="text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
                             {getProductTitle(previewItem.product)}

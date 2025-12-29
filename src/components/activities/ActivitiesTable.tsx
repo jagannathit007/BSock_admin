@@ -400,9 +400,9 @@ const ActivitiesTable = () => {
               <table className="w-full table-auto">
                 <thead className="bg-gray-100 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
+                    {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                       Image
-                    </th>
+                    </th> */}
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                       Name
                     </th>
@@ -462,9 +462,9 @@ const ActivitiesTable = () => {
                       const imageUrl = images?.[0] || placeholderImage
                       return (
                         <tr key={`${item.productId || item._id}-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                          <td className="px-6 py-4 align-middle">
+                          {/* <td className="px-6 py-4 align-middle">
                             <img src={imageUrl} alt="Product" className="h-10 w-10 object-cover rounded" />
-                          </td>
+                          </td> */}
                           <td className="px-6 py-4 align-middle text-sm text-gray-700 dark:text-gray-200">
                             {skuFamily?.name || product?.name || '—'}
                           </td>
@@ -650,11 +650,11 @@ const ActivitiesTable = () => {
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2 flex items-center gap-4">
-              <img
+              {/* <img
                 src={(selectedItem?.skuFamilyId?.images?.[0] || selectedItem?.images?.[0] || placeholderImage) as string}
                 alt="Product"
                 className="h-16 w-16 rounded object-cover"
-              />
+              /> */}
               <div>
                 <div className="text-sm text-gray-700 dark:text-gray-300">Created At</div>
                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
