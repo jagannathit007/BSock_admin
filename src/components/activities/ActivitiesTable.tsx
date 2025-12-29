@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import Swal from 'sweetalert2'
 import VersionProductService, { ProductVersionHistoryQuery, ProductsWithCountsQuery } from '../../services/versioning/versionProduct.services'
 import VersionOrderService, { OrderVersionHistoryQuery, OrdersWithCountsQuery } from '../../services/versioning/versionOrder.services'
-import placeholderImage from '../../../public/images/product/noimage.jpg'
+// import placeholderImage from '../../../public/images/product/noimage.jpg'
 import toastHelper from '../../utils/toastHelper'
 import { AdminOrderService, TrackingItem } from '../../services/order/adminOrder.services'
 import { LOCAL_STORAGE_KEYS } from '../../constants/localStorage'
@@ -458,8 +458,8 @@ const ActivitiesTable = () => {
                       const product = item?.productData || item?.data || item
                       const skuFamily = product?.skuFamilyId
                       const subSkuFamily = product?.subSkuFamilyId
-                      const images: string[] = (skuFamily?.images || product?.images || []) as string[]
-                      const imageUrl = images?.[0] || placeholderImage
+                      // const images: string[] = (skuFamily?.images || product?.images || []) as string[]
+                      // const imageUrl = images?.[0] || placeholderImage
                       return (
                         <tr key={`${item.productId || item._id}-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                           {/* <td className="px-6 py-4 align-middle">

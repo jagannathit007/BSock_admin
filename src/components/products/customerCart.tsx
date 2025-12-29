@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import toastHelper from "../../utils/toastHelper";
-import CustomerCartService, { CustomerCartItem, CartProduct } from "../../services/order/customerCart.services";
+import CustomerCartService, { CustomerCartItem } from "../../services/order/customerCart.services";
 import { useDebounce } from "../../hooks/useDebounce";
 
 // Interface for Customer Cart data
@@ -167,29 +167,29 @@ const CustomerCart: React.FC = () => {
   };
 
   // Build image URL
-  const buildImageUrl = (relativeOrAbsolute: string): string => {
-    if (!relativeOrAbsolute)
-      return "https://via.placeholder.com/60x60?text=Product";
-    const isAbsolute = /^https?:\/\//i.test(relativeOrAbsolute);
-    if (isAbsolute) return relativeOrAbsolute;
-    const base = import.meta.env.VITE_BASE_URL || "";
-    return `${base}${
-      relativeOrAbsolute.startsWith("/") ? "" : "/"
-    }${relativeOrAbsolute}`;
-  };
+  // const buildImageUrl = (relativeOrAbsolute: string): string => {
+  //   if (!relativeOrAbsolute)
+  //     return "https://via.placeholder.com/60x60?text=Product";
+  //   const isAbsolute = /^https?:\/\//i.test(relativeOrAbsolute);
+  //   if (isAbsolute) return relativeOrAbsolute;
+  //   const base = import.meta.env.VITE_BASE_URL || "";
+  //   return `${base}${
+  //     relativeOrAbsolute.startsWith("/") ? "" : "/"
+  //   }${relativeOrAbsolute}`;
+  // };
 
   // Get product image
-  const getProductImageSrc = (product: CartProduct): string => {
-    try {
-      const sku = product?.skuFamilyId as any;
-      const first =
-        Array.isArray(sku?.images) && sku.images.length > 0
-          ? sku.images[0]
-          : "";
-      if (first) return buildImageUrl(first);
-    } catch (_) {}
-    return "https://via.placeholder.com/60x60?text=Product";
-  };
+  // const getProductImageSrc = (product: CartProduct): string => {
+  //   try {
+  //     const sku = product?.skuFamilyId as any;
+  //     const first =
+  //       Array.isArray(sku?.images) && sku.images.length > 0
+  //         ? sku.images[0]
+  //         : "";
+  //     if (first) return buildImageUrl(first);
+  //   } catch (_) {}
+  //   return "https://via.placeholder.com/60x60?text=Product";
+  // };
 
   // Format price
   const formatPrice = (price: number | string): string => {
