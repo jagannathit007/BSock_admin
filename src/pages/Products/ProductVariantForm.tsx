@@ -273,7 +273,7 @@ const ProductVariantForm: React.FC = () => {
     return /^[0-9a-fA-F]{24}$/.test(id);
   };
 
-  const handleFormSave = async (rows: ProductRowData[], totalMoq?: number | string) => {
+  const handleFormSave = async (rows: ProductRowData[], totalMoq?: number | string, customColumns?: Array<{ key: string; label: string; width: number }>) => {
     try {
       setLoading(true);
       // Check if we're in edit mode - include groupCodeParam for multi-variant products
@@ -533,7 +533,8 @@ const ProductVariantForm: React.FC = () => {
                     }
                   })()
                 : []),
-          customMessage: cleanString(row.customMessage) || '',
+          // Always include these text fields - send null if empty to clear them (for update mode)
+          customMessage: cleanString(row.customMessage) || null,
           totalMoq: variantType === 'multi' && totalMoq ? parseFloat(String(totalMoq)) : null,
           paymentTerm: (() => {
             if (!row.paymentTerm) return [];
@@ -553,17 +554,17 @@ const ProductVariantForm: React.FC = () => {
             }
             return [];
           })(),
-          shippingTime: cleanString(row.shippingTime) || '',
+          shippingTime: cleanString(row.shippingTime) || null,
           vendor: cleanString(row.vendor) || null,
-          vendorListingNo: cleanString(row.vendorListingNo) || '',
+          vendorListingNo: cleanString(row.vendorListingNo) || null,
           carrier: cleanString(row.carrier) || null,
-          carrierListingNo: cleanString(row.carrierListingNo) || '',
-          uniqueListingNo: cleanString(row.uniqueListingNo) || '',
-          tags: cleanString(row.tags) || '',
-          adminCustomMessage: cleanString(row.adminCustomMessage) || '',
-          remark: cleanString(row.remark) || '',
-          warranty: cleanString(row.warranty) || '',
-          batteryHealth: cleanString(row.batteryHealth) || '',
+          carrierListingNo: cleanString(row.carrierListingNo) || null,
+          uniqueListingNo: cleanString(row.uniqueListingNo) || null,
+          tags: cleanString(row.tags) || null,
+          adminCustomMessage: cleanString(row.adminCustomMessage) || null,
+          remark: cleanString(row.remark) || null,
+          warranty: cleanString(row.warranty) || null,
+          batteryHealth: cleanString(row.batteryHealth) || null,
           lockUnlock: row.lockUnlock === '1',
           // Map status field from form to isStatus field in backend
           // Always use the status from the form if provided, otherwise use existing or default
@@ -588,6 +589,66 @@ const ProductVariantForm: React.FC = () => {
           })(),
         };
         
+        // Collect custom fields and send to backend
+        // Extract custom field keys from row that start with 'custom_'
+        const customFieldsMap: Record<string, string> = {};
+        const customColsMetadata: Array<{ key: string; label: string; width: number }> = [];
+        
+        // For new products, extract from all custom_ keys in row
+        // For edit mode, use customColumns passed from ExcelLikeProductForm if available
+        if (customColumns !== undefined) {
+          // Use customColumns to extract custom fields (for edit mode or when explicitly provided)
+          // customColumns can be an empty array when all custom columns were deleted
+          customColumns.forEach(customCol => {
+            const value = row[customCol.key as keyof ProductRowData];
+            // Remove custom_ prefix when sending to backend
+            const backendKey = customCol.key.startsWith('custom_') 
+              ? customCol.key.replace(/^custom_/, '') 
+              : customCol.key;
+            // Include value even if empty (backend can handle empty strings)
+            const fieldValue = (value && typeof value === 'string') ? value.trim() : '';
+            customFieldsMap[backendKey] = fieldValue;
+            // Store column metadata
+            customColsMetadata.push({
+              key: backendKey,
+              label: customCol.label || backendKey.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              width: customCol.width || 150
+            });
+          });
+        } else {
+          // For new products, extract from all keys starting with 'custom_'
+          Object.keys(row).forEach(key => {
+            if (key.startsWith('custom_')) {
+              const value = row[key as keyof ProductRowData];
+              // Remove custom_ prefix when sending to backend
+              const backendKey = key.replace(/^custom_/, '');
+              // Include value even if empty (backend can handle empty strings)
+              const fieldValue = (value && typeof value === 'string') ? value.trim() : '';
+              customFieldsMap[backendKey] = fieldValue;
+              // Store column metadata
+              customColsMetadata.push({
+                key: backendKey,
+                label: backendKey.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                width: 150
+              });
+            }
+          });
+        }
+        
+        // Always include customFields and customColumns in payload
+        // For edit mode or when customColumns is provided: Always include (even if empty) to ensure deletions persist
+        // For new products without customColumns: Only include if there are actual custom fields
+        if (isEditMode || customColumns !== undefined) {
+          // Always include customFields and customColumns in edit mode or when customColumns is provided
+          // If empty, send empty object/array to clear them in backend
+          productData.customFields = customFieldsMap;
+          productData.customColumns = customColsMetadata;
+        } else if (Object.keys(customFieldsMap).length > 0) {
+          // For new products without customColumns passed, only include if there are actual custom fields
+          productData.customFields = customFieldsMap;
+          productData.customColumns = customColsMetadata;
+        }
+        
         // ✅ For edit mode: Preserve additional fields from existing product that might not be in row
         if (isEditMode && existingProduct) {
           // Preserve status, verification, approval fields if they exist
@@ -597,8 +658,6 @@ const ProductVariantForm: React.FC = () => {
           if ((existingProduct as any).isApproved !== undefined) productData.isApproved = (existingProduct as any).isApproved;
           if ((existingProduct as any).approvedBy !== undefined) productData.approvedBy = (existingProduct as any).approvedBy;
           if ((existingProduct as any).isShowTimer !== undefined) productData.isShowTimer = (existingProduct as any).isShowTimer;
-          // Preserve customFields if they exist
-          if ((existingProduct as any).customFields) productData.customFields = (existingProduct as any).customFields;
           // Preserve pricingMetadata if it exists
           if ((existingProduct as any).pricingMetadata) productData.pricingMetadata = (existingProduct as any).pricingMetadata;
         }

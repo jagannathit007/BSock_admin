@@ -250,26 +250,26 @@ export class ProductService {
         sequence: productData.sequence || null,
         // ✅ CRITICAL: Include countryDeliverables with new margins and costs
         countryDeliverables: productData.countryDeliverables || null,
-        // Additional fields
-        supplierListingNumber: productData.supplierListingNumber || null,
-        customerListingNumber: productData.customerListingNumber || null,
-        packing: productData.packing || null,
-        currentLocation: productData.currentLocation || null,
-        deliveryLocation: productData.deliveryLocation || null,
-        customMessage: productData.customMessage || null,
-        paymentTerm: productData.paymentTerm || null,
-        paymentMethod: productData.paymentMethod || null,
-        shippingTime: productData.shippingTime || null,
-        vendor: productData.vendor || null,
-        vendorListingNo: productData.vendorListingNo || null,
-        carrier: productData.carrier || null,
-        carrierListingNo: productData.carrierListingNo || null,
-        uniqueListingNo: productData.uniqueListingNo || null,
-        tags: productData.tags || null,
-        adminCustomMessage: productData.adminCustomMessage || null,
-        remark: productData.remark || null,
-        warranty: productData.warranty || null,
-        batteryHealth: productData.batteryHealth || null,
+        // Additional fields - preserve null values to allow clearing fields
+        supplierListingNumber: productData.supplierListingNumber !== undefined ? productData.supplierListingNumber : undefined,
+        customerListingNumber: productData.customerListingNumber !== undefined ? productData.customerListingNumber : undefined,
+        packing: productData.packing !== undefined ? productData.packing : undefined,
+        currentLocation: productData.currentLocation !== undefined ? productData.currentLocation : undefined,
+        deliveryLocation: productData.deliveryLocation !== undefined ? productData.deliveryLocation : undefined,
+        customMessage: productData.customMessage !== undefined ? productData.customMessage : undefined,
+        paymentTerm: productData.paymentTerm !== undefined ? productData.paymentTerm : undefined,
+        paymentMethod: productData.paymentMethod !== undefined ? productData.paymentMethod : undefined,
+        shippingTime: productData.shippingTime !== undefined ? productData.shippingTime : undefined,
+        vendor: productData.vendor !== undefined ? productData.vendor : undefined,
+        vendorListingNo: productData.vendorListingNo !== undefined ? productData.vendorListingNo : undefined,
+        carrier: productData.carrier !== undefined ? productData.carrier : undefined,
+        carrierListingNo: productData.carrierListingNo !== undefined ? productData.carrierListingNo : undefined,
+        uniqueListingNo: productData.uniqueListingNo !== undefined ? productData.uniqueListingNo : undefined,
+        tags: productData.tags !== undefined ? productData.tags : undefined,
+        adminCustomMessage: productData.adminCustomMessage !== undefined ? productData.adminCustomMessage : undefined,
+        remark: productData.remark !== undefined ? productData.remark : undefined,
+        warranty: productData.warranty !== undefined ? productData.warranty : undefined,
+        batteryHealth: productData.batteryHealth !== undefined ? productData.batteryHealth : undefined,
         lockUnlock: typeof productData.lockUnlock === 'boolean' ? productData.lockUnlock : false,
         // Preserve additional fields if they exist
         status: productData.status,
@@ -280,10 +280,19 @@ export class ProductService {
         approvedBy: productData.approvedBy,
         isShowTimer: productData.isShowTimer,
         customFields: productData.customFields,
+        customColumns: (productData as any).customColumns,
         pricingMetadata: (productData as any).pricingMetadata,
       };
 
-      // ✅ Remove only truly empty/null/undefined values, but keep 0, false, empty arrays for countryDeliverables
+      // ✅ Remove only undefined values, but keep null (to clear fields), 0, false, empty arrays
+      // Fields that should explicitly send null to clear: remark, adminCustomMessage, customMessage, 
+      // vendorListingNo, carrierListingNo, warranty, batteryHealth, shippingTime, tags, uniqueListingNo
+      const fieldsToKeepNull = [
+        'remark', 'adminCustomMessage', 'customMessage', 'vendorListingNo', 'carrierListingNo',
+        'warranty', 'batteryHealth', 'shippingTime', 'tags', 'uniqueListingNo',
+        'supplierListingNumber', 'customerListingNumber', 'packing', 'currentLocation'
+      ];
+      
       Object.keys(transformedData).forEach(key => {
         const value = transformedData[key];
         // Keep countryDeliverables even if empty array (might be intentional)
@@ -293,7 +302,27 @@ export class ProductService {
           }
           return;
         }
-        // Remove null/undefined/empty string, but keep 0, false, empty arrays
+        // Keep customFields and customColumns even if empty (might be intentional to clear them)
+        if (key === 'customFields' || key === 'customColumns') {
+          if (value === null || value === undefined) {
+            delete transformedData[key];
+          }
+          // Keep empty objects/arrays to allow clearing
+          return;
+        }
+        // For fields that should be clearable, keep null values to explicitly clear them
+        if (fieldsToKeepNull.includes(key)) {
+          // Only remove if undefined, keep null (to clear), empty string (to clear), and valid values
+          if (value === undefined) {
+            delete transformedData[key];
+          }
+          // If value is empty string, convert to null to clear the field
+          if (value === '') {
+            transformedData[key] = null;
+          }
+          return;
+        }
+        // Remove null/undefined/empty string for other fields, but keep 0, false, empty arrays
         if (value === null || value === undefined || value === '') {
           delete transformedData[key];
         }
