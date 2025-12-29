@@ -4,8 +4,6 @@ export interface WtbAdminRow {
   id: string;
   customerName: string;
   customerEmail: string;
-  productId: string;
-  productSpec: string;
   quantity: number;
   status: string;
   createdAt: string;
@@ -36,3 +34,4 @@ export const WtbAdminService = {
     return res.data.data as WtbListResponse;
   },
 };
+

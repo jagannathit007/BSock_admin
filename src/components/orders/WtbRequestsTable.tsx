@@ -71,7 +71,6 @@ const WtbRequestsTable = () => {
                 <th className="px-3 py-2 text-left">Brand</th>
                 <th className="px-3 py-2 text-left">Category</th>
                 <th className="px-3 py-2 text-left">Condition</th>
-                <th className="px-3 py-2 text-left">Product Spec</th>
                 <th className="px-3 py-2 text-left">Qty</th>
                 <th className="px-3 py-2 text-left">Status</th>
                 <th className="px-3 py-2 text-left">Created</th>
@@ -87,7 +86,6 @@ const WtbRequestsTable = () => {
                   <td className="px-3 py-2">{r.brand || "-"}</td>
                   <td className="px-3 py-2">{r.productCategory || "-"}</td>
                   <td className="px-3 py-2">{r.conditionCategory || "-"}</td>
-                  <td className="px-3 py-2">{r.productSpec || "-"}</td>
                   <td className="px-3 py-2">{r.quantity}</td>
                   <td className="px-3 py-2 capitalize">{r.status}</td>
                   <td className="px-3 py-2">
@@ -126,3 +124,4 @@ const WtbRequestsTable = () => {
 };
 
 export default WtbRequestsTable;
+
