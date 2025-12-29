@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
 import { BusinessRequestsService } from "../../services/businessRequests/businessRequests.services";
+import { CustomerCategoryService } from "../../services/customerCategory/customerCategory.services";
+import { SellerCategoryService } from "../../services/sellerCategory/sellerCategory.services";
 import { LOCAL_STORAGE_KEYS } from "../../constants/localStorage";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useModulePermissions } from "../../hooks/useModulePermissions";
@@ -60,6 +62,10 @@ const BusinessRequestsTable: React.FC = () => {
     Record<string, "Approved" | "Pending" | "Rejected" | "Verified">
   >({});
   const [totalDocs, setTotalDocs] = useState<number>(0);
+  const [showCategoryModal, setShowCategoryModal] = useState<boolean>(false);
+  const [pendingVerification, setPendingVerification] = useState<{ id: string; type: 'customer' | 'seller' } | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -230,31 +236,58 @@ const BusinessRequestsTable: React.FC = () => {
     setCurrentAdminId(adminId || "");
   }, []);
 
-  const handleVerify = async (id: string, requestType?: 'customer' | 'seller') => {
-    const confirmed = await Swal.fire({
-      title: "Are you sure?",
-      text: "Verify this business request?",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Yes, verify it!",
-      cancelButtonText: "No, cancel!",
-    });
-
-    if (confirmed.isConfirmed) {
-      try {
-        if (requestType === 'seller') {
-          await BusinessRequestsService.verifySeller(id);
-        } else {
-          await BusinessRequestsService.verifyCustomer(id);
-        }
-        await fetchData();
-      } catch (err) {
-        console.error("Error verifying business request:", err);
-        await fetchData();
-      } finally {
-        setOpenDropdownId(null);
-        setDropdownPosition(null);
+  const loadCategories = async (type: 'customer' | 'seller') => {
+    try {
+      if (type === 'customer') {
+        const response = await CustomerCategoryService.getCustomerCategoryList(1, 1000, '');
+        setCategories(response.data?.docs || []);
+      } else {
+        const response = await SellerCategoryService.getSellerCategoryList(1, 1000, '');
+        setCategories(response.data?.docs || []);
       }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      setCategories([]);
+    }
+  };
+
+  const handleVerify = async (id: string, requestType?: 'customer' | 'seller') => {
+    const type = requestType || 'customer';
+    
+    // Load categories first
+    await loadCategories(type);
+    
+    // Set pending verification and show category modal
+    setPendingVerification({ id, type });
+    setSelectedCategory("");
+    setShowCategoryModal(true);
+    setOpenDropdownId(null);
+    setDropdownPosition(null);
+  };
+
+  const handleCategoryConfirm = async () => {
+    if (!pendingVerification || !selectedCategory) {
+      Swal.fire({
+        icon: "error",
+        title: "Category Required",
+        text: "Please select a category to verify the business request",
+      });
+      return;
+    }
+
+    try {
+      if (pendingVerification.type === 'seller') {
+        await BusinessRequestsService.verifySeller(pendingVerification.id, selectedCategory);
+      } else {
+        await BusinessRequestsService.verifyCustomer(pendingVerification.id, selectedCategory);
+      }
+      setShowCategoryModal(false);
+      setPendingVerification(null);
+      setSelectedCategory("");
+      await fetchData();
+    } catch (err) {
+      console.error("Error verifying business request:", err);
+      // Error is already shown by the service
     }
   };
 
@@ -788,6 +821,68 @@ const BusinessRequestsTable: React.FC = () => {
             >
               <i className="fas fa-times"></i>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Category Selection Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Select {pendingVerification?.type === 'seller' ? 'Seller' : 'Customer'} Category
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setPendingVerification(null);
+                  setSelectedCategory("");
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Please select a category to verify this business request.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer"
+              >
+                <option value="">Select a category...</option>
+                {categories.map((category) => (
+                  <option key={category._id || category.id} value={category._id || category.id}>
+                    {category.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setPendingVerification(null);
+                  setSelectedCategory("");
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCategoryConfirm}
+                disabled={!selectedCategory}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                Verify
+              </button>
+            </div>
           </div>
         </div>
       )}

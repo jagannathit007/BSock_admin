@@ -30,14 +30,15 @@ export class BusinessRequestsService {
   };
 
   static verifyCustomer = async (
-    customerId: string
+    customerId: string,
+    customerCategory: string
   ): Promise<any> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;
     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
     const url = `${baseUrl}/api/${adminRoute}/customer/verify`;
 
     try {
-      const res = await api.post(url, { customerId });
+      const res = await api.post(url, { customerId, customerCategory });
       const message = res.data?.message || 'Customer business request verified successfully';
       toastHelper.showTost(message, 'success');
       return res.data;
@@ -49,14 +50,15 @@ export class BusinessRequestsService {
   };
 
   static verifySeller = async (
-    sellerId: string
+    sellerId: string,
+    sellerCategory: string
   ): Promise<any> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;
     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
     const url = `${baseUrl}/api/${adminRoute}/seller/verify`;
 
     try {
-      const res = await api.post(url, { customerId: sellerId }); // Backend accepts customerId (from validator) or sellerId
+      const res = await api.post(url, { sellerId, sellerCategory });
       const message = res.data?.message || 'Seller business request verified successfully';
       toastHelper.showTost(message, 'success');
       return res.data;
