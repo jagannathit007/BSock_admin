@@ -83,6 +83,25 @@ export const walletAmountService = {
       });
       
       const response = await api.post(url, data);
+      
+      // Check if response has an error message even with status 200
+      if (response.data?.message && (
+        response.data.message.includes("only allowed for approved") ||
+        response.data.message.includes("not approved") ||
+        response.data.message.includes("approved customers") ||
+        response.data.data === null
+      )) {
+        // Throw error so component can handle it properly
+        const error: any = new Error(response.data.message);
+        error.response = {
+          data: {
+            message: response.data.message,
+            status: response.data.status || 200
+          }
+        };
+        throw error;
+      }
+      
       return response.data.data;
     } catch (error) {
       console.error('Error managing wallet:', error);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
+import Swal from "sweetalert2";
 import {
   walletAmountService,
   ManageWalletRequest,
@@ -150,7 +151,15 @@ const WalletAmountModal: React.FC<WalletAmountModalProps> = ({
       await walletAmountService.manageWallet(requestData);
 
       const action = formData.type === "credit" ? "added to" : "deducted from";
-      toastHelper.showTost(`Amount ${action} wallet successfully!`, "success");
+      
+      // Show success alert box
+      await Swal.fire({
+        icon: "success",
+        title: "Success!",
+        text: `Amount ${action} wallet successfully!`,
+        confirmButtonText: "OK",
+        confirmButtonColor: "#0071E0",
+      });
 
       onSave(); // Refresh the parent component data
       onClose();
@@ -160,7 +169,32 @@ const WalletAmountModal: React.FC<WalletAmountModalProps> = ({
         error.response?.data?.message ||
         error.message ||
         "Failed to manage wallet";
-      toastHelper.showTost(errorMessage, "error");
+      
+      // Check if it's an error about approved customers or other validation errors
+      if (errorMessage.includes("only allowed for approved") ||
+          errorMessage.includes("not approved") ||
+          errorMessage.includes("approved customers") ||
+          errorMessage.includes("Wallet operations")) {
+        // Show as alert box instead of toast
+        await Swal.fire({
+          icon: "warning",
+          title: "Wallet Operation Not Allowed",
+          html: `<p style="text-align: left; margin: 10px 0;">${errorMessage}</p>`,
+          confirmButtonText: "OK",
+          confirmButtonColor: "#0071E0",
+          width: "500px",
+        });
+      } else {
+        // Show other errors as alert box
+        await Swal.fire({
+          icon: "error",
+          title: "Error",
+          html: `<p style="text-align: left; margin: 10px 0;">${errorMessage}</p>`,
+          confirmButtonText: "OK",
+          confirmButtonColor: "#0071E0",
+          width: "500px",
+        });
+      }
     } finally {
       setSubmitting(false);
     }
