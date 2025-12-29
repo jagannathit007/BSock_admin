@@ -367,7 +367,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           // Load custom columns from backend (stored in database)
           const backendCustomCols = (firstProduct as any).customColumns.map((col: any) => ({
             key: col.key.startsWith('custom_') ? col.key : `custom_${col.key}`,
-            label: col.label || col.key.replace(/^custom_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            label: col.label || col.key.replace(/^custom_/, '').replace(/_/g, ' ').replace(/\b\w/g, (l:any) => l.toUpperCase()),
             width: col.width || 150,
           }));
           setCustomColumns(backendCustomCols);
@@ -377,7 +377,8 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
           editProducts.forEach((product) => {
             const customFields = (product as any).customFields || {};
             if (customFields instanceof Map) {
-              customFields.forEach((value, key) => {
+              customFields.forEach((_, key) => {
+                
                 const normalizedKey = key.startsWith('custom_') ? key : `custom_${key}`;
                 allCustomKeys.add(normalizedKey);
               });

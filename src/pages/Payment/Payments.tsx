@@ -7,6 +7,7 @@ import { handleNumericInput } from '../../utils/numericInput';
 import { roundToTwoDecimals } from '../../utils/numberPrecision';
 import { useDebounce } from '../../hooks/useDebounce';
 import { usePermissions } from '../../context/PermissionsContext';
+import { LOCAL_STORAGE_KEYS } from '../../constants/localStorage';
 
 const Payments: React.FC = () => {
   // ✅ Get permissions for payment module
@@ -53,8 +54,29 @@ const Payments: React.FC = () => {
   const [sendingOtp, setSendingOtp] = useState<boolean>(false);
   const [verifyingOtp, setVerifyingOtp] = useState<boolean>(false);
   const [otpCountdown, setOtpCountdown] = useState<number>(0);
+  const [currentAdminId, setCurrentAdminId] = useState<string>("");
   const itemsPerPage = 10;
   
+  // Get current admin ID from localStorage
+  useEffect(() => {
+    let adminId = localStorage.getItem(LOCAL_STORAGE_KEYS.ADMIN_ID) || "";
+    if (!adminId) {
+      adminId = localStorage.getItem(LOCAL_STORAGE_KEYS.USER_ID) || "";
+    }
+    if (!adminId) {
+      const userStr = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          adminId = user._id || user.id || "";
+        } catch (e) {
+          console.error('Error parsing user from localStorage:', e);
+        }
+      }
+    }
+    setCurrentAdminId(adminId);
+  }, []);
+
   // ✅ Check if user has read permission, redirect if not
   // Only check after permissions are loaded to avoid false negatives
   useEffect(() => {
@@ -1287,6 +1309,57 @@ const Payments: React.FC = () => {
                             // ✅ Hide verify/approve status if user doesn't have verifyApprove permission
                             if ((status === 'verify' || status === 'approve') && !canVerifyApprove) {
                               return false;
+                            }
+                            
+                            // Extract verifiedBy and approvedBy IDs properly
+                            let verifiedById: string | null = null;
+                            let approvedById: string | null = null;
+                            
+                            // Handle verifiedBy - can be object with _id, string, or null
+                            if (selectedPayment.verifiedBy) {
+                              if (typeof selectedPayment.verifiedBy === 'object' && selectedPayment.verifiedBy !== null) {
+                                verifiedById = (selectedPayment.verifiedBy as any)._id 
+                                  ? String((selectedPayment.verifiedBy as any)._id) 
+                                  : String(selectedPayment.verifiedBy);
+                              } else if (typeof selectedPayment.verifiedBy === 'string') {
+                                verifiedById = selectedPayment.verifiedBy;
+                              }
+                            }
+                            
+                            // Handle approvedBy - can be object with _id, string, or null
+                            if (selectedPayment.approvedBy) {
+                              if (typeof selectedPayment.approvedBy === 'object' && selectedPayment.approvedBy !== null) {
+                                approvedById = (selectedPayment.approvedBy as any)._id 
+                                  ? String((selectedPayment.approvedBy as any)._id) 
+                                  : String(selectedPayment.approvedBy);
+                              } else if (typeof selectedPayment.approvedBy === 'string') {
+                                approvedById = selectedPayment.approvedBy;
+                              }
+                            }
+                            
+                            // Normalize IDs for comparison
+                            const normalizedCurrentAdminId = currentAdminId ? String(currentAdminId).trim() : '';
+                            const normalizedVerifiedById = verifiedById ? String(verifiedById).trim() : null;
+                            const normalizedApprovedById = approvedById ? String(approvedById).trim() : null;
+                            
+                            // If current admin verified the payment, hide "Approved" status
+                            if (status === 'approved' && normalizedVerifiedById && normalizedCurrentAdminId) {
+                              if (normalizedVerifiedById === normalizedCurrentAdminId) {
+                                return false; // Hide "Approved" for the admin who verified
+                              }
+                            }
+                            
+                            // If another admin verified the payment, hide "Verify" status for other admins
+                            if (status === 'verify' && normalizedVerifiedById) {
+                              // If payment is already verified by someone, don't show verify option
+                              return false;
+                            }
+                            
+                            // If current admin approved the payment, hide "Verify" status
+                            if (status === 'verify' && normalizedApprovedById && normalizedCurrentAdminId) {
+                              if (normalizedApprovedById === normalizedCurrentAdminId) {
+                                return false; // Hide "Verify" for the admin who approved
+                              }
                             }
                             
                             // Only show valid transitions
