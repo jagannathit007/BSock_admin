@@ -1428,7 +1428,7 @@ const navigate = useNavigate();
                             {isSellerRequestView ? (
                               <>
                                 {/* Show "Add Details" button if product needs admin details */}
-                                {((item as any).needsAdminDetails || (item.status === 'pending_admin_details' && !(item as any).adminDetailsSubmitted)) ? (
+                                {/* {((item as any).needsAdminDetails || (item.status === 'pending_admin_details' && !(item as any).adminDetailsSubmitted)) ? (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1442,7 +1442,7 @@ const navigate = useNavigate();
                                     </div>
                                     <ActionTooltip text="Add or update admin-specific details for this product. Required for seller-submitted products before verification." />
                                   </button>
-                                ) : null}
+                                ) : null} */}
                                 {/* Show Verify button only if admin details submitted and not verified */}
                                 {((item as any).adminDetailsSubmitted || !(item as any).needsAdminDetails) && 
                                  canVerifyApprove && item.canVerify && item.verifiedBy !== loggedInAdminId && (
@@ -1495,7 +1495,7 @@ const navigate = useNavigate();
                             ) : (
                               <>
                                 {/* Show "Add Details" button if product needs admin details (for seller products) */}
-                                {((item as any).needsAdminDetails || (item.status === 'pending_admin_details' && !(item as any).adminDetailsSubmitted)) && canWrite && (
+                                {/* {((item as any).needsAdminDetails || (item.status === 'pending_admin_details' && !(item as any).adminDetailsSubmitted)) && canWrite && (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1509,7 +1509,7 @@ const navigate = useNavigate();
                                     </div>
                                     <ActionTooltip text="Add or update admin-specific details for this product. Required for seller-submitted products before verification." />
                                   </button>
-                                )}
+                                )} */}
                                 {/* Show Verify button only if admin details submitted (for seller products) or not a seller product */}
                                 {canVerifyApprove && item.canVerify &&
                                   item.verifiedBy !== loggedInAdminId && 
