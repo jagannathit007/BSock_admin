@@ -1028,12 +1028,12 @@ const navigate = useNavigate();
     );
   };
 
-  const handleAddDetails = (product: Product) => {
-    setSelectedProductForDetails(product);
-    setIsAdminDetailsModalOpen(true);
-    setOpenDropdownId(null);
-    setDropdownPosition(null);
-  };
+  // const handleAddDetails = (product: Product) => {
+  //   setSelectedProductForDetails(product);
+  //   setIsAdminDetailsModalOpen(true);
+  //   setOpenDropdownId(null);
+  //   setDropdownPosition(null);
+  // };
 
   return (
     <div className="p-4">
