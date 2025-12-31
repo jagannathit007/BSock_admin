@@ -55,3 +55,16 @@ export const roundObjectNumbers = (obj: any): any => {
   return obj;
 };
 
+/**
+ * Format wallet amount with 2 decimal places and thousand separators
+ * @param value - The wallet amount to format (number, string, null, or undefined)
+ * @returns Formatted string with 2 decimal places (e.g., "$1,234.56" or "$0.00")
+ */
+export const formatWalletAmount = (value: number | string | null | undefined): string => {
+  const numValue = roundToTwoDecimals(value);
+  return numValue.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+

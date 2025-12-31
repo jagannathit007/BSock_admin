@@ -6,6 +6,7 @@ import {
   BoxIcon,
 } from "../../icons";
 import { DashboardService, DashboardStats } from "../../services/dashboard/dashboard.services";
+import { formatWalletAmount } from "../../utils/numberPrecision";
 
 export default function EcommerceMetrics() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -167,7 +168,7 @@ export default function EcommerceMetrics() {
               </p>
             </div>
             <p className="text-3xl font-bold text-teal-600 dark:text-teal-400 mb-1">
-              {stats ? `$${formatNumber(stats.wallet?.total || 0)}` : '$0'}
+              {stats ? `$${formatWalletAmount(stats.wallet?.total || 0)}` : '$0.00'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
               All customers balance
