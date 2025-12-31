@@ -85,17 +85,22 @@ export const walletAmountService = {
       const response = await api.post(url, data);
       
       // Check if response has an error message even with status 200
-      if (response.data?.message && (
-        response.data.message.includes("only allowed for approved") ||
-        response.data.message.includes("not approved") ||
-        response.data.message.includes("approved customers") ||
-        response.data.data === null
+      // Backend returns success with null data for validation errors
+      if (response.data?.data === null || (
+        response.data?.message && (
+          response.data.message.toLowerCase().includes("insufficient") ||
+          response.data.message.includes("only allowed for approved") ||
+          response.data.message.includes("not approved") ||
+          response.data.message.includes("approved customers") ||
+          response.data.message.includes("must be positive") ||
+          response.data.message.includes("required")
+        )
       )) {
         // Throw error so component can handle it properly
-        const error: any = new Error(response.data.message);
+        const error: any = new Error(response.data.message || "Operation failed");
         error.response = {
           data: {
-            message: response.data.message,
+            message: response.data.message || "Operation failed",
             status: response.data.status || 200
           }
         };

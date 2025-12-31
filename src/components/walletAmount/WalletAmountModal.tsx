@@ -170,8 +170,20 @@ const WalletAmountModal: React.FC<WalletAmountModalProps> = ({
         error.message ||
         "Failed to manage wallet";
       
+      // Check for insufficient wallet balance - show as warning alert box
+      if (errorMessage.toLowerCase().includes("insufficient") ||
+          errorMessage.toLowerCase().includes("insufficient wallet balance")) {
+        await Swal.fire({
+          icon: "warning",
+          title: "Insufficient Wallet Balance",
+          text: errorMessage,
+          confirmButtonText: "OK",
+          confirmButtonColor: "#0071E0",
+          width: "500px",
+        });
+      } 
       // Check if it's an error about approved customers or other validation errors
-      if (errorMessage.includes("only allowed for approved") ||
+      else if (errorMessage.includes("only allowed for approved") ||
           errorMessage.includes("not approved") ||
           errorMessage.includes("approved customers") ||
           errorMessage.includes("Wallet operations")) {
