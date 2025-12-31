@@ -506,7 +506,7 @@ const ProductVariantForm: React.FC = () => {
           stock: parseFloat(String(row.totalQty)) || 0,
           country: (cleanString(row.country) || null) as string | null,
           moq: parseFloat(String(row.moqPerVariant)) || 1,
-          purchaseType: (row.purchaseType === 'full' || row.purchaseType === 'partial') ? row.purchaseType : 'partial',
+          purchaseType: (row.purchaseType === 'full' || row.purchaseType === 'partial') ? row.purchaseType : (row.purchaseType || ''),
           isNegotiable: row.negotiableFixed === '1',
           // Use flashDeal field from form (code value from constants), convert to boolean string
           isFlashDeal: row.flashDeal && (row.flashDeal === '1' || row.flashDeal === 'true' || row.flashDeal.toLowerCase() === 'yes') ? 'true' : 'false',

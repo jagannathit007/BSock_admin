@@ -589,7 +589,7 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     sim: '',
     version: '',
     grade: '',
-    status: 'active', // Default to active for isStatus field
+    status: '', // No default - user must select
     lockUnlock: '',
     warranty: '',
     batteryHealth: '',
@@ -606,10 +606,10 @@ const ExcelLikeProductForm: React.FC<ExcelLikeProductFormProps> = ({
     totalQty: '',
     moqPerVariant: '',
     weight: '',
-    purchaseType: 'partial',
+    purchaseType: '',
     paymentTerm: [],
     paymentMethod: [],
-    negotiableFixed: '0',
+    negotiableFixed: '',
     tags: '',
     flashDeal: '',
     shippingTime: '',
@@ -1797,7 +1797,7 @@ useEffect(() => {
           stock: parseFloat(String(row.totalQty)) || 0,
           country: (cleanString(row.country) || null) as string | null,
           moq: parseFloat(String(row.moqPerVariant)) || 1,
-          purchaseType: (row.purchaseType === 'full' || row.purchaseType === 'partial') ? row.purchaseType : 'partial',
+          purchaseType: (row.purchaseType === 'full' || row.purchaseType === 'partial') ? row.purchaseType : (row.purchaseType || ''),
           isNegotiable: row.negotiableFixed === '1',
           isFlashDeal: row.flashDeal && (row.flashDeal === '1' || row.flashDeal === 'true' || row.flashDeal.toLowerCase() === 'yes') ? 'true' : 'false',
           startTime: cleanString(row.startTime) ? new Date(row.startTime).toISOString() : '',
@@ -2415,7 +2415,7 @@ case 'colour':
       case 'status':
         // Handle both 'active'/'nonactive' and legacy values
         const statusValue = value as string;
-        const normalizedStatusValue = statusValue === 'non active' ? 'nonactive' : (statusValue || 'active');
+        const normalizedStatusValue = statusValue === 'non active' ? 'nonactive' : (statusValue || '');
         return (
           <select
             value={normalizedStatusValue}
@@ -2439,9 +2439,10 @@ case 'colour':
       case 'lockUnlock':
       case 'negotiableFixed':
         const options = column.key === 'lockUnlock' ? lockUnlockOptions : negotiableFixedOptions;
+        const selectValue = (groupDisplayValue as string) || '';
         return (
           <select
-            value={groupDisplayValue as string}
+            value={selectValue}
             onChange={(e) => updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value)}
             className="w-full px-2 py-1 text-xs border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
             required={column.key === 'lockUnlock'}
@@ -2725,7 +2726,7 @@ case 'colour':
       case 'purchaseType':
         return (
           <select
-            value={value as string || 'partial'}
+            value={value as string || ''}
             onChange={(e) => {
               updateRow(rowIndex, column.key as keyof ProductRowData, e.target.value);
               // If changed to 'full', set MOQ to equal stock
@@ -2740,6 +2741,7 @@ case 'colour':
               setSelectedRowIndex(rowIndex);
             }}
           >
+            <option value="" className="text-gray-500">Select Purchase Type</option>
             <option value="partial">Partial</option>
             <option value="full">Full</option>
           </select>
@@ -3741,6 +3743,7 @@ case 'colour':
         onSubmit={handleFinalSubmit}
         calculationResults={calculationResults}
         loading={loading}
+        skuFamilies={skuFamilies}
       />
 
       {/* Add Column Modal */}

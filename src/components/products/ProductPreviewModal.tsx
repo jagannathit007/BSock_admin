@@ -7,6 +7,7 @@ interface ProductPreviewModalProps {
   onSubmit: () => void;
   calculationResults: ProductCalculationResult[];
   loading?: boolean;
+  skuFamilies?: any[]; // SKU families list to resolve names from IDs
 }
 
 const ProductPreviewModal: React.FC<ProductPreviewModalProps> = ({
@@ -15,8 +16,28 @@ const ProductPreviewModal: React.FC<ProductPreviewModalProps> = ({
   onSubmit,
   calculationResults,
   loading = false,
+  skuFamilies = [],
 }) => {
   const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
+
+  // Helper function to get SKU family name from ID
+  const getSkuFamilyName = (skuFamilyId: any): string => {
+    if (!skuFamilyId) return 'N/A';
+    
+    // If it's already an object with name, return the name
+    if (typeof skuFamilyId === 'object' && skuFamilyId.name) {
+      return skuFamilyId.name;
+    }
+    
+    // If it's a string ID, look it up in skuFamilies
+    if (typeof skuFamilyId === 'string' && skuFamilies.length > 0) {
+      const skuFamily = skuFamilies.find(sku => sku._id === skuFamilyId || sku._id?.toString() === skuFamilyId);
+      return skuFamily?.name || skuFamilyId;
+    }
+    
+    // Fallback to string representation
+    return String(skuFamilyId);
+  };
 
   // ✅ FIX: API now returns all country/currency combinations directly
   // No need to expand - just use API response as-is
@@ -96,7 +117,7 @@ const ProductPreviewModal: React.FC<ProductPreviewModalProps> = ({
                           <div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">SKU</div>
                             <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                              {result.product.skuFamilyId || 'N/A'}
+                              {getSkuFamilyName(result.product.skuFamilyId)}
                             </div>
                           </div>
                         </div>
