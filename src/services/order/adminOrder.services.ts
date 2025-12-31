@@ -223,14 +223,19 @@ export class AdminOrderService {
   static getOrderStages = async (
     currentLocation: string,
     deliveryLocation: string,
-    currency: string
+    currency: string,
+    productId?: string | null
   ): Promise<string[]> => {
     const baseUrl = import.meta.env.VITE_BASE_URL;
     const adminRoute = import.meta.env.VITE_ADMIN_ROUTE;
     const url = `${baseUrl}/api/${adminRoute}/order/get-stages`;
 
     try {
-      const res = await api.post(url, { currentLocation, deliveryLocation, currency });
+      const body: any = { currentLocation, deliveryLocation, currency };
+      if (productId) {
+        body.productId = productId;
+      }
+      const res = await api.post(url, body);
       if (res.data?.data?.stages) {
         return res.data.data.stages;
       }
