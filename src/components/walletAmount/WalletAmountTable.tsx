@@ -13,6 +13,7 @@ import {
 } from "../../services/customer/customerService";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useModulePermissions } from "../../hooks/useModulePermissions";
+import { formatWalletAmount } from "../../utils/numberPrecision";
 
 // Define the interface for Transaction data
 interface Transaction {
@@ -309,7 +310,7 @@ const WalletAmountTable: React.FC = () => {
                   </p>
                 </div>
                 <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
-                  ${walletStats.totalWalletBalance.toLocaleString()}
+                  ${formatWalletAmount(walletStats.totalWalletBalance)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500">
                   Across all wallets
@@ -483,7 +484,7 @@ const WalletAmountTable: React.FC = () => {
                             : "text-red-500 dark:text-red-400"
                         }`}
                       >
-                        ${parseFloat(item.walletBalance).toLocaleString()}
+                        ${formatWalletAmount(item.walletBalance)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
@@ -643,10 +644,7 @@ const WalletAmountTable: React.FC = () => {
                           : "text-red-500 dark:text-red-400"
                       }`}
                     >
-                      $
-                      {parseFloat(
-                        viewingCustomer.walletBalance
-                      ).toLocaleString()}
+                      ${formatWalletAmount(viewingCustomer.walletBalance)}
                     </p>
                   </div>
                 </div>
@@ -698,7 +696,7 @@ const WalletAmountTable: React.FC = () => {
                             }`}
                           >
                             {transaction.type === "debit" ? "-" : "+"}$
-                            {transaction.amount.toLocaleString()}
+                            {formatWalletAmount(transaction.amount)}
                           </p>
                         </div>
                       </div>
