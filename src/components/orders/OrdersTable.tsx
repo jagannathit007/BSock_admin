@@ -135,10 +135,25 @@ const OrdersTable: React.FC = () => {
     let orderStages: string[] = [];
     try {
       if (order.currentLocation && order.deliveryLocation && order.currency) {
+        // ✅ Extract productId from first cartItem to get paymentTerm
+        let productId: string | null = null;
+        if (order.cartItems && order.cartItems.length > 0) {
+          const firstItem = order.cartItems[0];
+          if (firstItem.productId) {
+            // productId can be an object with _id or a string
+            if (typeof firstItem.productId === 'object' && firstItem.productId !== null) {
+              productId = firstItem.productId._id || null;
+            } else if (typeof firstItem.productId === 'string') {
+              productId = firstItem.productId;
+            }
+          }
+        }
+        
         orderStages = await AdminOrderService.getOrderStages(
           order.currentLocation,
           order.deliveryLocation,
-          order.currency
+          order.currency,
+          productId
         );
       } else {
         // Keep verify directly after requested; rejected is handled separately
