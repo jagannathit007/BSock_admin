@@ -373,6 +373,13 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
       }
     }
 
+    // Validation: Both isExpressDelivery and isSameLocationCharge cannot be true at the same time
+    if (formData.isExpressDelivery && formData.isSameLocationCharge) {
+      errors.isExpressDelivery = "Only one option can be selected at a time";
+      errors.isSameLocationCharge = "Only one option can be selected at a time";
+      isValid = false;
+    }
+
     setValidationErrors(errors);
     return isValid;
   };
@@ -908,10 +915,21 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
                     name="isExpressDelivery"
                     checked={formData.isExpressDelivery}
                     onChange={(e) => {
+                      const isChecked = e.target.checked;
                       setFormData((prev) => ({
                         ...prev,
-                        isExpressDelivery: e.target.checked,
+                        isExpressDelivery: isChecked,
+                        // Uncheck the other option if this one is checked
+                        isSameLocationCharge: isChecked ? false : prev.isSameLocationCharge,
                       }));
+                      // Clear validation errors when user makes a selection
+                      if (touched.isExpressDelivery || touched.isSameLocationCharge) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          isExpressDelivery: undefined,
+                          isSameLocationCharge: undefined,
+                        }));
+                      }
                     }}
                     className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                     disabled={isSubmitting}
@@ -923,6 +941,11 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-8">
                   Check this if this cost applies to express delivery orders
                 </p>
+                {touched.isExpressDelivery && validationErrors.isExpressDelivery && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400 ml-8">
+                    {validationErrors.isExpressDelivery}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -931,10 +954,21 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
                     name="isSameLocationCharge"
                     checked={formData.isSameLocationCharge}
                     onChange={(e) => {
+                      const isChecked = e.target.checked;
                       setFormData((prev) => ({
                         ...prev,
-                        isSameLocationCharge: e.target.checked,
+                        isSameLocationCharge: isChecked,
+                        // Uncheck the other option if this one is checked
+                        isExpressDelivery: isChecked ? false : prev.isExpressDelivery,
                       }));
+                      // Clear validation errors when user makes a selection
+                      if (touched.isExpressDelivery || touched.isSameLocationCharge) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          isExpressDelivery: undefined,
+                          isSameLocationCharge: undefined,
+                        }));
+                      }
                     }}
                     className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                     disabled={isSubmitting}
@@ -946,8 +980,21 @@ const CostModuleModal: React.FC<CostModuleModalProps> = ({
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-8">
                   Check this if this cost applies to same location delivery
                 </p>
+                {touched.isSameLocationCharge && validationErrors.isSameLocationCharge && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400 ml-8">
+                    {validationErrors.isSameLocationCharge}
+                  </p>
+                )}
               </div>
             </div>
+            {/* Warning message if both are somehow selected */}
+            {formData.isExpressDelivery && formData.isSameLocationCharge && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  ⚠️ Only one option can be selected at a time. Please uncheck one of the options.
+                </p>
+              </div>
+            )}
 
             {/* Value, Min Value, Max Value */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
