@@ -102,7 +102,7 @@ const SellerCategoryTable: React.FC = () => {
 
 
   return (
-    <div className="p-4">
+    <div className="py-4">
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 shadow-sm">
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <div className="flex items-center gap-3 flex-1">

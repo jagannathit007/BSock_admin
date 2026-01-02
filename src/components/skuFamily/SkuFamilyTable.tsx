@@ -378,7 +378,7 @@ const SkuFamilyTable: React.FC = () => {
   //   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMmyTPv4M5fFPvYLrMzMQcPD_VO34ByNjouQ&s";
 
   return (
-    <div className="p-4">
+    <div className="py-4">
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"

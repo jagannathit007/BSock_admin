@@ -11,16 +11,16 @@ export default function Home() {
         <EcommerceMetrics />
 
         {/* Charts Row - Sales Chart and Customers Chart on left, Recent Orders on right */}
-        <div className="grid grid-cols-12 gap-4 md:gap-6">
-          <div className="col-span-12 xl:col-span-7 space-y-6">
+        {/* <div className="grid grid-cols-12 gap-4 md:gap-6"> */}
+          {/* <div className="col-span-12 xl:col-span-7 space-y-6"> */}
             <MonthlySalesChart />
             <CustomersChart />
-          </div>
+          {/* </div> */}
 
           {/* <div className="col-span-12 xl:col-span-5">
             <RecentOrders />
           </div> */}
-        </div>
+        {/* </div> */}
       </div>
     </>
   );

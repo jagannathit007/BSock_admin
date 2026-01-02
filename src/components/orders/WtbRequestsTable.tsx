@@ -34,7 +34,7 @@ const WtbRequestsTable = () => {
   };
 
   return (
-    <div className="mt-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+    <div className="mt-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">
           WTB Requests

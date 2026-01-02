@@ -385,7 +385,7 @@ const PaymentConfig: React.FC<PaymentConfigProps> = ({ onRenderButtons: _onRende
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="py-4 max-w-7xl mx-auto min-h-screen bg-gray-50 dark:bg-gray-900">
       {paymentConfig ? (
         <div className="space-y-8">
           {/* Payment Modules Section */}

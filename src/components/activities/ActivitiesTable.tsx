@@ -347,7 +347,7 @@ const ActivitiesTable = () => {
 
   return (
     <>
-    <div className="p-4">
+    <div className="py-4">
       {/* Professional Tab Navigation */}
       <div className="mb-6">
         <div className="border-b border-gray-200 dark:border-gray-700">

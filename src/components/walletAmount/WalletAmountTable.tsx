@@ -272,7 +272,7 @@ const WalletAmountTable: React.FC = () => {
   );
 
   return (
-    <div className="p-4 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="py-4 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Header with Stats Cards */}
       <div className="mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">

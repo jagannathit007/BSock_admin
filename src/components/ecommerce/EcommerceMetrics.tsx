@@ -57,7 +57,7 @@ export default function EcommerceMetrics() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
       {/* <!-- Customers Card --> */}
       <div className="dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
         <div className="flex items-center justify-between">
@@ -68,12 +68,12 @@ export default function EcommerceMetrics() {
                 <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   Customers
                 </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-0.5">
+                {/* <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-0.5">
                   Active vs Total
-                </p>
+                </p> */}
               </div>
             </div>
-            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
               {stats ? formatNumber(stats.customers.active) : '0'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -98,7 +98,7 @@ export default function EcommerceMetrics() {
                 Total Orders
               </p>
             </div>
-            <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">
+            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">
               {stats ? formatNumber(stats.orders.total) : '0'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -121,7 +121,7 @@ export default function EcommerceMetrics() {
                 Total Sales
               </p>
             </div>
-            <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
               {stats ? `$${formatNumber(stats.sales.total)}` : '$0'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -144,7 +144,7 @@ export default function EcommerceMetrics() {
                 Active Products
               </p>
             </div>
-            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
               {stats ? formatNumber(stats.products.active) : '0'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -167,7 +167,7 @@ export default function EcommerceMetrics() {
                 Total Wallet
               </p>
             </div>
-            <p className="text-3xl font-bold text-teal-600 dark:text-teal-400 mb-1">
+            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400 mb-1">
               {stats ? `$${formatWalletAmount(stats.wallet?.total || 0)}` : '$0.00'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -190,7 +190,7 @@ export default function EcommerceMetrics() {
                 Active Lots
               </p>
             </div>
-            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mb-1">
               {stats ? formatNumber(stats.bids.activeLots || 0) : "0"}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -213,7 +213,7 @@ export default function EcommerceMetrics() {
                 Active Lotwise Bids
               </p>
             </div>
-            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mb-1">
               {stats ? formatNumber(stats.bids.activeLotwiseCustomerBids || 0) : "0"}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -236,7 +236,7 @@ export default function EcommerceMetrics() {
                 Customer-wise Lot-wise Bids
               </p>
             </div>
-            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mb-1">
               {stats ? formatNumber(stats.bids.customerWiseLotWiseBids || 0) : "0"}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">
@@ -259,7 +259,7 @@ export default function EcommerceMetrics() {
                 Today Orders
               </p>
             </div>
-            <p className="text-3xl font-bold text-rose-600 dark:text-rose-400 mb-1">
+            <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 mb-1">
               {stats ? formatNumber(stats.orders.todayPlaced || 0) : '0'}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500">

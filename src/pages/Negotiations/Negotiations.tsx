@@ -819,7 +819,7 @@ const getCustomerDetails = (customer: any) => {
       <PageBreadcrumb pageTitle="Negotiations" />
       <div className="space-y-6">
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="flex border-b border-gray-200">
             <button
               onClick={() => setActiveTab('all')}

@@ -7,6 +7,7 @@ import { AdminService, Admin, UpdateAdminRequest } from "../../services/admin/ad
 import { LOCAL_STORAGE_KEYS } from "../../constants/localStorage";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermissions } from "../../context/PermissionsContext";
+import { FaEdit, FaKey, FaShieldAlt, FaTrash } from "react-icons/fa";
 
 const AdminsTable: React.FC = () => {
   const { hasPermission, permissions } = usePermissions();
@@ -164,7 +165,7 @@ const AdminsTable: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="py-4">
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -259,7 +260,11 @@ const AdminsTable: React.FC = () => {
                     </td> */}
                     
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(item.createdAt).toLocaleDateString()}
+                      {new Date(item.createdAt).toLocaleDateString('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+})}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span 
@@ -271,24 +276,26 @@ const AdminsTable: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-center">
                       {canWrite ? (
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-3">
                           <button
                             onClick={() => handleEdit(item)}
-                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+                            className="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300 transition-colors"
                             title="Edit Admin"
                           >
-                            <i className="fas fa-edit"></i>
+                            {/* <i className="fas fa-edit"></i> */}
+                            <FaEdit className="w-[16px] h-[16px]"/>
                           </button>
                           <button
                             onClick={() => handleResetPassword(item)}
                             disabled={resettingPassword === item._id}
-                            className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="text-yellow-500 hover:text-yellow-600 dark:text-yellow-400 dark:hover:text-yellow-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Reset Password"
                           >
                             {resettingPassword === item._id ? (
                               <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-yellow-600"></div>
                             ) : (
-                              <i className="fas fa-key"></i>
+                              // <i className="fas fa-key"></i>
+                              <FaKey className="w-[16px] h-[16px]"/>
                             )}
                           </button>
                           <button
@@ -296,18 +303,20 @@ const AdminsTable: React.FC = () => {
                               setSelectedAdminForPermissions(item);
                               setPermissionModalOpen(true);
                             }}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                             title="Manage Permissions"
                           >
-                            <i className="fas fa-shield-alt"></i>
+                            {/* <i className="fas fa-shield-alt"></i> */}
+                            <FaShieldAlt className="w-[16px] h-[16px]" />
                           </button>
                           {isSuperAdmin && (
                             <button
                               onClick={() => handleDelete(item)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                              className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                               title="Delete Admin"
                             >
-                              <i className="fas fa-trash"></i>
+                              {/* <i className="fas fa-trash"></i> */}
+                              <FaTrash className="w-[16px] h-[16px]" />
                             </button>
                           )}
                         </div>

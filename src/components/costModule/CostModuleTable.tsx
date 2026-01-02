@@ -154,7 +154,7 @@ const CostModuleTable: React.FC = () => {
   const paginatedData = costModules;
 
   return (
-    <div className="p-4">
+    <div className="py-4">
       {/* Table Container */}
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 shadow-sm">
         {/* Table Header with Controls */}

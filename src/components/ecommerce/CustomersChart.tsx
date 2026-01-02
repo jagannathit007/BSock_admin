@@ -41,7 +41,7 @@ export default function CustomersChart() {
   const options: ApexOptions = {
     colors: ["#0071E0"],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: "Inter, sans-serif",
       type: "line",
       height: 180,
       toolbar: {
@@ -68,7 +68,7 @@ export default function CustomersChart() {
       show: true,
       position: "top",
       horizontalAlign: "left",
-      fontFamily: "Outfit",
+      fontFamily: "Inter",
     },
     yaxis: {
       title: {

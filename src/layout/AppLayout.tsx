@@ -15,10 +15,10 @@ const LayoutContent: React.FC = () => {
       {/* Main content area with padding-top to account for fixed header */}
       <div
         className={`transition-all duration-300 ease-in-out pt-16 ${
-          isExpanded || isHovered ? "lg:ml-[269px]" : "lg:ml-[90px]"
+          isExpanded || isHovered ? "lg:ml-[250px]" : "lg:ml-[90px]"
         } ${isMobileOpen ? "ml-0" : ""}`}
       >
-        <div className="p-4 mx-auto w-full max-w-screen-2xl md:p-6 2xl:max-w-[1920px] 2xl:px-8">
+        <div className="p-4 mx-auto w-full max-w-screen-2xl md:p-6 2xl:max-w-[1920px]">
           <Outlet />
         </div>
       </div>
