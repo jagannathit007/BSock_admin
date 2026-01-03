@@ -4,7 +4,10 @@ import CurrencyConversionTable from "../../components/currencyConversion/Currenc
 const CurrencyConversion = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Currency Conversion" />
+      <PageBreadcrumb 
+        pageTitle="Currency Conversion" 
+        subTitle="Manage currency conversion rates and settings"
+      />
       <div className="space-y-6">
         <CurrencyConversionTable />
       </div>

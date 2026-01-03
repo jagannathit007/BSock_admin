@@ -4,7 +4,10 @@ import SellerCategoryTable from "../../components/sellerCategory/SellerCategoryT
 const SellerCategory = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Seller Category" />
+      <PageBreadcrumb 
+        pageTitle="Seller Category" 
+        subTitle="Manage seller categories and classifications"
+      />
       <div className="space-y-6 ">
         <SellerCategoryTable />
       </div>

@@ -4,7 +4,10 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 const Activities = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Activities" />
+      <PageBreadcrumb 
+        pageTitle="Activities" 
+        subTitle="View system activities and user actions"
+      />
       <div className="space-y-6">
         <ActionsTable />
       </div>

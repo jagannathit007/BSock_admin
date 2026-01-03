@@ -816,7 +816,10 @@ const getCustomerDetails = (customer: any) => {
 
   return (
     <>
-      <PageBreadcrumb pageTitle="Negotiations" />
+      <PageBreadcrumb 
+        pageTitle="Negotiations" 
+        subTitle="Manage price negotiations between sellers and customers"
+      />
       <div className="space-y-6">
         {/* Tabs */}
         <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200">

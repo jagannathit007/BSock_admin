@@ -4,7 +4,10 @@ import ConditionCategoryTable from "../../components/conditionCategory/Condition
 const ConditionCategory = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Conditions" />
+      <PageBreadcrumb 
+        pageTitle="Conditions" 
+        subTitle="Manage product condition categories"
+      />
       <div className="space-y-6 ">
         <ConditionCategoryTable />
       </div>

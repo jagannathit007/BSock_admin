@@ -465,11 +465,12 @@ const BusinessRequestsTable: React.FC = () => {
                   Certificate
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b">
-                  Type
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b">
                   Business Name
                 </th>
+                {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b">
+                  Type
+                </th> */}
+                
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b">
                   Country
                 </th>
@@ -540,10 +541,8 @@ const BusinessRequestsTable: React.FC = () => {
                         />
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
-                        {item.businessName || "-"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        <h4 className="mb-1">{item.businessName || "-"}</h4>
+                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                           item.requestType === 'seller' 
                             ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
                             : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
@@ -551,14 +550,23 @@ const BusinessRequestsTable: React.FC = () => {
                           {item.requestType === 'seller' ? 'Seller' : 'Customer'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium">
+                      {/* <td className="px-6 py-4">
+                       
+                      </td> */}
+                      {/* <td className="px-6 py-4 text-sm font-medium">
                         {item.businessName || "-"}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 text-sm">
                         {item.country || "-"}
                       </td>
                       <td className="px-6 py-4 text-sm max-w-xs overflow-hidden">
-                        {item.address || "-"}
+                        <span
+  className="max-w-[220px] truncate block cursor-pointer"
+  title={item.address || "-"}
+>
+  {item.address || "-"}
+</span>
+
                       </td>
                       <td className="px-6 py-4">
                         <span

@@ -4,7 +4,10 @@ import CustomerTable from "../../components/customer/CustomerTable";
 const Customers = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Customers" />
+      <PageBreadcrumb 
+        pageTitle="Customers" 
+        subTitle="Manage customer accounts and information"
+      />
       <div className="space-y-6">
         <CustomerTable />
       </div>

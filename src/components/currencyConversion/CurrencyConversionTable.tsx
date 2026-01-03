@@ -5,6 +5,7 @@ import toastHelper from '../../utils/toastHelper';
 import CurrencyConversionModal from './CurrencyConversionModal.tsx';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useModulePermissions } from '../../hooks/useModulePermissions';
+import { FaEdit } from 'react-icons/fa';
 
 const CurrencyConversionTable: React.FC = () => {
   const { canWrite } = useModulePermissions('/currency-conversion');
@@ -194,18 +195,25 @@ const CurrencyConversionTable: React.FC = () => {
                       {typeof conversion.rate === 'number' ? conversion.rate.toFixed(4) : parseFloat(conversion.rate || '0').toFixed(4)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {conversion.updatedAt
-                        ? new Date(conversion.updatedAt).toLocaleDateString()
-                        : '-'}
+                      {
+  conversion.updatedAt
+    ? new Date(conversion.updatedAt).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '-'
+}
                     </td>
                     <td className="px-6 py-4 text-sm text-center">
                       {canWrite ? (
                         <button
                           onClick={() => handleEdit(conversion._id!)}
-                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+                          className="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300 transition-colors"
                           title="Edit Currency Conversion"
                         >
-                          <i className="fas fa-edit"></i>
+                          {/* <i className="fas fa-edit"></i> */}
+                          <FaEdit className="w-[16px] h-[16px]"/>
                         </button>
                       ) : (
                         <span className="text-gray-400 dark:text-gray-500 text-sm">View Only</span>

@@ -1,4 +1,5 @@
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PaymentConfig from "../../components/payment/PaymentConfig";
 import { useState } from "react";
 
@@ -11,10 +12,11 @@ const payment = () => {
         title="React.js Products Dashboard | TailAdmin - Next.js Admin Dashboard Template"
         description="This is React.js Products Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
       />
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 className="text-3xl font-semibold text-gray-800 dark:text-white/90">
-          Payment Configuration
-        </h2>
+      <PageBreadcrumb 
+        pageTitle="Payment Configuration" 
+        subTitle="Configure payment methods and settings"
+      />
+      <div className="flex justify-end mb-6">
         {actionButtons}
       </div>
       

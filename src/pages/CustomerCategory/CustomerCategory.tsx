@@ -4,7 +4,10 @@ import CustomerCategoryTable from "../../components/customerCategory/CustomerCat
 const CustomerCategory = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Customer Category" />
+      <PageBreadcrumb 
+        pageTitle="Customer Category" 
+        subTitle="Manage customer categories and classifications"
+      />
       <div className="space-y-6 ">
         <CustomerCategoryTable />
       </div>

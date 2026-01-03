@@ -4,6 +4,7 @@ import CustomerEditModal from './CustomerEditModal';
 import ViewCustomerModal from './ViewCustomerModal';
 import { useDebounce } from '../../hooks/useDebounce';
 import { usePermissions } from '../../context/PermissionsContext';
+import { FaEdit, FaEye } from 'react-icons/fa';
 
 const CustomerTable: React.FC = () => {
   const { hasPermission } = usePermissions();
@@ -161,9 +162,9 @@ const CustomerTable: React.FC = () => {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                   Name
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
+                {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                   Code
-                </th>
+                </th> */}
                 {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 align-middle">
                   Email
                 </th> */}
@@ -218,9 +219,9 @@ const CustomerTable: React.FC = () => {
                       <p className='capitalize'>{customer.name}</p>
                       <p className='text-gray-500 text-sm'>{customer.email}</p>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                    {/* <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {customer.code || '-'}
-                    </td>
+                    </td> */}
                     {/* <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {customer.email}
                     </td> */}
@@ -280,18 +281,20 @@ const CustomerTable: React.FC = () => {
                       <div className="flex items-center justify-center gap-3">
                         <button
                           onClick={() => handleView(customer)}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                          className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                           title="View Customer Details"
                         >
-                          <i className="fas fa-eye"></i>
+                          {/* <i className="fas fa-eye"></i>   */}
+                          <FaEye className="w-[16px] h-[16px]"/>
                         </button>
                         {canWrite && (
                           <button
                             onClick={() => handleEdit(customer)}
-                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+                            className="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300 transition-colors"
                             title="Edit Customer"
                           >
-                            <i className="fas fa-edit"></i>
+                            {/* <i className="fas fa-edit"></i> */}
+                            <FaEdit className="w-[16px] h-[16px]"/>
                           </button>
                         )}
                       </div>

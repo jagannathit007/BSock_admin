@@ -4,7 +4,10 @@ import ProductCategoryTable from "../../components/productCategory/ProductCatego
 const ProductCategory = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Product Category" />
+      <PageBreadcrumb 
+        pageTitle="Product Category" 
+        subTitle="Manage product categories and classifications"
+      />
       <div className="space-y-6 ">
         <ProductCategoryTable />
       </div>

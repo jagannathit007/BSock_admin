@@ -4,7 +4,10 @@ import RamTable from "../../components/ram/RamTable";
 const Ram = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="RAM" />
+      <PageBreadcrumb 
+        pageTitle="RAM" 
+        subTitle="Manage RAM specifications and configurations"
+      />
       <div className="space-y-6 ">
         <RamTable />
       </div>

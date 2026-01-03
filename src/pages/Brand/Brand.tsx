@@ -4,7 +4,10 @@ import BrandTable from "../../components/brand/BrandTable";
 const Brand = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Brand" />
+      <PageBreadcrumb 
+        pageTitle="Brand" 
+        subTitle="Manage product brands and their configurations"
+      />
       <div className="space-y-6 ">
         <BrandTable />
       </div>

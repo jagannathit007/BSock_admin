@@ -4,7 +4,10 @@ import BusinessRequestsTable from "../../components/businessRequests/BusinessReq
 const BusinessRequests = () => {
   return (
     <>
-      <PageBreadcrumb pageTitle="Business Requests" />
+      <PageBreadcrumb 
+        pageTitle="Business Requests" 
+        subTitle="View and manage business registration requests"
+      />
         <div className="space-y-6">
         <BusinessRequestsTable />
       </div>
